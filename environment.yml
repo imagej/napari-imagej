@@ -1,0 +1,7 @@
+name: napari-imagej
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - napari
+  - pyimagej
