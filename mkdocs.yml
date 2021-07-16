@@ -1,0 +1,10 @@
+site_name: napari-imagej
+site_description: Use ImageJ functionality from napari
+site_author: Curtis Rueden
+
+theme: readthedocs
+
+repo_url: https://github.com/ctrueden/napari-imagej
+
+pages:
+- Home: index.md
