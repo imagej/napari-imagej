@@ -116,6 +116,30 @@ def _functionify(info):
     type_hints['return'] = _ptype(out_types[0]) if len(out_types) == 1 else dict
     run_module.__annotations__ = type_hints
 
+    ##################################################
+    # ALTERNATE METHOD: REWRITE THE ACTUAL SIGNATURE #
+    # But it crashes the program with a segfault :-( #
+    ##################################################
+    #from inspect import signature, Parameter
+    #try:
+    #    out_types = [o.getType() for o in info.outputs()]
+    #    if len(out_types) == 0: return_type = None
+    #    elif len(out_types) == 1: return_type = _ptype(out_types[0])
+    #    else: return_type = dict
+
+    #    sig = signature(run_module)
+    #    run_module.__signature__ = sig.replace(parameters=[
+    #        Parameter(
+    #            str(i.getName()),
+    #            kind=Parameter.POSITIONAL_OR_KEYWORD,
+    #            default=None,
+    #            annotation=_ptype(i.getType())
+    #        )
+    #        for i in info.inputs()
+    #    ], return_annotation=return_type)
+    #except Exception as e:
+    #    print(e)
+
     run_module._info = info
     return run_module
 
