@@ -93,6 +93,8 @@ def _usable(info):
     return menu_path is not None and len(menu_path) > 0
 
 
+# Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
+
 def _functionify(info):
     def run_module(**kwargs):
         args = kwargs #locals()
