@@ -1,5 +1,7 @@
 # napari-imagej
 
+***VERY EARLY AND EXPERIMENTAL PROTOTYPE***
+
 [![License](https://img.shields.io/pypi/l/napari-imagej.svg?color=green)](https://github.com/ctrueden/napari-imagej/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-imagej.svg?color=green)](https://pypi.org/project/napari-imagej)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-imagej.svg?color=green)](https://python.org)
