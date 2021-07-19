@@ -17,11 +17,18 @@ import re
 import imagej
 from scyjava import jimport
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG) #TEMP
+
+logger.debug('Initializing ImageJ2')
 ij = imagej.init()
+logger.debug(f'Initialized at version {ij.getVersion()}')
 
 # Dispose the SciJava context when Python shuts down.
 # TODO: Consider registering atexit hook in imagej.init.
 import atexit; atexit.register(lambda: ij.dispose())
+logger.debug('SciJava cleanup hook registered')
 
 _ptypes = {
     # Primitives.
@@ -88,9 +95,14 @@ def _usable(info):
 
 def _functionify(info):
     def run_module(**kwargs):
-        m = ij.module().run(info, True, ij.py.jargs(kwargs)).get()
+        args = kwargs #locals()
+        logger.debug(f'run_module: {run_module.__qualname__}({args}) -- {info.getIdentifier()}')
+        m = ij.module().run(info, True, ij.py.jargs(args)).get()
+        logger.debug(f'run_module: execution complete')
         outputs = ij.py.from_java(m.getOutputs())
-        return outputs.popitem()[1] if len(outputs) == 1 else outputs
+        result = outputs.popitem()[1] if len(outputs) == 1 else outputs
+        logger.debug(f'run_module: result = {result}')
+        return result
 
     menu_string = " > ".join(str(p) for p in info.getMenuPath())
     run_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
@@ -108,4 +120,5 @@ def _functionify(info):
 
 @napari_hook_implementation
 def napari_experimental_provide_function():
+    logger.debug('Converting SciJava modules to Python functions')
     return [_functionify(info) for info in ij.module().getModules() if _usable(info)]
