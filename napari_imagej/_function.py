@@ -8,42 +8,104 @@ Replace code below according to your needs.
 """
 from typing import TYPE_CHECKING
 
-from enum import Enum
-import numpy as np
 from napari_plugin_engine import napari_hook_implementation
 
 if TYPE_CHECKING:
     import napari
 
+import re
+import imagej
+from scyjava import jimport
 
-# This is the actual plugin function, where we export our function
-# (The functions themselves are defined below)
+ij = imagej.init()
+
+# Dispose the SciJava context when Python shuts down.
+# TODO: Consider registering atexit hook in imagej.init.
+import atexit; atexit.register(lambda: ij.dispose())
+
+_ptypes = {
+    # Primitives.
+    jimport('[B'):                                            int,
+    jimport('[S'):                                            int,
+    jimport('[I'):                                            int,
+    jimport('[J'):                                            int,
+    jimport('[F'):                                            float,
+    jimport('[D'):                                            float,
+    jimport('[Z'):                                            bool,
+    jimport('[C'):                                            str,
+    # Primitive wrappers.
+    jimport('java.lang.Boolean'):                             bool,
+    jimport('java.lang.Character'):                           str,
+    jimport('java.lang.Byte'):                                int,
+    jimport('java.lang.Short'):                               int,
+    jimport('java.lang.Integer'):                             int,
+    jimport('java.lang.Long'):                                int,
+    jimport('java.lang.Float'):                               float,
+    jimport('java.lang.Double'):                              float,
+    # Core library types.
+    jimport('java.math.BigInteger'):                          int,
+    jimport('java.lang.String'):                              str,
+    jimport('java.lang.Enum'):                                'enum.Enum',
+    jimport('java.io.File'):                                  'pathlib.PosixPath',
+    jimport('java.nio.file.Path'):                            'pathlib.PosixPath',
+    jimport('java.util.Date'):                                'datetime.datetime',
+    # SciJava types.
+    jimport('org.scijava.table.Table'):                       'pandas.DataFrame',
+    # ImgLib2 types.
+    jimport('net.imglib2.type.BooleanType'):                  bool,
+    jimport('net.imglib2.type.numeric.IntegerType'):          int,
+    jimport('net.imglib2.type.numeric.RealType'):             float,
+    jimport('net.imglib2.type.numeric.ComplexType'):          complex,
+    jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
+    jimport('net.imglib2.roi.geom.real.PointMask'):           'napari.types.PointsData',
+    jimport('net.imglib2.roi.geom.real.RealPointCollection'): 'napari.types.PointsData',
+    jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.types.LabelsData',
+    jimport('net.imglib2.roi.geom.real.Line'):                'napari.types.ShapesData',
+    jimport('net.imglib2.roi.geom.real.Box'):                 'napari.types.ShapesData',
+    jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.types.ShapesData',
+    jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.types.ShapesData',
+    jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.types.ShapesData',
+    jimport('net.imglib2.display.ColorTable'):                'vispy.color.Colormap',
+    # ImageJ2 types.
+    jimport('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
+}
+
+
+# TODO: Move this function to scyjava.convert and/or ij.py.
+def _ptype(java_type):
+    for jtype, ptype in _ptypes.items():
+        if isinstance(java_type, jtype): return ptype
+    for jtype, ptype in _ptypes.items():
+        if ij.convert().supports(java_type, jtype): return ptype
+    raise ValueError(f'Unsupported Java type: {java_type}')
+
+
+def _usable(info):
+    #if not info.canRunHeadless(): return False
+    menu_path = info.getMenuPath()
+    return menu_path is not None and len(menu_path) > 0
+
+
+def _functionify(info):
+    def run_module(**kwargs):
+        m = ij.module().run(info, True, ij.py.jargs(kwargs)).get()
+        outputs = ij.py.from_java(m.getOutputs())
+        return outputs.popitem()[1] if len(outputs) == 1 else outputs
+
+    menu_string = " > ".join(str(p) for p in info.getMenuPath())
+    run_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
+    run_module.__name__ = re.sub('[^a-zA-Z0-9_]', '_', menu_string)
+    run_module.__qualname__ = menu_string
+
+    type_hints = {str(i.getName()): _ptype(i.getType()) for i in info.inputs()}
+    out_types = [o.getType() for o in info.outputs()]
+    type_hints['return'] = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    run_module.__annotations__ = type_hints
+
+    run_module._info = info
+    return run_module
+
+
 @napari_hook_implementation
 def napari_experimental_provide_function():
-    # we can return a single function
-    # or a tuple of (function, magicgui_options)
-    # or a list of multiple functions with or without options, as shown here:
-    return [threshold, image_arithmetic]
-
-
-# 1.  First example, a simple function that thresholds an image and creates a labels layer
-def threshold(data: "napari.types.ImageData", threshold: int) -> "napari.types.LabelsData":
-    """Threshold an image and return a mask."""
-    return (data > threshold).astype(int)
-
-
-# 2. Second example, a function that adds, subtracts, multiplies, or divides two layers
-
-# using Enums is a good way to get a dropdown menu.  Used here to select from np functions
-class Operation(Enum):
-    add = np.add
-    subtract = np.subtract
-    multiply = np.multiply
-    divide = np.divide
-
-
-def image_arithmetic(
-    layerA: "napari.types.ImageData", operation: Operation, layerB: "napari.types.ImageData"
-) -> "napari.types.LayerDataTuple":
-    """Adds, subtracts, multiplies, or divides two same-shaped image layers."""
-    return (operation.value(layerA, layerB), {"colormap": "turbo"})
+    return [_functionify(info) for info in ij.module().getModules() if _usable(info)]
