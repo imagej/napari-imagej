@@ -13,15 +13,16 @@ from napari_plugin_engine import napari_hook_implementation
 if TYPE_CHECKING:
     import napari
 
-import re
+import os, re
 import imagej
-from scyjava import jimport
+from scyjava import config, jimport
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) #TEMP
 
 logger.debug('Initializing ImageJ2')
+config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init()
 logger.debug(f'Initialized at version {ij.getVersion()}')
 
