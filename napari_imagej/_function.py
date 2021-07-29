@@ -82,7 +82,7 @@ _ptypes = {
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
     for jtype, ptype in _ptypes.items():
-        if isinstance(java_type, jtype): return ptype
+        if jtype.class_.isAssignableFrom(java_type): return ptype
     for jtype, ptype in _ptypes.items():
         if ij.convert().supports(java_type, jtype): return ptype
     raise ValueError(f'Unsupported Java type: {java_type}')
