@@ -148,4 +148,6 @@ def _functionify(info):
 @napari_hook_implementation
 def napari_experimental_provide_function():
     logger.debug('Converting SciJava modules to Python functions')
-    return [_functionify(info) for info in ij.module().getModules() if _usable(info)]
+    functions = [_functionify(info) for info in ij.module().getModules() if _usable(info)]
+    # TODO: Sort by menu weight rather than function name.
+    return sorted(functions, key=lambda f: f.__name__)
