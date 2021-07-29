@@ -134,6 +134,13 @@ def _functionify(info):
     except Exception as e:
         print(e)
 
+    # Add the type hints as annotations metadata as well.
+    # Without this, magicgui doesn't pick up on the types.
+    type_hints = {str(i.getName()): _ptype(i.getType()) for i in info.inputs()}
+    out_types = [o.getType() for o in info.outputs()]
+    type_hints['return'] = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    run_module.__annotation__ = type_hints
+
     run_module._info = info
     return run_module
 
