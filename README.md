@@ -2,6 +2,8 @@
 
 ***VERY EARLY AND EXPERIMENTAL PROTOTYPE***
 
+See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
+
 [![License](https://img.shields.io/pypi/l/napari-imagej.svg?color=green)](https://github.com/imagej/napari-imagej/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-imagej.svg?color=green)](https://pypi.org/project/napari-imagej)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-imagej.svg?color=green)](https://python.org)
