@@ -8,8 +8,6 @@ Replace code below according to your needs.
 """
 from typing import TYPE_CHECKING
 
-from napari_plugin_engine import napari_hook_implementation
-
 if TYPE_CHECKING:
     import napari
 
@@ -25,11 +23,6 @@ logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init()
 logger.debug(f'Initialized at version {ij.getVersion()}')
-
-# Dispose the SciJava context when Python shuts down.
-# TODO: Consider registering atexit hook in imagej.init.
-import atexit; atexit.register(lambda: ij.dispose())
-logger.debug('SciJava cleanup hook registered')
 
 _ptypes = {
     # Primitives.
@@ -145,7 +138,6 @@ def _functionify(info):
     return run_module
 
 
-@napari_hook_implementation
 def napari_experimental_provide_function():
     logger.debug('Converting SciJava modules to Python functions')
     functions = [_functionify(info) for info in ij.module().getModules() if _usable(info)]

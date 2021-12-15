@@ -4,24 +4,25 @@
 
 See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
 
-[![License](https://img.shields.io/pypi/l/napari-imagej.svg?color=green)](https://github.com/imagej/napari-imagej/raw/master/LICENSE)
+[![License](https://img.shields.io/pypi/l/napari-imagej.svg?color=green)](https://github.com/imagej/napari-imagej/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-imagej.svg?color=green)](https://pypi.org/project/napari-imagej)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-imagej.svg?color=green)](https://python.org)
 [![tests](https://github.com/imagej/napari-imagej/workflows/tests/badge.svg)](https://github.com/imagej/napari-imagej/actions)
-[![codecov](https://codecov.io/gh/imagej/napari-imagej/branch/master/graph/badge.svg)](https://codecov.io/gh/imagej/napari-imagej)
+[![codecov](https://codecov.io/gh/imagej/napari-imagej/branch/main/graph/badge.svg)](https://codecov.io/gh/imagej/napari-imagej)
+[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-imagej)](https://napari-hub.org/plugins/napari-imagej)
 
 Use ImageJ functionality from napari
 
 ----------------------------------
 
-This [napari] plugin was generated with [Cookiecutter] using with [@napari]'s [cookiecutter-napari-plugin] template.
+This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
 
 <!--
 Don't miss the full getting started guide to set up your new package:
 https://github.com/napari/cookiecutter-napari-plugin#getting-started
 
 and review the napari docs for plugin developers:
-https://napari.org/docs/plugins/index.html
+https://napari.org/plugins/stable/index.html
 -->
 
 ## Installation
@@ -30,6 +31,13 @@ You can install `napari-imagej` via [pip]:
 
     pip install napari-imagej
 
+
+
+To install latest development version :
+
+    pip install git+https://github.com/imagej/napari-imagej.git
+
+
 ## Contributing
 
 Contributions are very welcome. Tests can be run with [tox], please ensure
@@ -37,7 +45,7 @@ the coverage at least stays the same before you submit a pull request.
 
 ## License
 
-Distributed under the terms of the [MIT] license,
+Distributed under the terms of the [BSD-3] license,
 "napari-imagej" is free and open source software
 
 ## Issues
@@ -54,7 +62,9 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [Apache Software License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [cookiecutter-napari-plugin]: https://github.com/napari/cookiecutter-napari-plugin
+
 [file an issue]: https://github.com/imagej/napari-imagej/issues
+
 [napari]: https://github.com/napari/napari
 [tox]: https://tox.readthedocs.io/en/latest/
 [pip]: https://pypi.org/project/pip/

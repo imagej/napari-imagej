@@ -1,0 +1,11 @@
+name: napari-imagej
+display_name: napari-imagej
+contributions:
+  commands:
+    - id: napari-imagej.func
+      python_name: napari_imagej:napari_experimental_provide_function
+      title: Run ImageJ2 commands
+  widgets:
+    - command: napari-imagej.func
+      display_name: ImageJ2
+      autogenerate: true # <-- will wrap my_typed_function with magicgui
