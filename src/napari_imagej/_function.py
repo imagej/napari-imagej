@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 import os, re
 import imagej
 from scyjava import config, jimport
+from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem
 
 import logging
 logger = logging.getLogger(__name__)
@@ -23,6 +24,10 @@ logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init()
 logger.debug(f'Initialized at version {ij.getVersion()}')
+
+
+config.add_repositories({'scijava.public': 'https://maven.scijava.org/content/groups/public'})
+config.endpoints.append('org.scijava:scijava-search:1.0.0')
 
 _ptypes = {
     # Primitives.
@@ -143,3 +148,62 @@ def napari_experimental_provide_function():
     functions = [_functionify(info) for info in ij.module().getModules() if _usable(info)]
     # TODO: Sort by menu weight rather than function name.
     return sorted(functions, key=lambda f: f.__name__)
+
+class ExampleQWidget(QWidget):
+
+    def __init__(self, napari_viewer):
+        super().__init__()
+        self.viewer = napari_viewer
+
+        self.setLayout(QVBoxLayout())
+
+        ## Search Bar
+        searchWidget = QWidget()
+        searchWidget.setLayout(QHBoxLayout())
+
+        searchbar = QLineEdit()
+        searchbar.textChanged.connect(self._search)
+        searchWidget.layout().addWidget(searchbar)
+        
+        btn = QPushButton("Search")
+        btn.clicked.connect(self._on_click)
+        searchWidget.layout().addWidget(btn)
+
+        self.layout().addWidget(searchWidget)
+
+        self.searcher = self._generate_searcher()
+
+        ## Results box
+        labels = ['Module: ']
+        self.resultSize = 12
+        self.tableWidget = QTableWidget(self.resultSize, len(labels))
+        self.tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tableWidget.setHorizontalHeaderLabels(labels)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.tableWidget.verticalHeader().hide()
+        self.tableWidget.setShowGrid(False)
+        self.layout().addWidget(self.tableWidget)
+
+    def _generate_searcher(self):
+        pluginService = ij.get('org.scijava.plugin.PluginService')
+        moduleServiceCls = jimport('org.scijava.search.module.ModuleSearcher')
+        searcherCls = jimport('org.scijava.search.Searcher')
+        info = pluginService.getPlugin(moduleServiceCls, searcherCls)
+        searcher = info.createInstance()
+        ij.context().inject(searcher)
+        return searcher
+
+    def _on_click(self):
+        print("napari has", len(self.viewer.layers), "layers")
+
+    def _search(self, text):
+        # TODO: Consider adding a button to toggle fuzziness
+        # TODO: This is VERY SLOW
+        breakpoint()
+        results = self.searcher.search(text, True)
+        py_results = ij.py.from_java(results)
+        print(py_results)
+        # for i in range(len(py_results)):
+        #     self.tableWidget.setItem(i, 0, QTableWidgetItem(ij.py.from_java(py_results[i].name())))
+        # for i in range(len(py_results), self.resultSize):
+        #     self.tableWidget.setItem(i, 0, QTableWidgetItem(""))
