@@ -14,20 +14,19 @@ if TYPE_CHECKING:
 import os, re
 import imagej
 from scyjava import config, jimport
-from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem
+from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem, QLabel
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) #TEMP
 
+# config.add_repositories({'scijava.public': 'https://maven.scijava.org/content/groups/public'})
+# config.endpoints.append('org.scijava:scijava-common:2.87.1')
+
 logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init()
 logger.debug(f'Initialized at version {ij.getVersion()}')
-
-
-config.add_repositories({'scijava.public': 'https://maven.scijava.org/content/groups/public'})
-config.endpoints.append('org.scijava:scijava-search:1.0.0')
 
 _ptypes = {
     # Primitives.
@@ -160,29 +159,45 @@ class ExampleQWidget(QWidget):
         ## Search Bar
         searchWidget = QWidget()
         searchWidget.setLayout(QHBoxLayout())
-
-        searchbar = QLineEdit()
-        searchbar.textChanged.connect(self._search)
-        searchWidget.layout().addWidget(searchbar)
+        searchWidget.layout().addWidget(self._generate_searchbar())
         
-        btn = QPushButton("Search")
-        btn.clicked.connect(self._on_click)
-        searchWidget.layout().addWidget(btn)
+        # TODO: Do we want a button?
+        # btn = QPushButton("Search")
+        # btn.clicked.connect(self._on_click)
+        # searchWidget.layout().addWidget(btn)
 
         self.layout().addWidget(searchWidget)
 
         self.searcher = self._generate_searcher()
+        self.searchService = self._generate_search_service()
 
         ## Results box
         labels = ['Module: ']
-        self.resultSize = 12
-        self.tableWidget = QTableWidget(self.resultSize, len(labels))
+        self.results = []
+        self.maxResults = 12
+        self.tableWidget = QTableWidget(self.maxResults, len(labels))
         self.tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tableWidget.setHorizontalHeaderLabels(labels)
         self.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.tableWidget.verticalHeader().hide()
         self.tableWidget.setShowGrid(False)
+        self.tableWidget.cellClicked.connect(self._highlight_module)
         self.layout().addWidget(self.tableWidget)
+
+        ## Module highlighter
+        self.focus_widget = QWidget()
+        self.focus_widget.setLayout(QVBoxLayout())
+        self.focused_module = QLabel()
+        self.focus_widget.layout().addWidget(self.focused_module)
+        self.focused_module.setText("Display Module Here")
+        self.layout().addWidget(self.focus_widget)
+        self.focused_action_buttons = []
+
+    def _generate_searchbar(self):
+        searchbar = QLineEdit()
+        searchbar.textChanged.connect(self._search)
+        # TODO: On a Return, we might just want to select the top result
+        return searchbar
 
     def _generate_searcher(self):
         pluginService = ij.get('org.scijava.plugin.PluginService')
@@ -193,17 +208,41 @@ class ExampleQWidget(QWidget):
         ij.context().inject(searcher)
         return searcher
 
+    def _generate_search_service(self):
+        return ij.get('org.scijava.search.SearchService')
+
     def _on_click(self):
         print("napari has", len(self.viewer.layers), "layers")
 
     def _search(self, text):
         # TODO: Consider adding a button to toggle fuzziness
-        # TODO: This is VERY SLOW
         breakpoint()
-        results = self.searcher.search(text, True)
-        py_results = ij.py.from_java(results)
-        print(py_results)
-        # for i in range(len(py_results)):
-        #     self.tableWidget.setItem(i, 0, QTableWidgetItem(ij.py.from_java(py_results[i].name())))
-        # for i in range(len(py_results), self.resultSize):
-        #     self.tableWidget.setItem(i, 0, QTableWidgetItem(""))
+        self.results = self.searcher.search(text, True)
+        for i in range(len(self.results)):
+            name = ij.py.from_java(self.results[i].name())
+            self.tableWidget.setItem(i, 0, QTableWidgetItem(name))
+        for i in range(len(self.results), self.maxResults):
+            self.tableWidget.setItem(i, 0, QTableWidgetItem(""))
+
+    def _highlight_module(self, row: int, col: int):
+        # Print highlighted module
+        name = ij.py.from_java(self.results[row].name())
+        self.focused_module.setText(name)
+
+        # Create buttons for each action
+        self.focused_actions = self.searchService.actions(self.results[row])
+        activated_actions = len(self.focused_action_buttons)
+        # Hide buttons if we have more than needed
+        while activated_actions > len(self.focused_actions):
+            activated_actions = activated_actions - 1
+            self.focused_action_buttons[activated_actions].hide()
+        # Create buttons if we need more than we have
+        while len(self.focused_action_buttons) < len(self.focused_actions):
+            button = QPushButton()
+            self.focused_action_buttons.append(button)
+            self.focus_widget.layout().addWidget(button)
+        # Rename buttons to reflect focused module's actions
+        for i in range(len(self.focused_actions)):
+            action_name = ij.py.from_java(self.focused_actions[i].toString())
+            self.focused_action_buttons[i].setText(action_name)
+            self.focused_action_buttons[i].show()
