@@ -6,7 +6,7 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 
 Replace code below according to your needs.
 """
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     import napari
@@ -17,14 +17,16 @@ from scyjava import config, jimport
 from collections.abc import Mapping
 from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem, QLabel
 from jpype import JObject, JClass, JProxy
-from napari_imagej._preprocessor import NapariPreprocessor
+import magicgui
+from napari import Viewer
 
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) #TEMP
 
-# config.add_repositories({'scijava.public': 'https://maven.scijava.org/content/groups/public'})
-# config.endpoints.append('org.scijava:scijava-common:2.87.1')
+# TEMP: Avoid the issues caused by https://github.com/imagej/pyimagej/issues/160
+config.add_repositories({'scijava.public': 'https://maven.scijava.org/content/groups/public'})
+config.endpoints.append('io.scif:scifio:0.43.1')
 
 logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
@@ -38,20 +40,10 @@ getClass = Object.class_.getMethod('getClass')
 def which_class(o):
     return getClass.invoke(o)
 
-# PluginInfo = jimport('org.scijava.plugin.PluginInfo')
-# PreprocessorPlugin = jimport('org.scijava.module.process.PreprocessorPlugin')
-# JNapariPreprocessor = which_class(NapariPreprocessor())
-# napari_preprocessor_info = PluginInfo(JNapariPreprocessor, PreprocessorPlugin)
-# pluginService = ij.plugin()
-# pluginService.addPlugin(napari_preprocessor_info)
-
-preprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PreprocessorPlugin')
-napari_preprocessor = NapariPreprocessor()
-napari_preprocessor.context = ij.context()
-preprocessors.add(napari_preprocessor)
-
-postprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PostprocessorPlugin')
-
+PreprocessorPlugin = jimport('org.scijava.module.process.PreprocessorPlugin')
+PostprocessorPlugin = jimport('org.scijava.module.process.PostprocessorPlugin')
+InputHarvester = jimport('org.scijava.widget.InputHarvester')
+LoadInputsPreprocessor = jimport('org.scijava.module.process.LoadInputsPreprocessor')
 
 _ptypes = {
     # Primitives.
@@ -87,6 +79,7 @@ _ptypes = {
     jimport('net.imglib2.type.numeric.RealType'):             float,
     jimport('net.imglib2.type.numeric.ComplexType'):          complex,
     jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
+    jimport('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
     jimport('net.imglib2.roi.geom.real.PointMask'):           'napari.types.PointsData',
     jimport('net.imglib2.roi.geom.real.RealPointCollection'): 'napari.types.PointsData',
     jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.types.LabelsData',
@@ -116,19 +109,37 @@ def _return_type(info):
     return dict
 
 
-def _usable(info):
-    #if not info.canRunHeadless(): return False
-    menu_path = info.getMenuPath()
-    return menu_path is not None and len(menu_path) > 0
-
-
 # Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
 
-def _functionify(info):
-    def run_module(**kwargs):
-        args = kwargs #locals()
+def _resolve_remaining_inputs(module, info, postprocessors) -> Callable:
+    unresolved_inputs = list(filter(lambda i: not module.isResolved(i.getName()), info.inputs()))
+    # HACK: Specifically w.r.t. Ops, the Module can create optional, mutated inputs.
+    unresolved_inputs = list(filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved_inputs))
+    print("Unresolved: ", [(i.getName(), i.getType()) for i in unresolved_inputs])
+    print("All: ", [(i.getName(), i.getType()) for i in info.inputs()])
+    def run_module(*kwargs):
+        args = ij.py.jargs(*kwargs)
+        print(args)
+        # resolve remaining inputs
+        for i in range(len(args)):
+            name = unresolved_inputs[i].getName()
+            obj = args[i]
+            module.setInput(name, obj)
+        
+        # sanity check: ensure all inputs resolved
+        for input in info.inputs():
+            if not module.isInputResolved(input.getName()):
+                print("Input ", input.getName(), ' is not resolved!')
+
+        # run module
         logger.debug(f'run_module: {run_module.__qualname__}({args}) -- {info.getIdentifier()}')
-        m = ij.module().run(info, True, ij.py.jargs(args)).get()
+        module.run()
+
+        # postprocess
+        for postprocessor in postprocessors:
+            postprocessor.process(module)
+
+        # get output
         logger.debug(f'run_module: execution complete')
         outputs = ij.py.from_java(m.getOutputs())
         result = outputs.popitem()[1] if len(outputs) == 1 else outputs
@@ -141,7 +152,7 @@ def _functionify(info):
     run_module.__qualname__ = menu_string
 
     # Rewrite the function signature to match the module inputs.
-    from inspect import signature, Parameter
+    from inspect import signature, Parameter, Signature
     try:
         sig = signature(run_module)
         run_module.__signature__ = sig.replace(parameters=[
@@ -150,14 +161,14 @@ def _functionify(info):
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=_ptype(i.getType())
             )
-            for i in info.inputs()
+            for i in unresolved_inputs
         ], return_annotation=_return_type(info))
     except Exception as e:
         print(e)
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {str(i.getName()): _ptype(i.getType()) for i in info.inputs()}
+    type_hints = {str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs}
     out_types = [o.getType() for o in info.outputs()]
     type_hints['return'] = _ptype(out_types[0]) if len(out_types) == 1 else dict
     run_module.__annotation__ = type_hints
@@ -166,15 +177,9 @@ def _functionify(info):
     return run_module
 
 
-def napari_experimental_provide_function():
-    logger.debug('Converting SciJava modules to Python functions')
-    functions = [_functionify(info) for info in ij.module().getModules() if _usable(info)]
-    # TODO: Sort by menu weight rather than function name.
-    return sorted(functions, key=lambda f: f.__name__)
-
 class ExampleQWidget(QWidget):
 
-    def __init__(self, napari_viewer):
+    def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.viewer = napari_viewer
 
@@ -185,11 +190,6 @@ class ExampleQWidget(QWidget):
         searchWidget.setLayout(QHBoxLayout())
         searchWidget.layout().addWidget(self._generate_searchbar())
         
-        # TODO: Do we want a button?
-        # btn = QPushButton("Search")
-        # btn.clicked.connect(self._on_click)
-        # searchWidget.layout().addWidget(btn)
-
         self.layout().addWidget(searchWidget)
 
         self.searcher = self._generate_searcher()
@@ -220,7 +220,7 @@ class ExampleQWidget(QWidget):
     def _generate_searchbar(self):
         searchbar = QLineEdit()
         searchbar.textChanged.connect(self._search)
-        # TODO: On a Return, we might just want to select the top result
+        searchbar.returnPressed.connect(lambda :self._highlight_module(0, 0))
         return searchbar
 
     def _generate_searcher(self):
@@ -269,5 +269,45 @@ class ExampleQWidget(QWidget):
         for i in range(len(self.focused_actions)):
             action_name = ij.py.from_java(self.focused_actions[i].toString())
             self.focused_action_buttons[i].setText(action_name)
-            self.focused_action_buttons[i].clicked.connect(lambda : ij.module().run(self.results[row].info(), preprocessors, postprocessors, JObject({}, JClass('java.util.Map'))))
+            if action_name == "Run":
+                self.focused_action_buttons[i].clicked.connect(lambda : self._run_module(self.results[row].info()))
+            else: 
+                preprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PreprocessorPlugin')
+                postprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PostprocessorPlugin')
+                self.focused_action_buttons[i].clicked.connect(lambda : ij.module().run(self.results[row].info(), preprocessors, postprocessors, JObject({}, JClass('java.util.Map'))))
             self.focused_action_buttons[i].show()
+    
+    def _run_module(self, moduleInfo):
+        logging.debug('Creating module...')
+        module = ij.module().createModule(moduleInfo)
+
+        self._preprocess_module(module)
+
+        # preprocess using napari GUI
+        print('Processing...')
+        postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
+        func = _resolve_remaining_inputs(module, moduleInfo, postprocessors)
+        self.viewer.window.add_function_widget(func)
+    
+    def _preprocess_module(self, module):
+        # preprocess using plugin preprocessors
+        logging.debug('Preprocessing...')
+        preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
+        # for i in preprocessors:
+        #     print(i)
+        for preprocessor in preprocessors:
+            if isinstance(preprocessor, InputHarvester) or isinstance(preprocessor, LoadInputsPreprocessor):
+                # STOP AT INPUT HARVESTING
+                print('Found an Input Harvester; delegating input fulfillment to user')
+                break
+            else:
+                preprocessor.process(module)
+        
+
+
+
+
+
+
+
+
