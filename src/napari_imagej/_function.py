@@ -14,7 +14,10 @@ if TYPE_CHECKING:
 import os, re
 import imagej
 from scyjava import config, jimport
+from collections.abc import Mapping
 from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem, QLabel
+from jpype import JObject, JClass, JProxy
+from napari_imagej._preprocessor import NapariPreprocessor
 
 import logging
 logger = logging.getLogger(__name__)
@@ -25,8 +28,30 @@ logger.setLevel(logging.DEBUG) #TEMP
 
 logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
-ij = imagej.init()
+ij = imagej.init(headless=False)
+ij.log().setLevel(4)
 logger.debug(f'Initialized at version {ij.getVersion()}')
+
+Object = jimport('java.lang.Object')
+getClass = Object.class_.getMethod('getClass')
+
+def which_class(o):
+    return getClass.invoke(o)
+
+# PluginInfo = jimport('org.scijava.plugin.PluginInfo')
+# PreprocessorPlugin = jimport('org.scijava.module.process.PreprocessorPlugin')
+# JNapariPreprocessor = which_class(NapariPreprocessor())
+# napari_preprocessor_info = PluginInfo(JNapariPreprocessor, PreprocessorPlugin)
+# pluginService = ij.plugin()
+# pluginService.addPlugin(napari_preprocessor_info)
+
+preprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PreprocessorPlugin')
+napari_preprocessor = NapariPreprocessor()
+napari_preprocessor.context = ij.context()
+preprocessors.add(napari_preprocessor)
+
+postprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PostprocessorPlugin')
+
 
 _ptypes = {
     # Primitives.
@@ -74,7 +99,6 @@ _ptypes = {
     # ImageJ2 types.
     jimport('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
 }
-
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
@@ -245,4 +269,5 @@ class ExampleQWidget(QWidget):
         for i in range(len(self.focused_actions)):
             action_name = ij.py.from_java(self.focused_actions[i].toString())
             self.focused_action_buttons[i].setText(action_name)
+            self.focused_action_buttons[i].clicked.connect(lambda : ij.module().run(self.results[row].info(), preprocessors, postprocessors, JObject({}, JClass('java.util.Map'))))
             self.focused_action_buttons[i].show()
