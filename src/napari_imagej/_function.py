@@ -45,6 +45,8 @@ PostprocessorPlugin = jimport('org.scijava.module.process.PostprocessorPlugin')
 InputHarvester = jimport('org.scijava.widget.InputHarvester')
 LoadInputsPreprocessor = jimport('org.scijava.module.process.LoadInputsPreprocessor')
 
+Initializable = jimport('net.imagej.ops.Initializable')
+
 _ptypes = {
     # Primitives.
     jimport('[B'):                                            int,
@@ -124,7 +126,9 @@ def _resolve_remaining_inputs(module, info, postprocessors) -> Callable:
         for i in range(len(args)):
             name = unresolved_inputs[i].getName()
             obj = args[i]
+            print('Resolving ', name, ' with ', obj)
             module.setInput(name, obj)
+            module.resolveInput(name)
         
         # sanity check: ensure all inputs resolved
         for input in info.inputs():
@@ -133,15 +137,30 @@ def _resolve_remaining_inputs(module, info, postprocessors) -> Callable:
 
         # run module
         logger.debug(f'run_module: {run_module.__qualname__}({args}) -- {info.getIdentifier()}')
-        module.run()
+        try:
+            module.initialize()
+            # HACK: module.initialize() does not seem to call Initializable.initialize()
+            if isinstance(module.getDelegateObject(), Initializable):
+                module.getDelegateObject().initialize()
+        except Exception as e:
+            print("Initialization Error")
+            print(e.stacktrace())
 
+        try:
+            module.run()
+        except Exception as e:
+            print("Run Error")
+            print(e.stacktrace())
         # postprocess
         for postprocessor in postprocessors:
             postprocessor.process(module)
 
+        global fun
+        fun = module
+
         # get output
         logger.debug(f'run_module: execution complete')
-        outputs = ij.py.from_java(m.getOutputs())
+        outputs = ij.py.from_java(module.getOutputs())
         result = outputs.popitem()[1] if len(outputs) == 1 else outputs
         logger.debug(f'run_module: result = {result}')
         return result
@@ -301,6 +320,7 @@ class ExampleQWidget(QWidget):
                 print('Found an Input Harvester; delegating input fulfillment to user')
                 break
             else:
+                print(preprocessor)
                 preprocessor.process(module)
         
 
