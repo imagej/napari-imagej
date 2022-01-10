@@ -287,7 +287,9 @@ class ExampleQWidget(QWidget):
         # Rename buttons to reflect focused module's actions
         for i in range(len(self.focused_actions)):
             action_name = ij.py.from_java(self.focused_actions[i].toString())
+            self.focused_action_buttons[i].show()
             self.focused_action_buttons[i].setText(action_name)
+            self.focused_action_buttons[i].disconnect()
             if action_name == "Run":
                 self.focused_action_buttons[i].clicked.connect(lambda : self._run_module(self.results[row].info()))
             else: 
