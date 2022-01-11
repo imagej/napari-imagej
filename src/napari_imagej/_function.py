@@ -6,6 +6,7 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 
 Replace code below according to your needs.
 """
+from atexit import unregister
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScro
 from jpype import JObject, JClass, JProxy
 import magicgui
 from napari import Viewer
+from napari_imagej._ptypes import generate_ptypes
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,59 +43,14 @@ def which_class(o):
     return getClass.invoke(o)
 
 PreprocessorPlugin = jimport('org.scijava.module.process.PreprocessorPlugin')
+preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
 PostprocessorPlugin = jimport('org.scijava.module.process.PostprocessorPlugin')
+postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
 InputHarvester = jimport('org.scijava.widget.InputHarvester')
 LoadInputsPreprocessor = jimport('org.scijava.module.process.LoadInputsPreprocessor')
-
 Initializable = jimport('net.imagej.ops.Initializable')
 
-_ptypes = {
-    # Primitives.
-    jimport('[B'):                                            int,
-    jimport('[S'):                                            int,
-    jimport('[I'):                                            int,
-    jimport('[J'):                                            int,
-    jimport('[F'):                                            float,
-    jimport('[D'):                                            float,
-    jimport('[Z'):                                            bool,
-    jimport('[C'):                                            str,
-    # Primitive wrappers.
-    jimport('java.lang.Boolean'):                             bool,
-    jimport('java.lang.Character'):                           str,
-    jimport('java.lang.Byte'):                                int,
-    jimport('java.lang.Short'):                               int,
-    jimport('java.lang.Integer'):                             int,
-    jimport('java.lang.Long'):                                int,
-    jimport('java.lang.Float'):                               float,
-    jimport('java.lang.Double'):                              float,
-    # Core library types.
-    jimport('java.math.BigInteger'):                          int,
-    jimport('java.lang.String'):                              str,
-    jimport('java.lang.Enum'):                                'enum.Enum',
-    jimport('java.io.File'):                                  'pathlib.PosixPath',
-    jimport('java.nio.file.Path'):                            'pathlib.PosixPath',
-    jimport('java.util.Date'):                                'datetime.datetime',
-    # SciJava types.
-    jimport('org.scijava.table.Table'):                       'pandas.DataFrame',
-    # ImgLib2 types.
-    jimport('net.imglib2.type.BooleanType'):                  bool,
-    jimport('net.imglib2.type.numeric.IntegerType'):          int,
-    jimport('net.imglib2.type.numeric.RealType'):             float,
-    jimport('net.imglib2.type.numeric.ComplexType'):          complex,
-    jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
-    jimport('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
-    jimport('net.imglib2.roi.geom.real.PointMask'):           'napari.types.PointsData',
-    jimport('net.imglib2.roi.geom.real.RealPointCollection'): 'napari.types.PointsData',
-    jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.types.LabelsData',
-    jimport('net.imglib2.roi.geom.real.Line'):                'napari.types.ShapesData',
-    jimport('net.imglib2.roi.geom.real.Box'):                 'napari.types.ShapesData',
-    jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.types.ShapesData',
-    jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.types.ShapesData',
-    jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.types.ShapesData',
-    jimport('net.imglib2.display.ColorTable'):                'vispy.color.Colormap',
-    # ImageJ2 types.
-    jimport('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
-}
+_ptypes = generate_ptypes()
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
@@ -113,87 +70,127 @@ def _return_type(info):
 
 # Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
 
-def _resolve_remaining_inputs(module, info, postprocessors) -> Callable:
-    unresolved_inputs = list(filter(lambda i: not module.isResolved(i.getName()), info.inputs()))
+def _preprocess_non_inputs(module):
+    # preprocess using plugin preprocessors
+    logging.debug('Preprocessing...')
+    # for i in preprocessors:
+    for preprocessor in preprocessors:
+        if isinstance(preprocessor, InputHarvester) or isinstance(preprocessor, LoadInputsPreprocessor):
+            # STOP AT INPUT HARVESTING
+            break
+        else:
+            print(preprocessor)
+            preprocessor.process(module)
+
+def _preprocess_remaining_inputs(module, inputs, unresolved_inputs, user_resolved_inputs):
+    resolved_java_args = ij.py.jargs(*user_resolved_inputs)
+    # resolve remaining inputs
+    for i in range(len(resolved_java_args)):
+        name = unresolved_inputs[i].getName()
+        obj = resolved_java_args[i]
+        print('Resolving ', name, ' with ', obj)
+        module.setInput(name, obj)
+        module.resolveInput(name)
+
+    # sanity check: ensure all inputs resolved
+    for input in inputs:
+        if not module.isInputResolved(input.getName()):
+            print("Input ", input.getName(), ' is not resolved!')
+    
+    return resolved_java_args
+
+
+def _filter_unresolved_inputs(module, inputs):
+    unresolved_inputs = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
     # HACK: Specifically w.r.t. Ops, the Module can create optional, mutated inputs.
     unresolved_inputs = list(filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved_inputs))
-    print("Unresolved: ", [(i.getName(), i.getType()) for i in unresolved_inputs])
-    print("All: ", [(i.getName(), i.getType()) for i in info.inputs()])
-    def run_module(*kwargs):
-        args = ij.py.jargs(*kwargs)
-        print(args)
-        # resolve remaining inputs
-        for i in range(len(args)):
-            name = unresolved_inputs[i].getName()
-            obj = args[i]
-            print('Resolving ', name, ' with ', obj)
-            module.setInput(name, obj)
-            module.resolveInput(name)
-        
-        # sanity check: ensure all inputs resolved
-        for input in info.inputs():
-            if not module.isInputResolved(input.getName()):
-                print("Input ", input.getName(), ' is not resolved!')
+    return unresolved_inputs
 
-        # run module
-        logger.debug(f'run_module: {run_module.__qualname__}({args}) -- {info.getIdentifier()}')
-        try:
-            module.initialize()
-            # HACK: module.initialize() does not seem to call Initializable.initialize()
-            if isinstance(module.getDelegateObject(), Initializable):
-                module.getDelegateObject().initialize()
-        except Exception as e:
-            print("Initialization Error")
-            print(e.stacktrace())
+def _initialize_module(module):
+    try:
+        module.initialize()
+        # HACK: module.initialize() does not seem to call Initializable.initialize()
+        if isinstance(module.getDelegateObject(), Initializable):
+            module.getDelegateObject().initialize()
+    except Exception as e:
+        print("Initialization Error")
+        print(e.stacktrace())
 
+def _run_module(module):
         try:
             module.run()
         except Exception as e:
             print("Run Error")
             print(e.stacktrace())
-        # postprocess
-        for postprocessor in postprocessors:
-            postprocessor.process(module)
 
-        global fun
-        fun = module
+def _postprocess_module(module):
+    for postprocessor in postprocessors:
+        postprocessor.process(module)
 
-        # get output
-        logger.debug(f'run_module: execution complete')
-        outputs = ij.py.from_java(module.getOutputs())
-        result = outputs.popitem()[1] if len(outputs) == 1 else outputs
-        logger.debug(f'run_module: result = {result}')
-        return result
-
-    menu_string = " > ".join(str(p) for p in info.getMenuPath())
-    run_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
-    run_module.__name__ = re.sub('[^a-zA-Z0-9_]', '_', menu_string)
-    run_module.__qualname__ = menu_string
-
-    # Rewrite the function signature to match the module inputs.
+def _modify_function_signature(function, inputs, module_info):
     from inspect import signature, Parameter, Signature
     try:
-        sig = signature(run_module)
-        run_module.__signature__ = sig.replace(parameters=[
+        sig = signature(function)
+        function.__signature__ = sig.replace(parameters=[
             Parameter(
                 str(i.getName()),
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=_ptype(i.getType())
             )
-            for i in unresolved_inputs
-        ], return_annotation=_return_type(info))
+            for i in inputs
+        ], return_annotation=_return_type(module_info))
     except Exception as e:
         print(e)
+
+def _module_output(module):
+    outputs = ij.py.from_java(module.getOutputs())
+    return outputs.popitem()[1] if len(outputs) == 1 else outputs
+
+def _functionify_module_execution(module, info) -> Callable:
+    # Run preprocessors until we hit input harvesting
+    _preprocess_non_inputs(module)
+
+    # Determine which inputs must be resolved by the user
+    unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
+
+    # Package the rest of the execution into a widget
+    def execute_module(*user_resolved_inputs):
+
+        # Resolve remaining inputs
+        resolved_java_args = _preprocess_remaining_inputs(module, info.inputs(), unresolved_inputs, user_resolved_inputs)
+        
+        # run module
+        logger.debug(f'run_module: {execute_module.__qualname__}({resolved_java_args}) -- {info.getIdentifier()}')
+        _initialize_module(module)
+        _run_module(module)
+
+        # postprocess
+        _postprocess_module(module)
+
+        # get output
+        logger.debug(f'run_module: execution complete')
+        result = _module_output(module)
+        logger.debug(f'run_module: result = {result}')
+        return result
+
+    # Format napari metadata
+    menu_string = " > ".join(str(p) for p in info.getMenuPath())
+    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
+    execute_module.__name__ = re.sub('[^a-zA-Z0-9_]', '_', menu_string)
+    execute_module.__qualname__ = menu_string
+
+    # Rewrite the function signature to match the module inputs.
+    _modify_function_signature(execute_module, unresolved_inputs, info)
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs}
     out_types = [o.getType() for o in info.outputs()]
     type_hints['return'] = _ptype(out_types[0]) if len(out_types) == 1 else dict
-    run_module.__annotation__ = type_hints
+    execute_module.__annotation__ = type_hints
 
-    run_module._info = info
-    return run_module
+    execute_module._info = info
+    return execute_module
 
 
 class ExampleQWidget(QWidget):
@@ -291,39 +288,22 @@ class ExampleQWidget(QWidget):
             self.focused_action_buttons[i].setText(action_name)
             self.focused_action_buttons[i].disconnect()
             if action_name == "Run":
-                self.focused_action_buttons[i].clicked.connect(lambda : self._run_module(self.results[row].info()))
+                self.focused_action_buttons[i].clicked.connect(lambda : self._execute_module(self.results[row].info()))
             else: 
                 preprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PreprocessorPlugin')
                 postprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PostprocessorPlugin')
                 self.focused_action_buttons[i].clicked.connect(lambda : ij.module().run(self.results[row].info(), preprocessors, postprocessors, JObject({}, JClass('java.util.Map'))))
             self.focused_action_buttons[i].show()
     
-    def _run_module(self, moduleInfo):
+    def _execute_module(self, moduleInfo):
         logging.debug('Creating module...')
         module = ij.module().createModule(moduleInfo)
 
-        self._preprocess_module(module)
-
         # preprocess using napari GUI
-        print('Processing...')
-        postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
-        func = _resolve_remaining_inputs(module, moduleInfo, postprocessors)
-        self.viewer.window.add_function_widget(func)
+        logging.debug('Processing...')
+        func = _functionify_module_execution(module, moduleInfo)
+        self.viewer.window.add_function_widget(func, name=ij.py.from_java(moduleInfo.getTitle()))
     
-    def _preprocess_module(self, module):
-        # preprocess using plugin preprocessors
-        logging.debug('Preprocessing...')
-        preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
-        # for i in preprocessors:
-        #     print(i)
-        for preprocessor in preprocessors:
-            if isinstance(preprocessor, InputHarvester) or isinstance(preprocessor, LoadInputsPreprocessor):
-                # STOP AT INPUT HARVESTING
-                print('Found an Input Harvester; delegating input fulfillment to user')
-                break
-            else:
-                print(preprocessor)
-                preprocessor.process(module)
         
 
 
