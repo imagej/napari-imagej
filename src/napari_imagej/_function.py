@@ -23,7 +23,7 @@ from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScro
 from jpype import JObject, JClass, JProxy
 import magicgui
 from napari import Viewer
-from napari_imagej._ptypes import generate_ptypes
+from napari_imagej._ptypes import PTypes
 
 import logging
 logger = logging.getLogger(__name__)
@@ -52,13 +52,13 @@ InputHarvester = jimport('org.scijava.widget.InputHarvester')
 LoadInputsPreprocessor = jimport('org.scijava.module.process.LoadInputsPreprocessor')
 Initializable = jimport('net.imagej.ops.Initializable')
 
-_ptypes = generate_ptypes()
+_ptypes = PTypes()
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
-    for jtype, ptype in _ptypes.items():
+    for jtype, ptype in _ptypes.ptypes.items():
         if jtype.class_.isAssignableFrom(java_type): return ptype
-    for jtype, ptype in _ptypes.items():
+    for jtype, ptype in _ptypes.ptypes.items():
         if ij.convert().supports(java_type, jtype): return ptype
     raise ValueError(f'Unsupported Java type: {java_type}')
 
@@ -88,6 +88,7 @@ def _preprocess_remaining_inputs(module, inputs, unresolved_inputs, user_resolve
         name = unresolved_inputs[i].getName()
         obj = resolved_java_args[i]
         print('Resolving ', name, ' with ', obj)
+        print('The object was originally a ', type(user_resolved_inputs[i]))
         module.setInput(name, obj)
         module.resolveInput(name)
 
@@ -149,7 +150,7 @@ def _module_output(module):
     if not output_entry.isPresent():
         return None
     output_value = output_entry.get().getValue()
-    return ij.py.from_java(output_value)
+    return output_value
 
 
 def _functionify_module_execution(module, info) -> Callable:
@@ -176,8 +177,10 @@ def _functionify_module_execution(module, info) -> Callable:
         # get output
         logger.debug(f'run_module: execution complete')
         result = _module_output(module)
+        if not _ptypes.canNapariDisplay(result):
+            print("Result: ", result)
         logger.debug(f'run_module: result = {result}')
-        return result
+        return ij.py.from_java(result)
 
     # Format napari metadata
     menu_string = " > ".join(str(p) for p in info.getMenuPath())
