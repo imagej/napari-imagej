@@ -9,6 +9,9 @@ Replace code below according to your needs.
 from atexit import unregister
 from typing import TYPE_CHECKING, Callable
 
+from napari.utils.events.event import CallbackRef
+from xarray.core.common import C
+
 if TYPE_CHECKING:
     import napari
 
@@ -33,7 +36,6 @@ config.endpoints.append('io.scif:scifio:0.43.1')
 logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init(headless=False)
-ij.log().setLevel(4)
 logger.debug(f'Initialized at version {ij.getVersion()}')
 
 Object = jimport('java.lang.Object')
@@ -68,8 +70,6 @@ def _return_type(info):
     return dict
 
 
-# Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
-
 def _preprocess_non_inputs(module):
     # preprocess using plugin preprocessors
     logging.debug('Preprocessing...')
@@ -79,7 +79,6 @@ def _preprocess_non_inputs(module):
             # STOP AT INPUT HARVESTING
             break
         else:
-            print(preprocessor)
             preprocessor.process(module)
 
 def _preprocess_remaining_inputs(module, inputs, unresolved_inputs, user_resolved_inputs):
@@ -127,6 +126,8 @@ def _postprocess_module(module):
     for postprocessor in postprocessors:
         postprocessor.process(module)
 
+# Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
+
 def _modify_function_signature(function, inputs, module_info):
     from inspect import signature, Parameter, Signature
     try:
@@ -143,8 +144,13 @@ def _modify_function_signature(function, inputs, module_info):
         print(e)
 
 def _module_output(module):
-    outputs = ij.py.from_java(module.getOutputs())
-    return outputs.popitem()[1] if len(outputs) == 1 else outputs
+    outputs = module.getOutputs()
+    output_entry = outputs.entrySet().stream().findFirst()
+    if not output_entry.isPresent():
+        return None
+    output_value = output_entry.get().getValue()
+    return ij.py.from_java(output_value)
+
 
 def _functionify_module_execution(module, info) -> Callable:
     # Run preprocessors until we hit input harvesting
