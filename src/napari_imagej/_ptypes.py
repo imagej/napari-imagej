@@ -61,9 +61,14 @@ def generate_ptypes():
         jimport('net.imglib2.display.ColorTable'):                'vispy.color.Colormap',
     }
 
+    # ImageJ1 types.
+    _imagej1_types = {
+        jimport('ij.ImagePlus'):                                  'napari.types.ImageData'
+    }
+
     # ImageJ2 types.
     _imagej2_types = {
         jimport('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
     }
 
-    return {**_primitives, **_primitive_wrappers, **_core_library_types, **_scijava_types, **_imglib2_types, **_imagej2_types}
+    return {**_primitives, **_primitive_wrappers, **_core_library_types, **_scijava_types, **_imglib2_types, **_imagej1_types, **_imagej2_types}
