@@ -38,6 +38,7 @@ logger.debug('Initializing ImageJ2')
 config.add_option(f'-Dimagej.dir={os.getcwd()}') #TEMP
 ij = imagej.init(headless=False)
 logger.debug(f'Initialized at version {ij.getVersion()}')
+ij.log().setLevel(4)
 
 Object = jimport('java.lang.Object')
 getClass = Object.class_.getMethod('getClass')
@@ -309,9 +310,7 @@ class ImageJWidget(QWidget):
             if action_name == "Run":
                 self.focused_action_buttons[i].clicked.connect(lambda : self._execute_module(self.results[row].info()))
             else: 
-                preprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PreprocessorPlugin')
-                postprocessors = ij.plugin().getPluginsOfClass('org.scijava.module.process.PostprocessorPlugin')
-                self.focused_action_buttons[i].clicked.connect(lambda : ij.module().run(self.results[row].info(), preprocessors, postprocessors, JObject({}, JClass('java.util.Map'))))
+                self.focused_action_buttons[i].clicked.connect(self.focused_actions[i].run)
             self.focused_action_buttons[i].show()
     
     def _execute_module(self, moduleInfo):
