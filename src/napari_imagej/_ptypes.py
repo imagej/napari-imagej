@@ -109,6 +109,6 @@ class PTypes:
             **self._enums,
             **self._dates}
 
-    def canNapariDisplay(self, data):
+    def displayable_in_napari(self, data):
         keys = {**self._images, **self._points, **self._shapes, **self._surfaces, **self._labels}.keys()
         return any(filter(lambda x: isinstance(data, x), keys))

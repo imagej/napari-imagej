@@ -21,7 +21,8 @@ from scyjava import config, jimport
 from collections.abc import Mapping
 from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QScrollArea, QLineEdit, QTableWidget, QAbstractItemView, QHeaderView, QTableWidgetItem, QLabel
 from jpype import JObject, JClass, JProxy
-import magicgui
+from magicgui import magicgui
+import napari
 from napari import Viewer
 from napari_imagej._ptypes import PTypes
 
@@ -152,7 +153,6 @@ def _module_output(module):
     output_value = output_entry.get().getValue()
     return output_value
 
-
 def _functionify_module_execution(module, info) -> Callable:
     # Run preprocessors until we hit input harvesting
     _preprocess_non_inputs(module)
@@ -177,10 +177,21 @@ def _functionify_module_execution(module, info) -> Callable:
         # get output
         logger.debug(f'run_module: execution complete')
         result = _module_output(module)
-        if not _ptypes.canNapariDisplay(result):
-            print("Result: ", result)
         logger.debug(f'run_module: result = {result}')
-        return ij.py.from_java(result)
+        if not _ptypes.displayable_in_napari(result):
+
+            import pandas as pd
+            @magicgui(result_widget=True, auto_call=True)
+            def show_tabular_output() -> pd.DataFrame :
+                # return ij.py.from_java(result.getRealDouble())
+                val = ij.py.from_java(result.getRealDouble())
+                return pd.DataFrame({"Result":[val]})
+            
+            show_tabular_output.show(run=True)
+            show_tabular_output.update()
+        
+        return ij.py.from_java(result) if _ptypes.displayable_in_napari(result) else result
+
 
     # Format napari metadata
     menu_string = " > ".join(str(p) for p in info.getMenuPath())
@@ -201,8 +212,7 @@ def _functionify_module_execution(module, info) -> Callable:
     execute_module._info = info
     return execute_module
 
-
-class ExampleQWidget(QWidget):
+class ImageJWidget(QWidget):
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
