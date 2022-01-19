@@ -86,7 +86,7 @@ def _preprocess_non_inputs(module):
 def _preprocess_remaining_inputs(module, inputs, unresolved_inputs, user_resolved_inputs):
     resolved_java_args = ij.py.jargs(*user_resolved_inputs)
     # resolve remaining inputs
-    for i in range(len(resolved_java_args)):
+    for i in range(len(unresolved_inputs)):
         name = unresolved_inputs[i].getName()
         obj = resolved_java_args[i]
         print('Resolving ', name, ' with ', obj)
@@ -134,15 +134,21 @@ def _postprocess_module(module):
 def _modify_function_signature(function, inputs, module_info):
     from inspect import signature, Parameter, Signature
     try:
-        sig = signature(function)
-        function.__signature__ = sig.replace(parameters=[
+        sig: Signature = signature(function)
+        # Grab all options after the module inputs
+        module_params = [
             Parameter(
-                str(i.getName()),
-                kind=Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=_ptype(i.getType())
-            )
-            for i in inputs
-        ], return_annotation=_return_type(module_info))
+                    str(i.getName()),
+                    kind=Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=_ptype(i.getType())
+                ) for i in inputs
+        ]
+        other_params = list(sig.parameters.values())[1:]
+        all_params = module_params + other_params
+        function.__signature__ = sig.replace(
+            parameters=all_params,
+            return_annotation=_return_type(module_info)
+        )
     except Exception as e:
         print(e)
 
@@ -154,7 +160,7 @@ def _module_output(module):
     output_value = output_entry.get().getValue()
     return output_value
 
-def _functionify_module_execution(module, info) -> Callable:
+def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     # Run preprocessors until we hit input harvesting
     _preprocess_non_inputs(module)
 
@@ -162,7 +168,7 @@ def _functionify_module_execution(module, info) -> Callable:
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
 
     # Package the rest of the execution into a widget
-    def execute_module(*user_resolved_inputs):
+    def execute_module(*user_resolved_inputs, display_results_in_new_window: bool):
 
         # Resolve remaining inputs
         resolved_java_args = _preprocess_remaining_inputs(module, info.inputs(), unresolved_inputs, user_resolved_inputs)
@@ -181,15 +187,25 @@ def _functionify_module_execution(module, info) -> Callable:
         logger.debug(f'run_module: result = {result}')
         if not _ptypes.displayable_in_napari(result):
 
+            from inspect import signature, Signature
             import pandas as pd
-            @magicgui(result_widget=True, auto_call=True)
-            def show_tabular_output() -> pd.DataFrame :
-                # return ij.py.from_java(result.getRealDouble())
-                val = ij.py.from_java(result.getRealDouble())
-                return pd.DataFrame({"Result":[val]})
+            def show_tabular_output():
+                return ij.py.from_java(result.getRealDouble())
             
-            show_tabular_output.show(run=True)
-            show_tabular_output.update()
+            sig: Signature = signature(show_tabular_output)
+            print(_return_type(info))
+            show_tabular_output.__signature__ = sig.replace(
+                return_annotation=_return_type(info)
+            )
+            result_widget = magicgui(show_tabular_output, result_widget=True, auto_call=True)
+
+            if display_results_in_new_window:
+                result_widget.show(run=True)
+            else:
+                name = "Result: " + ij.py.from_java(info.getTitle())
+                print(name)
+                viewer.window.add_dock_widget(result_widget, name=name)
+            result_widget.update()
         
         return ij.py.from_java(result) if _ptypes.displayable_in_napari(result) else result
 
@@ -319,7 +335,7 @@ class ImageJWidget(QWidget):
 
         # preprocess using napari GUI
         logging.debug('Processing...')
-        func = _functionify_module_execution(module, moduleInfo)
+        func = _functionify_module_execution(module, moduleInfo, self.viewer)
         self.viewer.window.add_function_widget(func, name=ij.py.from_java(moduleInfo.getTitle()))
     
         
