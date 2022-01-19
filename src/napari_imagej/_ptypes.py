@@ -1,5 +1,6 @@
 from scyjava import jimport
 
+
 class PTypes:
     def __init__(self):
         # Numbers
@@ -109,10 +110,16 @@ class PTypes:
             **self._enums,
             **self._dates}
 
+        self._napari_layer_types = {
+            **self._images,
+            **self._points,
+            **self._shapes,
+            **self._surfaces,
+            **self._labels
+        }.keys()
+
     def displayable_in_napari(self, data):
-        keys = {**self._images, **self._points, **self._shapes, **self._surfaces, **self._labels}.keys()
-        return any(filter(lambda x: isinstance(data, x), keys))
+        return any(filter(lambda x: isinstance(data, x), self._napari_layer_types))
 
     def type_displayable_in_napari(self, type):
-        keys = {**self._images, **self._points, **self._shapes, **self._surfaces, **self._labels}.keys()
-        return type in keys
+        return type in self._napari_layer_types
