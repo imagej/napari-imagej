@@ -205,7 +205,10 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
 
     # Package the rest of the execution into a widget
-    def execute_module(*user_resolved_inputs, display_results_in_new_window: bool):
+    def execute_module(
+        *user_resolved_inputs,
+        display_results_in_new_window: bool = False
+    ):
 
         # Resolve remaining inputs
         resolved_java_args = _preprocess_remaining_inputs(
