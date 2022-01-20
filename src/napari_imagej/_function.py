@@ -8,7 +8,7 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Callable, List
+from typing import Any, Callable, Dict, Tuple
 import imagej
 from scyjava import config, jimport
 from qtpy.QtWidgets import (
@@ -25,6 +25,7 @@ from qtpy.QtWidgets import (
 )
 from magicgui import magicgui
 from napari import Viewer
+from inspect import signature, Signature, Parameter
 from napari_imagej._ptypes import PTypes
 
 import logging
@@ -52,16 +53,33 @@ def which_class(o):
     return getClass.invoke(o)
 
 
-PreprocessorPlugin = jimport("org.scijava.module.process.PreprocessorPlugin")
+PreprocessorPlugin = jimport(
+    "org.scijava.module.process.PreprocessorPlugin"
+)
+PostprocessorPlugin = jimport(
+    "org.scijava.module.process.PostprocessorPlugin"
+)
+InputHarvester = jimport(
+    "org.scijava.widget.InputHarvester"
+)
+LoadInputsPreprocessor = jimport(
+    "org.scijava.module.process.LoadInputsPreprocessor"
+)
+Initializable = jimport(
+    "net.imagej.ops.Initializable"
+)
+ModuleSearcher = jimport(
+    "org.scijava.search.module.ModuleSearcher"
+)
+Searcher = jimport(
+    "org.scijava.search.Searcher"
+)
+SearchResult = jimport(
+    "org.scijava.search.SearchResult"
+)
+
 preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
-PostprocessorPlugin = jimport("org.scijava.module.process.PostprocessorPlugin")
 postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
-InputHarvester = jimport("org.scijava.widget.InputHarvester")
-LoadInputsPreprocessor = jimport("org.scijava.module.process.LoadInputsPreprocessor")
-Initializable = jimport("net.imagej.ops.Initializable")
-ModuleSearcher = jimport("org.scijava.search.module.ModuleSearcher")
-Searcher = jimport("org.scijava.search.Searcher")
-SearchResult = jimport("org.scijava.search.SearchResult")
 
 _ptypes = PTypes()
 
@@ -130,22 +148,26 @@ def _preprocess_remaining_inputs(
 def _filter_unresolved_inputs(module, inputs):
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
-    unresolved_inputs = list(
+    unresolved = list(
         filter(lambda i: not module.isResolved(i.getName()), inputs)
     )
     # Delegate optional output construction to the module
     # We will leave those unresolved
-    unresolved_inputs = list(
-        filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved_inputs)
+    unresolved = list(
+        filter(
+            lambda i: not (i.isOutput() and not i.isRequired()),
+            unresolved
+        )
     )
-    return unresolved_inputs
+    return unresolved
 
 
 def _initialize_module(module):
     """Initializes the passed module."""
     try:
         module.initialize()
-        # HACK: module.initialize() does not seem to call Initializable.initialize()
+        # HACK: module.initialize() does not seem to call
+        # Initializable.initialize()
         if isinstance(module.getDelegateObject(), Initializable):
             module.getDelegateObject().initialize()
     except Exception as e:
@@ -170,10 +192,18 @@ def _postprocess_module(module):
 
 # Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
 
+def _napari_module_param_additions(module_info) -> Dict[str, Tuple[type, Any]]:
+    """Returns a set of parameters useful for napari functionality."""
+    # additional parameters are in the form "name": (type, default value)
+    additional_params: Dict[str, Tuple[type, Any]] = {}
+    output_item = module_info.outputs().iterator().next()
+    if not _ptypes.type_displayable_in_napari(output_item.getType()):
+        additional_params["display_results_in_new_window"] = (bool, False)
+    return additional_params
+
 
 def _modify_function_signature(function, inputs, module_info):
-    """Rewrites the passed function with type annotations for all I/O items in the module."""
-    from inspect import signature, Parameter, Signature
+    """Rewrites function with type annotations for all module I/O items."""
 
     try:
         sig: Signature = signature(function)
@@ -186,7 +216,15 @@ def _modify_function_signature(function, inputs, module_info):
             )
             for i in inputs
         ]
-        other_params = list(sig.parameters.values())[1:]
+        other_params = [
+            Parameter(
+                i[0],
+                kind=Parameter.POSITIONAL_OR_KEYWORD,
+                annotation=i[1][0],
+                default=i[1][1]
+            )
+            for i in _napari_module_param_additions(module_info).items()
+        ]
         all_params = module_params + other_params
         function.__signature__ = sig.replace(
             parameters=all_params, return_annotation=_return_type(module_info)
@@ -205,6 +243,19 @@ def _module_output(module):
     return output_value
 
 
+def _napari_specific_parameter(
+    func: Callable,
+    args: Tuple[Any],
+    param: str
+) -> Any:
+    try:
+        index = list(signature(func).parameters.keys()).index(param)
+    except ValueError:
+        return None
+
+    return args[index]
+
+
 def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
@@ -216,7 +267,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     # Package the rest of the execution into a widget
     def execute_module(
         *user_resolved_inputs,
-        display_results_in_new_window: bool = False
+        # display_results_in_new_window: bool = False
     ):
 
         # Resolve remaining inputs
@@ -239,12 +290,14 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         logger.debug("run_module: execution complete")
         result = _module_output(module)
         logger.debug(f"run_module: result = {result}")
-        if not _ptypes.displayable_in_napari(result):
-
-            from inspect import signature, Signature
-
+        display_in_window = _napari_specific_parameter(
+            execute_module,
+            user_resolved_inputs,
+            'display_results_in_new_window'
+        )
+        if display_in_window is not None:
             def show_tabular_output():
-                return ij.py.from_java(result.getRealDouble())
+                return ij.py.from_java(result)
 
             sig: Signature = signature(show_tabular_output)
             show_tabular_output.__signature__ = sig.replace(
@@ -254,16 +307,17 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
                 show_tabular_output, result_widget=True, auto_call=True
             )
 
-            if display_results_in_new_window:
+            if display_in_window:
                 result_widget.show(run=True)
             else:
                 name = "Result: " + ij.py.from_java(info.getTitle())
                 viewer.window.add_dock_widget(result_widget, name=name)
             result_widget.update()
 
-        return (
-            ij.py.from_java(result) if _ptypes.displayable_in_napari(result) else result
-        )
+        if _ptypes.displayable_in_napari(result):
+            return ij.py.from_java(result)
+        else:
+            return result
 
     # Format napari metadata
     menu_string = " > ".join(str(p) for p in info.getMenuPath())
@@ -276,12 +330,15 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs}
+    type_hints = {
+        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
+    }
     out_types = [o.getType() for o in info.outputs()]
-    type_hints["return"] = _ptype(out_types[0]) if len(out_types) == 1 else dict
-    execute_module.__annotation__ = type_hints
+    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    type_hints["return"] = return_annotation
+    execute_module.__annotation__ = type_hints  # type: ignore
 
-    execute_module._info = info
+    execute_module._info = info  # type: ignore
     return execute_module
 
 
@@ -304,7 +361,7 @@ class ImageJWidget(QWidget):
         self.searchService = self._generate_search_service()
 
         # Results box
-        self.results = []
+        self.results = []  # type: ignore
         self.tableWidget: QTableWidget = self._generate_results_widget()
         self.layout().addWidget(self.tableWidget)
 
@@ -316,7 +373,7 @@ class ImageJWidget(QWidget):
         self.focus_widget.layout().addWidget(self.focused_module_label)
         self.focused_module_label.setText("Display Module Here")
         self.layout().addWidget(self.focus_widget)
-        self.focused_action_buttons = []
+        self.focused_action_buttons = []  # type: ignore
 
     def _generate_searchbar(self) -> QLineEdit:
         searchbar = QLineEdit()
@@ -343,7 +400,10 @@ class ImageJWidget(QWidget):
         tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
         # Label the columns with labels
         tableWidget.setHorizontalHeaderLabels(labels)
-        tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        tableWidget.horizontalHeader().setSectionResizeMode(
+            0,
+            QHeaderView.Stretch
+        )
         tableWidget.verticalHeader().hide()
         tableWidget.setShowGrid(False)
         tableWidget.cellClicked.connect(self._highlight_module)
@@ -366,7 +426,7 @@ class ImageJWidget(QWidget):
             return
         # Print highlighted module
         self.focused_module = self.results[row]
-        name = ij.py.from_java(self.focused_module.name())
+        name = ij.py.from_java(self.focused_module.name())  # type: ignore
         self.focused_module_label.setText(name)
 
         # Create buttons for each action
@@ -389,7 +449,9 @@ class ImageJWidget(QWidget):
             self.focused_action_buttons[i].disconnect()
             if action_name == "Run":
                 self.focused_action_buttons[i].clicked.connect(
-                    lambda: self._execute_module(self.focused_module.info())
+                    lambda: self._execute_module(
+                        self.focused_module.info()  # type: ignore
+                    )
                 )
             else:
                 self.focused_action_buttons[i].clicked.connect(

@@ -122,4 +122,4 @@ class PTypes:
         return any(filter(lambda x: isinstance(data, x), self._napari_layer_types))
 
     def type_displayable_in_napari(self, type):
-        return type in self._napari_layer_types
+        return any(filter(lambda x: issubclass(type, x), self._napari_layer_types))
