@@ -39,19 +39,14 @@ config.add_repositories(
 )
 config.endpoints.append("io.scif:scifio:0.43.1")
 
+# Initialize ImageJ
 logger.debug("Initializing ImageJ2")
 config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
 ij = imagej.init(headless=False)
 logger.debug(f"Initialized at version {ij.getVersion()}")
 ij.log().setLevel(4)
 
-Object = jimport("java.lang.Object")
-getClass = Object.class_.getMethod("getClass")
-
-
-def which_class(o):
-    return getClass.invoke(o)
-
+# Import useful classes
 
 PreprocessorPlugin = jimport(
     "org.scijava.module.process.PreprocessorPlugin"
@@ -78,14 +73,16 @@ SearchResult = jimport(
     "org.scijava.search.SearchResult"
 )
 
+# Grab pre- and postprocessors
 preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
 postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
 
+# Create Java -> Python type mapper
 _ptypes = PTypes()
-
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
+    """Returns the Python type associated with the passed java type."""
     for jtype, ptype in _ptypes.ptypes.items():
         if jtype.class_.isAssignableFrom(java_type):
             return ptype
@@ -96,6 +93,7 @@ def _ptype(java_type):
 
 
 def _return_type(info):
+    """Returns the output type of info."""
     out_types = [o.getType() for o in info.outputs()]
     if len(out_types) == 0:
         return None
@@ -347,15 +345,16 @@ class ImageJWidget(QWidget):
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.viewer = napari_viewer
+        self._ij = ij
 
         self.setLayout(QVBoxLayout())
 
         # Search Bar
-        searchWidget: QWidget = QWidget()
-        searchWidget.setLayout(QHBoxLayout())
-        searchWidget.layout().addWidget(self._generate_searchbar())
+        self._search_widget: QWidget = QWidget()
+        self._search_widget.setLayout(QHBoxLayout())
+        self._search_widget.layout().addWidget(self._generate_searchbar())
 
-        self.layout().addWidget(searchWidget)
+        self.layout().addWidget(self._search_widget)
 
         self.searcher: QLineEdit = self._generate_searcher()
         self.searchService = self._generate_search_service()
@@ -374,6 +373,7 @@ class ImageJWidget(QWidget):
         self.focused_module_label.setText("Display Module Here")
         self.layout().addWidget(self.focus_widget)
         self.focused_action_buttons = []  # type: ignore
+
 
     def _generate_searchbar(self) -> QLineEdit:
         searchbar = QLineEdit()
