@@ -73,10 +73,6 @@ SearchResult = jimport(
     "org.scijava.search.SearchResult"
 )
 
-# Grab pre- and postprocessors
-preprocessors = ij.plugin().createInstancesOfType(PreprocessorPlugin)
-postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
-
 # Create Java -> Python type mapper
 _ptypes = PTypes()
 
@@ -102,7 +98,7 @@ def _return_type(info):
     return dict
 
 
-def _preprocess_non_inputs(module):
+def _preprocess_non_inputs(module, preprocessors):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
     logging.debug("Preprocessing...")
@@ -182,7 +178,7 @@ def _run_module(module):
         print(e.stacktrace())
 
 
-def _postprocess_module(module):
+def _postprocess_module(module, postprocessors):
     """Runs all known postprocessors on the passed module."""
     for postprocessor in postprocessors:
         postprocessor.process(module)
@@ -257,7 +253,9 @@ def _napari_specific_parameter(
 def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
-    _preprocess_non_inputs(module)
+    preprocessors = ij.plugin() \
+        .createInstancesOfType(PreprocessorPlugin)
+    _preprocess_non_inputs(module, preprocessors)
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -282,7 +280,9 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         _run_module(module)
 
         # postprocess
-        _postprocess_module(module)
+        postprocessors = ij.plugin() \
+            .createInstancesOfType(PostprocessorPlugin)
+        _postprocess_module(module, postprocessors)
 
         # get output
         logger.debug("run_module: execution complete")
