@@ -42,7 +42,7 @@ config.endpoints.append("io.scif:scifio:0.43.1")
 # Initialize ImageJ
 logger.debug("Initializing ImageJ2")
 config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
-ij = imagej.init(headless=False)
+ij = imagej.init(headless=True)
 logger.debug(f"Initialized at version {ij.getVersion()}")
 ij.log().setLevel(4)
 
