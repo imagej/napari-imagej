@@ -8,7 +8,7 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 import imagej
 from scyjava import config, jimport
 from qtpy.QtWidgets import (
@@ -48,6 +48,9 @@ ij.log().setLevel(4)
 
 # Import useful classes
 
+Collections = jimport(
+    "java.util.Collections"
+)
 PreprocessorPlugin = jimport(
     "org.scijava.module.process.PreprocessorPlugin"
 )
@@ -59,6 +62,9 @@ InputHarvester = jimport(
 )
 LoadInputsPreprocessor = jimport(
     "org.scijava.module.process.LoadInputsPreprocessor"
+)
+DisplayPostprocessor = jimport(
+    "org.scijava.display.DisplayPostprocessor"
 )
 Initializable = jimport(
     "net.imagej.ops.Initializable"
@@ -181,6 +187,11 @@ def _run_module(module):
 def _postprocess_module(module, postprocessors):
     """Runs all known postprocessors on the passed module."""
     for postprocessor in postprocessors:
+        if isinstance(postprocessor, DisplayPostprocessor):
+            # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
+            # We are going to ignore it until it behaves (see https://github.com/imagej/imagej-common/issues/100 )
+            continue
+        print('Postprocessing with ', postprocessor)
         postprocessor.process(module)
 
 
@@ -280,11 +291,10 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         _run_module(module)
 
         # postprocess
-        postprocessors = ij.plugin() \
-            .createInstancesOfType(PostprocessorPlugin)
+        postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
         _postprocess_module(module, postprocessors)
 
-        # get output
+        # t output
         logger.debug("run_module: execution complete")
         result = _module_output(module)
         logger.debug(f"run_module: result = {result}")
