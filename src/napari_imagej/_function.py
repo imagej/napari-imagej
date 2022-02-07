@@ -26,7 +26,8 @@ from qtpy.QtWidgets import (
 from magicgui import magicgui
 from napari import Viewer
 from inspect import signature, Signature, Parameter
-from napari_imagej._ptypes import PTypes
+from napari_imagej._ptypes import PTypes, NapariTypes
+from labeling.Labeling import Labeling
 
 import logging
 
@@ -46,7 +47,7 @@ config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
 # This change is waiting on a new pyimagej release
 ij = imagej.init(headless=True)
 logger.debug(f"Initialized at version {ij.getVersion()}")
-ij.log().setLevel(4)
+# ij.log().setLevel(4)
 
 # Import useful classes
 
@@ -82,7 +83,26 @@ SearchResult = jimport(
 )
 
 # Create Java -> Python type mapper
-_ptypes = PTypes()
+_ptypes: PTypes  = PTypes()
+
+# Create Python -> Napari type mapper
+_ntypes: NapariTypes = NapariTypes()
+
+def _labeling_to_layer(labeling: Labeling):
+    img, data = labeling.get_result()
+
+    label_to_pixel = {}
+    for key, value in data.labelSets.items():
+        for v in value:
+            if v not in label_to_pixel:
+                label_to_pixel[v] = []
+            label_to_pixel[v].append(int(key))
+
+    layers = (img, {"metadata": {"labeling": vars(data), "label_to_pixel": label_to_pixel}}, "labels")
+    return layers
+
+_ntypes.add_converter(Labeling, _labeling_to_layer)
+
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
@@ -325,7 +345,8 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
             result_widget.update()
 
         if _ptypes.displayable_in_napari(result):
-            return ij.py.from_java(result)
+            result = _ntypes.to_napari(ij.py.from_java(result))
+            return result
         else:
             return result
 
