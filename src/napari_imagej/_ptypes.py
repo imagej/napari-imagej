@@ -68,7 +68,7 @@ class PTypes:
 
         # Labels
         self._labels = {
-            jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.types.LayerDataTuple'
+            jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.layers.Labels'
         }
 
         # Color tables
