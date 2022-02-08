@@ -28,6 +28,7 @@ from napari import Viewer
 from inspect import signature, Signature, Parameter
 from napari_imagej._ptypes import PTypes, NapariTypes
 from labeling.Labeling import Labeling
+from napari.layers import Labels
 
 import logging
 
@@ -98,8 +99,8 @@ def _labeling_to_layer(labeling: Labeling):
                 label_to_pixel[v] = []
             label_to_pixel[v].append(int(key))
 
-    layers = (img, {"metadata": {"labeling": vars(data), "label_to_pixel": label_to_pixel}}, "labels")
-    return layers
+    layer = Labels(img, metadata={"labeling": vars(data), "label_to_pixel": label_to_pixel})
+    return layer
 
 _ntypes.add_converter(Labeling, _labeling_to_layer)
 
