@@ -10,6 +10,7 @@ import os
 import re
 from typing import Any, Callable, Dict, List, Tuple
 import imagej
+from matplotlib import container
 from scyjava import config, jimport
 from qtpy.QtWidgets import (
     QWidget,
@@ -26,7 +27,8 @@ from qtpy.QtWidgets import (
 from magicgui import magicgui
 from napari import Viewer
 from inspect import signature, Signature, Parameter
-from napari_imagej._ptypes import PTypes, NapariTypes
+from napari_imagej._ptypes import PTypes
+from napari_imagej._ntypes import NapariTypes
 from labeling.Labeling import Labeling
 from napari.layers import Labels
 
@@ -89,21 +91,6 @@ _ptypes: PTypes  = PTypes()
 # Create Python -> Napari type mapper
 _ntypes: NapariTypes = NapariTypes()
 
-def _labeling_to_layer(labeling: Labeling):
-    img, data = labeling.get_result()
-
-    label_to_pixel = {}
-    for key, value in data.labelSets.items():
-        for v in value:
-            if v not in label_to_pixel:
-                label_to_pixel[v] = []
-            label_to_pixel[v].append(int(key))
-
-    layer = Labels(img, metadata={"labeling": vars(data), "label_to_pixel": label_to_pixel})
-    return layer
-
-_ntypes.add_converter(Labeling, _labeling_to_layer)
-
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
@@ -146,7 +133,8 @@ def _preprocess_remaining_inputs(
     module, inputs, unresolved_inputs, user_resolved_inputs
 ):
     """Resolves each input in unresolved_inputs"""
-    resolved_java_args = ij.py.jargs(*user_resolved_inputs)
+    resolved_java_args = [_ntypes.from_napari(a) for a in user_resolved_inputs]
+    resolved_java_args = ij.py.jargs(*resolved_java_args)
     # resolve remaining inputs
     for i in range(len(unresolved_inputs)):
         name = unresolved_inputs[i].getName()

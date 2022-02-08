@@ -125,19 +125,3 @@ class PTypes:
 
     def type_displayable_in_napari(self, type):
         return any(filter(lambda x: issubclass(type, x), self._napari_layer_types))
-
-class NapariTypes():
-    def __init__(self):
-        self._converters : Dict[Type, Callable] = {}
-
-    def add_converter(self, key: Type, value: Callable):
-        self._converters[key] = value
-    
-    def to_napari(self, object: Any):
-        key: Type = type(object)
-        if key in self._converters:
-            converter = self._converters[key]
-            object = converter(object)
-        return object
-
-    
