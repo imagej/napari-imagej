@@ -114,10 +114,12 @@ def _return_type(info):
     return dict
 
 
-def _preprocess_non_inputs(module, preprocessors):
+def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
     logging.debug("Preprocessing...")
+    preprocessors = ij.plugin() \
+        .createInstancesOfType(PreprocessorPlugin)
     # for i in preprocessors:
     for preprocessor in preprocessors:
         if isinstance(preprocessor, InputHarvester) or isinstance(
@@ -129,12 +131,31 @@ def _preprocess_non_inputs(module, preprocessors):
             preprocessor.process(module)
 
 
+def _convert_inputs(napari_args):
+    """Converts napari inputs to java inputs"""
+    # Convert napari types to python (pyimagej) types
+    py_args = [_ntypes.from_napari(a) for a in napari_args]
+    # Convert python types to java types
+    j_args = ij.py.jargs(*py_args)
+
+    return j_args
+
+
+def _convert_output(j_result):
+    """Converts a java output to a napari output"""
+    # Convert java type to python type
+    py_result = ij.py.from_java(j_result)
+    # Convert python type to napari type
+    napari_result = _ntypes.to_napari(py_result)
+
+    return napari_result
+
+
 def _preprocess_remaining_inputs(
     module, inputs, unresolved_inputs, user_resolved_inputs
 ):
     """Resolves each input in unresolved_inputs"""
-    resolved_java_args = [_ntypes.from_napari(a) for a in user_resolved_inputs]
-    resolved_java_args = ij.py.jargs(*resolved_java_args)
+    resolved_java_args = _convert_inputs(user_resolved_inputs)
     # resolve remaining inputs
     for i in range(len(unresolved_inputs)):
         name = unresolved_inputs[i].getName()
@@ -195,8 +216,11 @@ def _run_module(module):
         print(e.stacktrace())
 
 
-def _postprocess_module(module, postprocessors):
+def _postprocess_module(module):
     """Runs all known postprocessors on the passed module."""
+    # Discover all postprocessors
+    postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
+    # Run all discovered postprocessors
     for postprocessor in postprocessors:
         if isinstance(postprocessor, DisplayPostprocessor):
             # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
@@ -271,13 +295,53 @@ def _napari_specific_parameter(
 
     return args[index]
 
+def _display_result(result: Any, info, viewer: Viewer, external: bool):
+    """Displays result in a new widget"""
+    def show_tabular_output():
+        return ij.py.from_java(result)
+
+    sig: Signature = signature(show_tabular_output)
+    show_tabular_output.__signature__ = sig.replace(
+        return_annotation=_return_type(info)
+    )
+    result_widget = magicgui(
+        show_tabular_output, result_widget=True, auto_call=True
+    )
+
+    if external:
+        result_widget.show(run=True)
+    else:
+        name = "Result: " + ij.py.from_java(info.getTitle())
+        viewer.window.add_dock_widget(result_widget, name=name)
+    result_widget.update()
+
+
+def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
+    menu_string = " > ".join(str(p) for p in info.getMenuPath())
+    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
+    execute_module.__name__ = re.sub("[^a-zA-Z0-9_]", "_", menu_string)
+    execute_module.__qualname__ = menu_string
+
+    # Rewrite the function signature to match the module inputs.
+    _modify_function_signature(execute_module, unresolved_inputs, info)
+
+    # Add the type hints as annotations metadata as well.
+    # Without this, magicgui doesn't pick up on the types.
+    type_hints = {
+        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
+    }
+    out_types = [o.getType() for o in info.outputs()]
+    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    type_hints["return"] = return_annotation
+    execute_module.__annotation__ = type_hints  # type: ignore
+
+    execute_module._info = info  # type: ignore
+
 
 def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
-    preprocessors = ij.plugin() \
-        .createInstancesOfType(PreprocessorPlugin)
-    _preprocess_non_inputs(module, preprocessors)
+    _preprocess_non_inputs(module)
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -302,63 +366,28 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         _run_module(module)
 
         # postprocess
-        postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
-        _postprocess_module(module, postprocessors)
+        _postprocess_module(module)
 
-        # t output
+        # get output
         logger.debug("run_module: execution complete")
-        result = _module_output(module)
+        j_result = _module_output(module)
+        result = _convert_output(j_result) 
         logger.debug(f"run_module: result = {result}")
-        display_in_window = _napari_specific_parameter(
+
+        # display result 
+        display_externally = _napari_specific_parameter(
             execute_module,
             user_resolved_inputs,
             'display_results_in_new_window'
         )
-        if display_in_window is not None:
-            def show_tabular_output():
-                return ij.py.from_java(result)
+        if display_externally is not None:
+            _display_result(result, info, viewer, display_externally)
 
-            sig: Signature = signature(show_tabular_output)
-            show_tabular_output.__signature__ = sig.replace(
-                return_annotation=_return_type(info)
-            )
-            result_widget = magicgui(
-                show_tabular_output, result_widget=True, auto_call=True
-            )
+        return result
 
-            if display_in_window:
-                result_widget.show(run=True)
-            else:
-                name = "Result: " + ij.py.from_java(info.getTitle())
-                viewer.window.add_dock_widget(result_widget, name=name)
-            result_widget.update()
+    # Add metadata for widget creation
+    _add_napari_metadata(execute_module, info, unresolved_inputs)
 
-        if _ptypes.displayable_in_napari(result):
-            result = _ntypes.to_napari(ij.py.from_java(result))
-            return result
-        else:
-            return result
-
-    # Format napari metadata
-    menu_string = " > ".join(str(p) for p in info.getMenuPath())
-    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
-    execute_module.__name__ = re.sub("[^a-zA-Z0-9_]", "_", menu_string)
-    execute_module.__qualname__ = menu_string
-
-    # Rewrite the function signature to match the module inputs.
-    _modify_function_signature(execute_module, unresolved_inputs, info)
-
-    # Add the type hints as annotations metadata as well.
-    # Without this, magicgui doesn't pick up on the types.
-    type_hints = {
-        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
-    }
-    out_types = [o.getType() for o in info.outputs()]
-    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
-    type_hints["return"] = return_annotation
-    execute_module.__annotation__ = type_hints  # type: ignore
-
-    execute_module._info = info  # type: ignore
     return execute_module
 
 
