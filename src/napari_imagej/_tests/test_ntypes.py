@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
+from napari.layers import Labels
 
 
 @pytest.fixture(scope="module")
@@ -35,8 +36,25 @@ def test_labeling_circular_equality(py_labeling):
     assert np.array_equal(exp_img, act_img)
 
     exp_data = vars(exp_data)
-    print(exp_data)
     act_data = vars(act_data)
-    print(act_data)
 
     assert exp_data == act_data
+
+def test_labeling_to_labels(py_labeling):
+    """Tests data equality after conversion from labeling to labels"""
+    labels: Labels = _labeling_to_layer(py_labeling)
+    # For a labeling, we need to persist image and metadata
+    exp_img, exp_data = py_labeling.get_result()
+    act_img = labels.data
+    act_data = labels.metadata["pyLabelingData"]
+    assert np.array_equal(exp_img, act_img)
+    assert exp_data == act_data
+
+def test_labels_to_labeling(py_labeling):
+    """Tests data equality after conversion from labels to labeling"""
+    labels: Labels = _labeling_to_layer(py_labeling)
+    labeling: Labeling = _layer_to_labeling(labels)
+    # For a labels, we need to persist image
+    exp_img = labels.data
+    act_img, act_data = labeling.get_result()
+    assert np.array_equal(exp_img, act_img)
