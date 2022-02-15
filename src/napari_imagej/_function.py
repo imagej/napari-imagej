@@ -10,6 +10,7 @@ import os
 import re
 from typing import Any, Callable, Dict, List, Tuple
 import imagej
+from jpype import JArray
 from matplotlib import container
 from scyjava import config, jimport, Converter, Priority, when_jvm_starts, add_java_converter, add_py_converter
 from qtpy.QtWidgets import (
@@ -30,7 +31,8 @@ from inspect import signature, Signature, Parameter
 from napari_imagej._ptypes import PTypes
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
-from napari.layers import Labels
+from napari.layers import Labels, Shapes
+import numpy as np
 
 import logging
 
@@ -59,6 +61,12 @@ Collections = jimport(
 )
 ImgLabeling = jimport(
     "net.imglib2.roi.labeling.ImgLabeling"
+)
+SuperEllipsoid = jimport(
+    'net.imglib2.roi.geom.real.SuperEllipsoid'
+)
+ClosedWritableEllipsoid = jimport(
+    'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
 )
 PreprocessorPlugin = jimport(
     "org.scijava.module.process.PreprocessorPlugin"
@@ -132,10 +140,49 @@ def _layer_to_imglabeling(layer: Labels):
     return ij.py.to_java(labeling)
 
 
+def _format_ellipse_points(pts):
+    if pts.shape[0] == 2:
+        return pts[0, :], pts[1, :]
+    center = np.mean(pts, axis=0)
+    radii = np.abs(pts[0, :] - center)
+
+    return center, radii
+
+
+def _shapes_to_realmasks(layer: Shapes):
+    """Converts a Shapes layer to a RealMask or a list of them."""
+    masks = []
+    for pts, shape_type in zip(layer.data, layer.shape_type):
+        if shape_type == 'ellipse':
+            center, radii = _format_ellipse_points(pts)
+            masks.append(ClosedWritableEllipsoid(center, radii))
+    return masks[0] if len(masks) == 1 else masks
+
+
+def _ellipsoid_to_shapes(mask: SuperEllipsoid):
+    center = mask.center().positionAsDoubleArray()
+    center = ij.py.from_java(center)
+    radii = mask.minAsDoubleArray()
+    radii = ij.py.from_java(radii)
+    for i in range(len(radii)):
+        radii[i] = mask.semiAxisLength(i)
+    data = np.zeros((len(center), 2))
+    data[0, :] = center
+    data[1, :] = radii
+    layer = Shapes()
+    layer.add_ellipses(data)
+    return layer
+    
+
 py_to_java_converters: List[Converter] = [
     Converter(
         predicate=lambda obj: isinstance(obj, Labels),
         converter=_layer_to_imglabeling,
+        priority=Priority.VERY_HIGH
+    ),
+    Converter(
+        predicate=lambda obj: isinstance(obj, Shapes),
+        converter=_shapes_to_realmasks,
         priority=Priority.VERY_HIGH
     ),
 ]
@@ -145,6 +192,11 @@ java_to_py_converters: List[Converter] = [
     Converter(
         predicate=lambda obj: isinstance(obj, ImgLabeling),
         converter=_imglabeling_to_layer,
+        priority=Priority.VERY_HIGH
+    ),
+    Converter(
+        predicate=lambda obj: isinstance(obj, SuperEllipsoid),
+        converter=_ellipsoid_to_shapes,
         priority=Priority.VERY_HIGH
     ),
 ]
