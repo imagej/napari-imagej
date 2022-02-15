@@ -54,11 +54,11 @@ class PTypes:
 
         # Shapes
         self._shapes = {
-            jimport('net.imglib2.roi.geom.real.Line'):                'napari.types.ShapesData',
-            jimport('net.imglib2.roi.geom.real.Box'):                 'napari.types.ShapesData',
-            jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.types.ShapesData',
-            jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.types.ShapesData',
-            jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.types.ShapesData',
+            jimport('net.imglib2.roi.geom.real.Line'):                'napari.layers.Shapes',
+            jimport('net.imglib2.roi.geom.real.Box'):                 'napari.layers.Shapes',
+            jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.layers.Shapes',
+            jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.layers.Shapes',
+            jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.layers.Shapes',
         }
 
         # Surfaces
