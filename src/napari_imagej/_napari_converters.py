@@ -1,5 +1,6 @@
 import os
 from typing import List
+from jpype import JArray, JDouble
 import numpy as np
 from napari.layers import Labels, Shapes
 from napari_imagej import _ntypes
@@ -57,15 +58,55 @@ def _format_ellipse_points(pts):
 
     return center, radii
 
+def arr(coords):
+    arr = JArray(JDouble)(len(coords))
+    arr[:] = coords
+    return arr
 
-def _shapes_to_realmasks(layer: Shapes):
+def _polygon_from_points(points):
+    # HACK: JPype doesn't know whether to call the float or double
+    def point_from_coords(coords):
+        arr = JArray(JDouble)(2)
+        arr[:] = coords
+        return RealPoint(arr)
+    pts = [point_from_coords(x) for x in points]
+    ptList = ArrayList(pts)
+    return ClosedWritablePolygon2D(ptList)
+
+
+def _rectangle_from_points(points):
+    # find rectangle min
+    origin = np.array([0, 0])
+    dists = [np.linalg.norm(origin - pt) for pt in points]
+    min = points[np.argmin(dists)]
+    # find rectangle max
+    min_dists = [np.linalg.norm(min - pt) for pt in points]
+    max = points[np.argmax(min_dists)]
+    # determine whether the rectangle is axis aligned
+    other = next(filter(lambda p2: not np.array_equal(min, p2) and not np.array_equal(max, p2), points), None)
+    min_diff = other - min
+    is_box = any(d == 0 for d in min_diff)
+    # Return box if axis aligned
+    if is_box:
+        return ClosedWritableBox(arr(min), arr(max))
+    # Return polygon if not
+    else:
+        return _polygon_from_points(points)
+
+
+def _shapes_to_realmasks(ij, layer: Shapes):
     """Converts a Shapes layer to a RealMask or a list of them."""
-    masks = []
+    masks = ArrayList()
     for pts, shape_type in zip(layer.data, layer.shape_type):
         if shape_type == 'ellipse':
             center, radii = _format_ellipse_points(pts)
-            masks.append(ClosedWritableEllipsoid(center, radii))
-    return masks[0] if len(masks) == 1 else masks
+            shape = ClosedWritableEllipsoid(center, radii)
+        if shape_type == 'rectangle':
+            shape = _rectangle_from_points(pts)
+        masks.add(shape)
+    rois = DefaultROITree()
+    rois.addROIs(masks)
+    return rois
 
 
 def _ellipsoid_to_shapes(ij, mask):
@@ -81,6 +122,18 @@ def _ellipsoid_to_shapes(ij, mask):
     layer = Shapes()
     layer.add_ellipses(data)
     return layer
+
+def _box_to_shapes(ij, mask):
+    min = mask.minAsDoubleArray()
+    min = ij.py.from_java(min)
+    max = mask.maxAsDoubleArray()
+    max = ij.py.from_java(max)
+    data = np.zeros((2, len(min)))
+    data[0, :] = min
+    data[1, :] = max
+    layer = Shapes()
+    layer.add_rectangles(data)
+    return layer
     
 
 def _napari_to_java_converters(ij) -> List[Converter]:
@@ -92,7 +145,7 @@ def _napari_to_java_converters(ij) -> List[Converter]:
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Shapes),
-            converter=_shapes_to_realmasks,
+            converter=lambda obj: _shapes_to_realmasks(ij, obj),
             priority=Priority.VERY_HIGH
         ),
     ]
@@ -110,6 +163,11 @@ def _java_to_napari_converters(ij) -> List[Converter]:
             converter=lambda obj: _ellipsoid_to_shapes(ij, obj),
             priority=Priority.VERY_HIGH
         ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Box),
+            converter=lambda obj: _box_to_shapes(ij, obj),
+            priority=Priority.VERY_HIGH
+        ),
     ]
 
 
@@ -120,22 +178,70 @@ def init_napari_converters(ij):
     :param ij: An ImageJ gateway
     """
     # Initialize needed classes
+    global Double
+    global ArrayList
     global LabelingIOService
+    global DefaultROITree
     global SuperEllipsoid
+    global Box
     global ImgLabeling
     global ClosedWritableEllipsoid
+    global ClosedWritablePolygon2D
+    global ClosedWritableBox
+    global RealPoint
+    global Point
+    global PointMatch
+    global RigidModel2D
+    global AffineTransform
+    global RealViews
 
+    Double = jimport(
+        'java.lang.Double'
+    )
+    ArrayList = jimport(
+        'java.util.ArrayList'
+    )
     LabelingIOService = jimport(
         'io.scif.labeling.LabelingIOService'
+    )
+    DefaultROITree = jimport(
+        'net.imagej.roi.DefaultROITree'
     )
     SuperEllipsoid = jimport(
         'net.imglib2.roi.geom.real.SuperEllipsoid'
     )
+    Box = jimport(
+        'net.imglib2.roi.geom.real.Box'
+    )
     ClosedWritableEllipsoid = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
     )
+    ClosedWritablePolygon2D = jimport(
+        'net.imglib2.roi.geom.real.ClosedWritablePolygon2D'
+    )
+    ClosedWritableBox = jimport(
+        'net.imglib2.roi.geom.real.ClosedWritableBox'
+    )
     ImgLabeling = jimport(
         'net.imglib2.roi.labeling.ImgLabeling'
+    )
+    RealPoint = jimport(
+        'net.imglib2.RealPoint'
+    )
+    Point = jimport(
+        'mpicbg.models.Point'
+    )
+    PointMatch = jimport(
+        'mpicbg.models.PointMatch'
+    )
+    RigidModel2D = jimport(
+        'mpicbg.models.RigidModel2D'
+    )
+    AffineTransform = jimport(
+        'net.imglib2.realtransform.AffineTransform'
+    )
+    RealViews = jimport(
+        'net.imglib2.realtransform.RealViews'
     )
 
     # Add napari -> Java converters

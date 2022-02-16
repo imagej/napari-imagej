@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+from jpype import JArray, JDouble
 import pytest
 import numpy as np
 from scyjava import jimport
@@ -80,12 +81,37 @@ def ellipse_mask(ij_fixture):
     return ClosedWritableEllipsoid([20, 20], [10, 10])
 
 @pytest.fixture
+def box_mask(ij_fixture):
+    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
+    return ClosedWritableBox([20, 20], [40, 40])
+
+@pytest.fixture
 def ellipse_layer():
     shp = Shapes()
     data = np.zeros((2, 2))
     data[0, :] = [30, 30] # ceter
     data[1, :] = [10, 10] # axes
     shp.add_ellipses(data)
+    return shp
+
+@pytest.fixture
+def rectangle_layer_axis_aligned():
+    shp = Shapes()
+    data = np.zeros((2, 2))
+    data[0, :] = [10, 10] # min. corner
+    data[1, :] = [30, 30] # max. corner
+    shp.add_rectangles(data)
+    return shp
+
+@pytest.fixture
+def rectangle_layer_rotated():
+    shp = Shapes()
+    data = np.zeros((4, 2))
+    data[0, :] = [0, 10]
+    data[1, :] = [10, 0]
+    data[2, :] = [0, -10]
+    data[3, :] = [-10, 0]
+    shp.add_rectangles(data)
     return shp
 
 def test_ellipse_to_shapes(ij_fixture, ellipse_mask):
@@ -103,9 +129,33 @@ def test_ellipse_to_shapes(ij_fixture, ellipse_mask):
     assert np.array_equal(ellipse_data[2], np.array([30, 30]))
     assert np.array_equal(ellipse_data[3], np.array([10, 30]))
 
+def test_box_to_shapes(ij_fixture, box_mask):
+    py_mask = ij_fixture.py.from_java(box_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'rectangle'
+    data = py_mask.data
+    assert len(data) == 1
+    box_data = data[0]
+    assert len(box_data) == 4
+    assert np.array_equal(box_data[0], np.array([20, 20]))
+    assert np.array_equal(box_data[1], np.array([40, 20]))
+    assert np.array_equal(box_data[2], np.array([40, 40]))
+    assert np.array_equal(box_data[3], np.array([20, 40]))
+
+def assert_ROITree_conversion(ij, layer):
+    roitree = ij.py.to_java(layer)
+    ROITree = jimport('net.imagej.roi.ROITree')
+    assert isinstance(roitree, ROITree)
+    return roitree.children()
+
+
 def test_shapes_to_ellipse(ij_fixture, ellipse_layer):
     # Assert shapes conversion to ellipse
-    j_mask = ij_fixture.py.to_java(ellipse_layer)
+    children = assert_ROITree_conversion(ij_fixture, ellipse_layer)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
     ClosedWritableEllipsoid = jimport('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
     assert isinstance(j_mask, ClosedWritableEllipsoid)
     # Assert dimensionality
@@ -119,3 +169,41 @@ def test_shapes_to_ellipse(ij_fixture, ellipse_layer):
     assert j_mask.semiAxisLength(1) == 10
 
     
+def test_shapes_to_rectangle_axis_aligned(ij_fixture, rectangle_layer_axis_aligned):
+    # Assert shapes conversion to ellipse
+    children = assert_ROITree_conversion(ij_fixture, rectangle_layer_axis_aligned)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
+    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
+    assert isinstance(j_mask, ClosedWritableBox)
+    # Assert dimensionality
+    assert j_mask.numDimensions() == 2
+    # Assert center position
+    center = j_mask.center().positionAsDoubleArray()
+    center = ij_fixture.py.from_java(center)
+    assert center == [20, 20]
+    # Assert side lengths   
+    assert j_mask.sideLength(0) == 20
+    assert j_mask.sideLength(1) == 20
+
+def point_assertion(mask, pt: list, expected: bool) -> None:
+    arr = JArray(JDouble)(len(pt))
+    arr[:] = pt
+    RealPoint = jimport('net.imglib2.RealPoint')
+    r = RealPoint(arr)
+    assert mask.test(r) == expected
+
+
+def test_shapes_to_rectangle_rotated(ij_fixture, rectangle_layer_rotated):
+    # Assert shapes conversion to ellipse
+    children = assert_ROITree_conversion(ij_fixture, rectangle_layer_rotated)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
+    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    assert isinstance(j_mask, ClosedWritablePolygon2D)
+    # Assert dimensionality
+    assert j_mask.numDimensions() == 2
+    # Test some points
+    point_assertion(j_mask, [0, 0], True)
+    point_assertion(j_mask, [5, 5], True)
+    point_assertion(j_mask, [5, 6], False)
