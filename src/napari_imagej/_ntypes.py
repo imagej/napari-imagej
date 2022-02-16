@@ -1,6 +1,5 @@
 from napari.layers import Labels
 from labeling.Labeling import Labeling
-from typing import Any, Callable, Dict, Type
 
 
 def _labeling_to_layer(labeling: Labeling):
