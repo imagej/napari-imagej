@@ -152,6 +152,35 @@ def _polygon_mask_to_layer(ij, mask):
     return layer
 
 
+# -- Polygons -- ##
+
+
+def _line_layer_to_mask(points):
+    # HACK: JPype doesn't know whether to call the float or double
+    def point_from_coords(coords):
+        arr = JArray(JDouble)(2)
+        arr[:] = coords
+        return RealPoint(arr)
+    pts = [point_from_coords(x) for x in points]
+    return DefaultWritableLine(pts[0], pts[1])
+
+
+def _line_mask_to_layer(ij, mask):
+    num_dims = mask.numDimensions()
+    arr = JArray(JDouble)(int(num_dims))
+    data = np.zeros((2, num_dims))
+    # First point
+    mask.endpointOne().localize(arr)
+    data[0, :] = arr
+    # Second point
+    mask.endpointTwo().localize(arr)
+    data[1, :] = arr
+    # Create Shapes layer
+    layer = Shapes()
+    layer.add_lines(data)
+    return layer
+
+
 # -- Shapes / ROITrees -- #
 
 
@@ -166,6 +195,8 @@ def _shapes_to_realmasks(ij, layer: Shapes):
             shape = _rectangle_layer_to_mask(pts)
         elif shape_type == 'polygon':
             shape = _polygon_layer_to_mask(pts)
+        elif shape_type == 'line':
+            shape = _line_layer_to_mask(pts)
         else:
             raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
         masks.add(shape)
@@ -214,6 +245,11 @@ def _java_to_napari_converters(ij) -> List[Converter]:
             converter=lambda obj: _polygon_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Line),
+            converter=lambda obj: _line_mask_to_layer(ij, obj),
+            priority=Priority.VERY_HIGH
+        ),
     ]
 
 
@@ -231,10 +267,12 @@ def init_napari_converters(ij):
     global SuperEllipsoid
     global Box
     global Polyshape
+    global Line
     global ImgLabeling
     global ClosedWritableEllipsoid
     global ClosedWritablePolygon2D
     global ClosedWritableBox
+    global DefaultWritableLine
     global RealPoint
     global Point
     global PointMatch
@@ -263,6 +301,9 @@ def init_napari_converters(ij):
     Polyshape = jimport(
         'net.imglib2.roi.geom.real.Polyshape'
     )
+    Line = jimport(
+        'net.imglib2.roi.geom.real.Line'
+    )
     ClosedWritableEllipsoid = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
     )
@@ -271,6 +312,9 @@ def init_napari_converters(ij):
     )
     ClosedWritableBox = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableBox'
+    )
+    DefaultWritableLine = jimport(
+        'net.imglib2.roi.geom.real.DefaultWritableLine'
     )
     ImgLabeling = jimport(
         'net.imglib2.roi.labeling.ImgLabeling'
