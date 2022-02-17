@@ -75,27 +75,30 @@ def _polyshape_to_layer_data(mask):
 # -- Ellipses -- #
 
 
-def _format_ellipse_points(pts):
+def _ellipse_layer_to_mask(pts):
     if pts.shape[0] == 2:
         return pts[0, :], pts[1, :]
     center = np.mean(pts, axis=0)
     radii = np.abs(pts[0, :] - center)
+    return ClosedWritableEllipsoid(center, radii)
 
-    return center, radii
 
-
-def _ellipse_mask_to_layer(ij, mask):
+def _ellipse_mask_to_data(mask):
     center = mask.center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
+    # center = ij.py.from_java(center)
     radii = mask.minAsDoubleArray()
-    radii = ij.py.from_java(radii)
-    for i in range(len(radii)):
+    # radii = ij.py.from_java(radii)
+    for i in range(radii.length):
         radii[i] = mask.semiAxisLength(i)
-    data = np.zeros((2, len(center)))
-    data[0, :] = center
-    data[1, :] = radii
+    data = np.zeros((2, center.length))
+    data[0, :] = center[:] # Slice needed for JArray
+    data[1, :] = radii[:] # Slice needed for JArray
+    return data
+
+
+def _ellipse_mask_to_layer(mask):
     layer = Shapes()
-    layer.add_ellipses(data)
+    layer.add_ellipses(_ellipse_mask_to_data(mask))
     return layer
 
 
@@ -122,16 +125,18 @@ def _rectangle_layer_to_mask(points):
         return _polygon_layer_to_mask(points)
 
 
-def _rectangle_mask_to_layer(ij, mask):
+def _rectangle_mask_to_data(mask):
     min = mask.minAsDoubleArray()
-    min = ij.py.from_java(min)
     max = mask.maxAsDoubleArray()
-    max = ij.py.from_java(max)
     data = np.zeros((2, len(min)))
-    data[0, :] = min
-    data[1, :] = max
+    data[0, :] = min[:] # Slice needed for JArray
+    data[1, :] = max[:] # Slice needed for JArray
+    return data
+
+
+def _rectangle_mask_to_layer(mask):
     layer = Shapes()
-    layer.add_rectangles(data)
+    layer.add_rectangles(_rectangle_mask_to_data(mask))
     return layer
 
 
@@ -149,10 +154,13 @@ def _polygon_layer_to_mask(points):
     return ClosedWritablePolygon2D(ptList)
 
 
-def _polygon_mask_to_layer(ij, mask):
-    data = _polyshape_to_layer_data(mask)
+def _polygon_mask_to_data(mask):
+    return _polyshape_to_layer_data(mask)
+
+
+def _polygon_mask_to_layer(mask):
     layer = Shapes()
-    layer.add_polygons(data)
+    layer.add_polygons(_polygon_mask_to_data(mask))
     return layer
 
 
@@ -169,7 +177,7 @@ def _line_layer_to_mask(points):
     return DefaultWritableLine(pts[0], pts[1])
 
 
-def _line_mask_to_layer(ij, mask):
+def _line_mask_to_data(mask):
     num_dims = mask.numDimensions()
     arr = JArray(JDouble)(int(num_dims))
     data = np.zeros((2, num_dims))
@@ -179,9 +187,13 @@ def _line_mask_to_layer(ij, mask):
     # Second point
     mask.endpointTwo().localize(arr)
     data[1, :] = arr
+    return data
+
+
+def _line_mask_to_layer(mask):
     # Create Shapes layer
     layer = Shapes()
-    layer.add_lines(data)
+    layer.add_lines(_line_mask_to_data(mask))
     return layer
 
 
@@ -198,23 +210,44 @@ def _path_layer_to_mask(points):
     return DefaultWritablePolyline(ptList)
 
 
-def _path_mask_to_layer(ij, mask):
-    data = _polyshape_to_layer_data(mask)
+def _path_mask_to_data(mask):
+    return _polyshape_to_layer_data(mask)
+
+
+def _path_mask_to_layer(mask):
     layer = Shapes()
-    layer.add_paths(data)
+    layer.add_paths(_path_mask_to_data(mask))
     return layer
 
 
 # -- Shapes / ROITrees -- #
 
 
-def _shapes_to_realmasks(ij, layer: Shapes):
+def _roitree_to_layer(roitree):
+    layer = Shapes()
+    rois = [child.data() for child in roitree.children()]
+    for roi in rois:
+        if isinstance(roi, SuperEllipsoid):
+            layer.add_ellipses(_ellipse_mask_to_data(roi))
+        elif isinstance(roi, Box):
+            layer.add_rectangles(_rectangle_mask_to_data(roi))
+        elif isinstance(roi, Polygon2D):
+            layer.add_polygons(_polygon_mask_to_data(roi))
+        elif isinstance(roi, Line):
+            layer.add_lines(_line_mask_to_data(roi))
+        elif isinstance(roi, Polyline):
+            layer.add_paths(_path_mask_to_data(roi))
+        else:
+            raise NotImplementedError(f'Cannot convert {roi}: conversion not implemented!')
+    return layer
+
+
+def _layer_to_roitree(layer: Shapes):
     """Converts a Shapes layer to a RealMask or a list of them."""
     masks = ArrayList()
     for pts, shape_type in zip(layer.data, layer.shape_type):
         if shape_type == 'ellipse':
-            center, radii = _format_ellipse_points(pts)
-            shape = ClosedWritableEllipsoid(center, radii)
+            shape = _ellipse_layer_to_mask(pts)
         elif shape_type == 'rectangle':
             shape = _rectangle_layer_to_mask(pts)
         elif shape_type == 'polygon':
@@ -243,13 +276,13 @@ def _napari_to_java_converters(ij) -> List[Converter]:
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Shapes),
-            converter=lambda obj: _shapes_to_realmasks(ij, obj),
+            converter=lambda obj: _layer_to_roitree(obj),
             priority=Priority.VERY_HIGH
         ),
     ]
 
 
-def _java_to_napari_converters(ij) -> List[Converter]:
+def _java_to_napari_converters() -> List[Converter]:
     return [
         Converter(
             predicate=lambda obj: isinstance(obj, ImgLabeling),
@@ -258,28 +291,33 @@ def _java_to_napari_converters(ij) -> List[Converter]:
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, SuperEllipsoid),
-            converter=lambda obj: _ellipse_mask_to_layer(ij, obj),
+            converter=_ellipse_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Box),
-            converter=lambda obj: _rectangle_mask_to_layer(ij, obj),
+            converter=_rectangle_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Polygon2D),
-            converter=lambda obj: _polygon_mask_to_layer(ij, obj),
+            converter=_polygon_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Line),
-            converter=lambda obj: _line_mask_to_layer(ij, obj),
+            converter=_line_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Polyline),
-            converter=lambda obj: _path_mask_to_layer(ij, obj),
+            converter=_path_mask_to_layer,
             priority=Priority.VERY_HIGH
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, ROITree),
+            converter=_roitree_to_layer,
+            priority=Priority.VERY_HIGH + 1
         ),
     ]
 
@@ -300,6 +338,7 @@ def init_napari_converters(ij):
     global Polygon2D
     global Line
     global Polyline
+    global ROITree
     global ImgLabeling
     global ClosedWritableEllipsoid
     global ClosedWritablePolygon2D
@@ -339,6 +378,9 @@ def init_napari_converters(ij):
     )
     Polyline = jimport(
         'net.imglib2.roi.geom.real.Polyline'
+    )
+    ROITree = jimport(
+        'net.imagej.roi.DefaultROITree'
     )
     ClosedWritableEllipsoid = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
@@ -382,5 +424,5 @@ def init_napari_converters(ij):
         add_java_converter(converter)
 
     # Add Java -> napari converters
-    for converter in _java_to_napari_converters(ij):
+    for converter in _java_to_napari_converters():
         add_py_converter(converter)
