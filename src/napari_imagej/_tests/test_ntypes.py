@@ -276,3 +276,63 @@ def test_polygon_layer_to_mask(ij_fixture, polygon_layer):
     point_assertion(j_mask, [3, 0], True)
     point_assertion(j_mask, [2, 1], True)
     point_assertion(j_mask, [5, 6], False)
+
+
+# -- LINES -- #
+
+
+@pytest.fixture
+def line_mask():
+    DefaultWritableLine = jimport('net.imglib2.roi.geom.real.DefaultWritableLine')
+    DoubleArr = JArray(JDouble)
+    p1 = DoubleArr(2)
+    p2 = DoubleArr(2)
+    p1[:] = [0, 0]
+    p2[:] = [4, 4]
+    return DefaultWritableLine(p1, p2, True)
+
+
+@pytest.fixture
+def line_layer():
+    shp = Shapes()
+    data = np.zeros((2, 2))
+    data[0, :] = [0, 0]
+    data[1, :] = [4, -4]
+    shp.add_lines(data)
+    return shp
+
+
+def test_line_mask_to_layer(ij_fixture, line_mask):
+    py_mask = ij_fixture.py.from_java(line_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'line'
+    data = py_mask.data
+    assert len(data) == 1
+    line_data = data[0]
+    assert len(line_data) == 2
+    assert np.array_equal(line_data[0], np.array([0, 0]))
+    assert np.array_equal(line_data[1], np.array([4, 4]))
+
+
+def test_line_layer_to_mask(ij_fixture, line_layer):
+    # Assert shapes conversion to ellipse
+    children = assert_ROITree_conversion(ij_fixture, line_layer)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
+    DefaultWritableLine = jimport('net.imglib2.roi.geom.real.DefaultWritableLine')
+    assert isinstance(j_mask, DefaultWritableLine)
+    # Assert dimensionality
+    assert j_mask.numDimensions() == 2
+    # Assert endpoints
+    arr = JArray(JDouble)(2)
+    j_mask.endpointOne().localize(arr)
+    assert ij_fixture.py.from_java(arr) == [0, 0]
+    j_mask.endpointTwo().localize(arr)
+    assert ij_fixture.py.from_java(arr) == [4, -4]
+    # Test some points
+    point_assertion(j_mask, [0, 0], True)
+    point_assertion(j_mask, [4, -4], True)
+    point_assertion(j_mask, [2, -2], True)
+    point_assertion(j_mask, [5, 6], False)
