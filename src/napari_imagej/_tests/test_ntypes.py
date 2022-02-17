@@ -407,3 +407,92 @@ def test_path_layer_to_mask(ij_fixture, path_layer):
     point_assertion(j_mask, [6, -2], True)
     point_assertion(j_mask, [8, 0], True)
     point_assertion(j_mask, [5, 6], False)
+
+
+# -- ROITrees -- #
+
+
+@pytest.fixture
+def multiple_masks(ellipse_mask, rectangle_mask):
+    return [ellipse_mask, rectangle_mask]
+
+
+@pytest.fixture
+def multiple_layer():
+    shp = Shapes()
+    # Add an ellipse
+    data = np.zeros((2, 2))
+    data[0, :] = [30, 30] # ceter
+    data[1, :] = [10, 10] # axes
+    shp.add_ellipses(data)
+    # Add a rectangle
+    data = np.zeros((2, 2))
+    data[0, :] = [10, 10] # min. corner
+    data[1, :] = [30, 30] # max. corner
+    shp.add_rectangles(data)
+    return shp
+
+
+def test_multiple_masks_to_layer(ij_fixture, multiple_masks):
+    # Make a tree frmo an ellipse and a rectangle
+    DefaultROITree = jimport('net.imagej.roi.DefaultROITree')
+    ArrayList = jimport('java.util.ArrayList')
+    mask_list = ArrayList(multiple_masks)
+    tree = DefaultROITree()
+    tree.addROIs(mask_list)
+    # Convert the tree to a napari shapes layer
+    shapes = ij_fixture.py.from_java(tree)
+    # Assert two shapes in the layer
+    types = shapes.shape_type
+    assert len(types) == 2
+    assert types[0] == 'ellipse'
+    assert types[1] == 'rectangle'
+    data = shapes.data
+    assert len(data) == 2
+    # Assert ellipse data is as expected
+    ellipse_data = data[0]
+    assert len(ellipse_data) == 4
+    assert np.array_equal(ellipse_data[0], np.array([10, 10]))
+    assert np.array_equal(ellipse_data[1], np.array([30, 10]))
+    assert np.array_equal(ellipse_data[2], np.array([30, 30]))
+    assert np.array_equal(ellipse_data[3], np.array([10, 30]))
+    # Assert rectangle data is as expected
+    box_data = data[1]
+    assert len(box_data) == 4
+    assert np.array_equal(box_data[0], np.array([20, 20]))
+    assert np.array_equal(box_data[1], np.array([40, 20]))
+    assert np.array_equal(box_data[2], np.array([40, 40]))
+    assert np.array_equal(box_data[3], np.array([20, 40]))
+
+
+def test_multiple_layer_to_masks(ij_fixture, multiple_layer):
+    # Convert the napari shapes layer into a tree
+    masks = ij_fixture.py.to_java(multiple_layer)
+    ROITree = jimport('net.imagej.roi.ROITree')
+    assert isinstance(masks, ROITree)
+    rois = [child.data() for child in masks.children()]
+    # Assert ellipsoid of first child
+    SuperEllipsoid = jimport('net.imglib2.roi.geom.real.SuperEllipsoid')
+    assert isinstance(rois[0], SuperEllipsoid)
+    # Assert dimensionality
+    assert rois[0].numDimensions() == 2
+    # Assert center position
+    center = rois[0].center().positionAsDoubleArray()
+    center = ij_fixture.py.from_java(center)
+    assert center == [30, 30]
+    # Assert semi-axis lengths   
+    assert rois[0].semiAxisLength(0) == 10
+    assert rois[0].semiAxisLength(1) == 10
+    # Assert Box of second child
+    Box = jimport('net.imglib2.roi.geom.real.Box')
+    assert isinstance(rois[1], Box)
+    # Assert dimensionality
+    assert rois[1].numDimensions() == 2
+    # Assert center position
+    center = rois[1].center().positionAsDoubleArray()
+    center = ij_fixture.py.from_java(center)
+    assert center == [20, 20]
+    # Assert side lengths   
+    assert rois[1].sideLength(0) == 20
+    assert rois[1].sideLength(1) == 20
+
