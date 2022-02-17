@@ -75,25 +75,30 @@ def test_labels_to_labeling(py_labeling):
     act_img, _ = labeling.get_result()
     assert np.array_equal(exp_img, act_img)
 
+# -- SHAPES / ROIS -- #
+
+
+def assert_ROITree_conversion(ij, layer):
+    roitree = ij.py.to_java(layer)
+    ROITree = jimport('net.imagej.roi.ROITree')
+    assert isinstance(roitree, ROITree)
+    return roitree.children()
+
+
+def point_assertion(mask, pt: list, expected: bool) -> None:
+    arr = JArray(JDouble)(len(pt))
+    arr[:] = pt
+    RealPoint = jimport('net.imglib2.RealPoint')
+    r = RealPoint(arr)
+    assert mask.test(r) == expected
+
+
+# -- ELLIPSES -- #
+
 @pytest.fixture
 def ellipse_mask(ij_fixture):
     ClosedWritableEllipsoid = jimport('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
     return ClosedWritableEllipsoid([20, 20], [10, 10])
-
-@pytest.fixture
-def box_mask(ij_fixture):
-    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
-    return ClosedWritableBox([20, 20], [40, 40])
-
-@pytest.fixture
-def polygon_mask(ij_fixture):
-    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
-    DoubleArr = JArray(JDouble)
-    x = DoubleArr(3)
-    y = DoubleArr(3)
-    x[:] = [0, -3, 0]
-    y[:] = [0, 0, -4]
-    return ClosedWritablePolygon2D(x, y)
 
 @pytest.fixture
 def ellipse_layer():
@@ -104,37 +109,7 @@ def ellipse_layer():
     shp.add_ellipses(data)
     return shp
 
-@pytest.fixture
-def rectangle_layer_axis_aligned():
-    shp = Shapes()
-    data = np.zeros((2, 2))
-    data[0, :] = [10, 10] # min. corner
-    data[1, :] = [30, 30] # max. corner
-    shp.add_rectangles(data)
-    return shp
-
-@pytest.fixture
-def rectangle_layer_rotated():
-    shp = Shapes()
-    data = np.zeros((4, 2))
-    data[0, :] = [0, 10]
-    data[1, :] = [10, 0]
-    data[2, :] = [0, -10]
-    data[3, :] = [-10, 0]
-    shp.add_rectangles(data)
-    return shp
-
-@pytest.fixture
-def polygon_layer():
-    shp = Shapes()
-    data = np.zeros((3, 2))
-    data[0, :] = [0, 0]
-    data[1, :] = [3, 0]
-    data[2, :] = [0, 4]
-    shp.add_polygons(data)
-    return shp
-
-def test_ellipse_to_shapes(ij_fixture, ellipse_mask):
+def test_ellipse_mask_to_layer(ij_fixture, ellipse_mask):
     py_mask = ij_fixture.py.from_java(ellipse_mask)
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
@@ -149,29 +124,7 @@ def test_ellipse_to_shapes(ij_fixture, ellipse_mask):
     assert np.array_equal(ellipse_data[2], np.array([30, 30]))
     assert np.array_equal(ellipse_data[3], np.array([10, 30]))
 
-def test_box_to_shapes(ij_fixture, box_mask):
-    py_mask = ij_fixture.py.from_java(box_mask)
-    assert isinstance(py_mask, Shapes)
-    types = py_mask.shape_type
-    assert len(types) == 1
-    assert types[0] == 'rectangle'
-    data = py_mask.data
-    assert len(data) == 1
-    box_data = data[0]
-    assert len(box_data) == 4
-    assert np.array_equal(box_data[0], np.array([20, 20]))
-    assert np.array_equal(box_data[1], np.array([40, 20]))
-    assert np.array_equal(box_data[2], np.array([40, 40]))
-    assert np.array_equal(box_data[3], np.array([20, 40]))
-
-def assert_ROITree_conversion(ij, layer):
-    roitree = ij.py.to_java(layer)
-    ROITree = jimport('net.imagej.roi.ROITree')
-    assert isinstance(roitree, ROITree)
-    return roitree.children()
-
-
-def test_shapes_to_ellipse(ij_fixture, ellipse_layer):
+def test_ellipse_layer_to_mask(ij_fixture, ellipse_layer):
     # Assert shapes conversion to ellipse
     children = assert_ROITree_conversion(ij_fixture, ellipse_layer)
     assert children.size() == 1
@@ -188,8 +141,55 @@ def test_shapes_to_ellipse(ij_fixture, ellipse_layer):
     assert j_mask.semiAxisLength(0) == 10
     assert j_mask.semiAxisLength(1) == 10
 
+
+# -- RECTANGLES -- #
+
+
+@pytest.fixture
+def rectangle_mask():
+    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
+    return ClosedWritableBox([20, 20], [40, 40])
+
+
+@pytest.fixture
+def rectangle_layer_axis_aligned():
+    shp = Shapes()
+    data = np.zeros((2, 2))
+    data[0, :] = [10, 10] # min. corner
+    data[1, :] = [30, 30] # max. corner
+    shp.add_rectangles(data)
+    return shp
+
+
+@pytest.fixture
+def rectangle_layer_rotated():
+    shp = Shapes()
+    data = np.zeros((4, 2))
+    data[0, :] = [0, 10]
+    data[1, :] = [10, 0]
+    data[2, :] = [0, -10]
+    data[3, :] = [-10, 0]
+    shp.add_rectangles(data)
+    return shp
+
     
-def test_shapes_to_rectangle_axis_aligned(ij_fixture, rectangle_layer_axis_aligned):
+def test_rectangle_mask_to_layer(ij_fixture, rectangle_mask):
+    py_mask = ij_fixture.py.from_java(rectangle_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'rectangle'
+    data = py_mask.data
+    assert len(data) == 1
+    box_data = data[0]
+    assert len(box_data) == 4
+    assert np.array_equal(box_data[0], np.array([20, 20]))
+    assert np.array_equal(box_data[1], np.array([40, 20]))
+    assert np.array_equal(box_data[2], np.array([40, 40]))
+    assert np.array_equal(box_data[3], np.array([20, 40]))
+
+
+def test_rectangle_layer_to_mask_box(ij_fixture, rectangle_layer_axis_aligned):
     # Assert shapes conversion to ellipse
     children = assert_ROITree_conversion(ij_fixture, rectangle_layer_axis_aligned)
     assert children.size() == 1
@@ -206,15 +206,8 @@ def test_shapes_to_rectangle_axis_aligned(ij_fixture, rectangle_layer_axis_align
     assert j_mask.sideLength(0) == 20
     assert j_mask.sideLength(1) == 20
 
-def point_assertion(mask, pt: list, expected: bool) -> None:
-    arr = JArray(JDouble)(len(pt))
-    arr[:] = pt
-    RealPoint = jimport('net.imglib2.RealPoint')
-    r = RealPoint(arr)
-    assert mask.test(r) == expected
 
-
-def test_shapes_to_rectangle_rotated(ij_fixture, rectangle_layer_rotated):
+def test_rectangle_layer_to_mask_polygon(ij_fixture, rectangle_layer_rotated):
     # Assert shapes conversion to ellipse
     children = assert_ROITree_conversion(ij_fixture, rectangle_layer_rotated)
     assert children.size() == 1
@@ -229,7 +222,47 @@ def test_shapes_to_rectangle_rotated(ij_fixture, rectangle_layer_rotated):
     point_assertion(j_mask, [5, 6], False)
 
 
-def test_shapes_to_polygon(ij_fixture, polygon_layer):
+# -- POLYGONS -- #
+
+
+@pytest.fixture
+def polygon_mask():
+    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    DoubleArr = JArray(JDouble)
+    x = DoubleArr(3)
+    y = DoubleArr(3)
+    x[:] = [0, -3, 0]
+    y[:] = [0, 0, -4]
+    return ClosedWritablePolygon2D(x, y)
+
+
+@pytest.fixture
+def polygon_layer():
+    shp = Shapes()
+    data = np.zeros((3, 2))
+    data[0, :] = [0, 0]
+    data[1, :] = [3, 0]
+    data[2, :] = [0, 4]
+    shp.add_polygons(data)
+    return shp
+
+
+def test_polygon_mask_to_layer(ij_fixture, polygon_mask):
+    py_mask = ij_fixture.py.from_java(polygon_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'polygon'
+    data = py_mask.data
+    assert len(data) == 1
+    polygon_data = data[0]
+    assert len(polygon_data) == 3
+    assert np.array_equal(polygon_data[0], np.array([0, 0]))
+    assert np.array_equal(polygon_data[1], np.array([-3, 0]))
+    assert np.array_equal(polygon_data[2], np.array([0, -4]))
+
+
+def test_polygon_layer_to_mask(ij_fixture, polygon_layer):
     # Assert shapes conversion to ellipse
     children = assert_ROITree_conversion(ij_fixture, polygon_layer)
     assert children.size() == 1
@@ -243,18 +276,3 @@ def test_shapes_to_polygon(ij_fixture, polygon_layer):
     point_assertion(j_mask, [3, 0], True)
     point_assertion(j_mask, [2, 1], True)
     point_assertion(j_mask, [5, 6], False)
-
-
-def test_polygon_to_shapes(ij_fixture, polygon_mask):
-    py_mask = ij_fixture.py.from_java(polygon_mask)
-    assert isinstance(py_mask, Shapes)
-    types = py_mask.shape_type
-    assert len(types) == 1
-    assert types[0] == 'polygon'
-    data = py_mask.data
-    assert len(data) == 1
-    polygon_data = data[0]
-    assert len(polygon_data) == 3
-    assert np.array_equal(polygon_data[0], np.array([0, 0]))
-    assert np.array_equal(polygon_data[1], np.array([-3, 0]))
-    assert np.array_equal(polygon_data[2], np.array([0, -4]))
