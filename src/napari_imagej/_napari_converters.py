@@ -8,6 +8,9 @@ from scyjava import Converter, Priority, jimport, add_py_converter, add_java_con
 from labeling.Labeling import Labeling
 
 
+# -- Labels / ImgLabelings -- #
+
+
 def _delete_labeling_files(filepath):
     """
     Removes any Labeling data left over at filepath
@@ -50,6 +53,18 @@ def _layer_to_imglabeling(ij, layer: Labels):
     return ij.py.to_java(labeling)
 
 
+# -- Shapes Utils -- #
+
+
+def arr(coords):
+    arr = JArray(JDouble)(len(coords))
+    arr[:] = coords
+    return arr
+
+
+# -- Ellipses -- #
+
+
 def _format_ellipse_points(pts):
     if pts.shape[0] == 2:
         return pts[0, :], pts[1, :]
@@ -58,23 +73,26 @@ def _format_ellipse_points(pts):
 
     return center, radii
 
-def arr(coords):
-    arr = JArray(JDouble)(len(coords))
-    arr[:] = coords
-    return arr
 
-def _polygon_from_points(points):
-    # HACK: JPype doesn't know whether to call the float or double
-    def point_from_coords(coords):
-        arr = JArray(JDouble)(2)
-        arr[:] = coords
-        return RealPoint(arr)
-    pts = [point_from_coords(x) for x in points]
-    ptList = ArrayList(pts)
-    return ClosedWritablePolygon2D(ptList)
+def _ellipse_mask_to_layer(ij, mask):
+    center = mask.center().positionAsDoubleArray()
+    center = ij.py.from_java(center)
+    radii = mask.minAsDoubleArray()
+    radii = ij.py.from_java(radii)
+    for i in range(len(radii)):
+        radii[i] = mask.semiAxisLength(i)
+    data = np.zeros((2, len(center)))
+    data[0, :] = center
+    data[1, :] = radii
+    layer = Shapes()
+    layer.add_ellipses(data)
+    return layer
 
 
-def _rectangle_from_points(points):
+# -- Boxes -- #
+
+
+def _rectangle_layer_to_mask(points):
     # find rectangle min
     origin = np.array([0, 0])
     dists = [np.linalg.norm(origin - pt) for pt in points]
@@ -91,43 +109,10 @@ def _rectangle_from_points(points):
         return ClosedWritableBox(arr(min), arr(max))
     # Return polygon if not
     else:
-        return _polygon_from_points(points)
+        return _polygon_layer_to_mask(points)
 
 
-def _shapes_to_realmasks(ij, layer: Shapes):
-    """Converts a Shapes layer to a RealMask or a list of them."""
-    masks = ArrayList()
-    for pts, shape_type in zip(layer.data, layer.shape_type):
-        if shape_type == 'ellipse':
-            center, radii = _format_ellipse_points(pts)
-            shape = ClosedWritableEllipsoid(center, radii)
-        elif shape_type == 'rectangle':
-            shape = _rectangle_from_points(pts)
-        elif shape_type == 'polygon':
-            shape = _polygon_from_points(pts)
-        else:
-            raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
-        masks.add(shape)
-    rois = DefaultROITree()
-    rois.addROIs(masks)
-    return rois
-
-
-def _ellipsoid_to_shapes(ij, mask):
-    center = mask.center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
-    radii = mask.minAsDoubleArray()
-    radii = ij.py.from_java(radii)
-    for i in range(len(radii)):
-        radii[i] = mask.semiAxisLength(i)
-    data = np.zeros((2, len(center)))
-    data[0, :] = center
-    data[1, :] = radii
-    layer = Shapes()
-    layer.add_ellipses(data)
-    return layer
-
-def _box_to_shapes(ij, mask):
+def _rectangle_mask_to_layer(ij, mask):
     min = mask.minAsDoubleArray()
     min = ij.py.from_java(min)
     max = mask.maxAsDoubleArray()
@@ -139,7 +124,22 @@ def _box_to_shapes(ij, mask):
     layer.add_rectangles(data)
     return layer
 
-def _polyshape_to_shapes(ij, mask):
+
+# -- Polygons -- ##
+
+
+def _polygon_layer_to_mask(points):
+    # HACK: JPype doesn't know whether to call the float or double
+    def point_from_coords(coords):
+        arr = JArray(JDouble)(2)
+        arr[:] = coords
+        return RealPoint(arr)
+    pts = [point_from_coords(x) for x in points]
+    ptList = ArrayList(pts)
+    return ClosedWritablePolygon2D(ptList)
+
+
+def _polygon_mask_to_layer(ij, mask):
     vertices = mask.vertices()
     num_dims = mask.numDimensions()
     arr = JArray(JDouble)(int(num_dims))
@@ -150,7 +150,32 @@ def _polyshape_to_shapes(ij, mask):
     layer = Shapes()
     layer.add_polygons(data)
     return layer
-    
+
+
+# -- Shapes / ROITrees -- #
+
+
+def _shapes_to_realmasks(ij, layer: Shapes):
+    """Converts a Shapes layer to a RealMask or a list of them."""
+    masks = ArrayList()
+    for pts, shape_type in zip(layer.data, layer.shape_type):
+        if shape_type == 'ellipse':
+            center, radii = _format_ellipse_points(pts)
+            shape = ClosedWritableEllipsoid(center, radii)
+        elif shape_type == 'rectangle':
+            shape = _rectangle_layer_to_mask(pts)
+        elif shape_type == 'polygon':
+            shape = _polygon_layer_to_mask(pts)
+        else:
+            raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
+        masks.add(shape)
+    rois = DefaultROITree()
+    rois.addROIs(masks)
+    return rois
+
+
+# -- Converters -- #
+
 
 def _napari_to_java_converters(ij) -> List[Converter]:
     return [
@@ -176,17 +201,17 @@ def _java_to_napari_converters(ij) -> List[Converter]:
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, SuperEllipsoid),
-            converter=lambda obj: _ellipsoid_to_shapes(ij, obj),
+            converter=lambda obj: _ellipse_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Box),
-            converter=lambda obj: _box_to_shapes(ij, obj),
+            converter=lambda obj: _rectangle_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Polyshape),
-            converter=lambda obj: _polyshape_to_shapes(ij, obj),
+            converter=lambda obj: _polygon_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
     ]
