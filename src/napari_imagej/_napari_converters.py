@@ -101,8 +101,12 @@ def _shapes_to_realmasks(ij, layer: Shapes):
         if shape_type == 'ellipse':
             center, radii = _format_ellipse_points(pts)
             shape = ClosedWritableEllipsoid(center, radii)
-        if shape_type == 'rectangle':
+        elif shape_type == 'rectangle':
             shape = _rectangle_from_points(pts)
+        elif shape_type == 'polygon':
+            shape = _polygon_from_points(pts)
+        else:
+            raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
         masks.add(shape)
     rois = DefaultROITree()
     rois.addROIs(masks)
@@ -133,6 +137,18 @@ def _box_to_shapes(ij, mask):
     data[1, :] = max
     layer = Shapes()
     layer.add_rectangles(data)
+    return layer
+
+def _polyshape_to_shapes(ij, mask):
+    vertices = mask.vertices()
+    num_dims = mask.numDimensions()
+    arr = JArray(JDouble)(int(num_dims))
+    data = np.zeros((vertices.size(), num_dims))
+    for i in range(len(vertices)):
+        vertices.get(i).localize(arr)
+        data[i, :] = arr
+    layer = Shapes()
+    layer.add_polygons(data)
     return layer
     
 
@@ -168,6 +184,11 @@ def _java_to_napari_converters(ij) -> List[Converter]:
             converter=lambda obj: _box_to_shapes(ij, obj),
             priority=Priority.VERY_HIGH
         ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Polyshape),
+            converter=lambda obj: _polyshape_to_shapes(ij, obj),
+            priority=Priority.VERY_HIGH
+        ),
     ]
 
 
@@ -184,6 +205,7 @@ def init_napari_converters(ij):
     global DefaultROITree
     global SuperEllipsoid
     global Box
+    global Polyshape
     global ImgLabeling
     global ClosedWritableEllipsoid
     global ClosedWritablePolygon2D
@@ -212,6 +234,9 @@ def init_napari_converters(ij):
     )
     Box = jimport(
         'net.imglib2.roi.geom.real.Box'
+    )
+    Polyshape = jimport(
+        'net.imglib2.roi.geom.real.Polyshape'
     )
     ClosedWritableEllipsoid = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
