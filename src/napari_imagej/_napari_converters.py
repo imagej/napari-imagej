@@ -61,6 +61,16 @@ def arr(coords):
     arr[:] = coords
     return arr
 
+def _polyshape_to_layer_data(mask):
+    vertices = mask.vertices()
+    num_dims = mask.numDimensions()
+    arr = JArray(JDouble)(int(num_dims))
+    data = np.zeros((vertices.size(), num_dims))
+    for i in range(len(vertices)):
+        vertices.get(i).localize(arr)
+        data[i, :] = arr
+    return data
+
 
 # -- Ellipses -- #
 
@@ -140,19 +150,13 @@ def _polygon_layer_to_mask(points):
 
 
 def _polygon_mask_to_layer(ij, mask):
-    vertices = mask.vertices()
-    num_dims = mask.numDimensions()
-    arr = JArray(JDouble)(int(num_dims))
-    data = np.zeros((vertices.size(), num_dims))
-    for i in range(len(vertices)):
-        vertices.get(i).localize(arr)
-        data[i, :] = arr
+    data = _polyshape_to_layer_data(mask)
     layer = Shapes()
     layer.add_polygons(data)
     return layer
 
 
-# -- Polygons -- ##
+# -- Lines -- ##
 
 
 def _line_layer_to_mask(points):
@@ -181,6 +185,26 @@ def _line_mask_to_layer(ij, mask):
     return layer
 
 
+# -- Paths -- ##
+
+
+def _path_layer_to_mask(points):
+    def point_from_coords(coords):
+        arr = JArray(JDouble)(2)
+        arr[:] = coords
+        return RealPoint(arr)
+    pts = [point_from_coords(x) for x in points]
+    ptList = ArrayList(pts)
+    return DefaultWritablePolyline(ptList)
+
+
+def _path_mask_to_layer(ij, mask):
+    data = _polyshape_to_layer_data(mask)
+    layer = Shapes()
+    layer.add_paths(data)
+    return layer
+
+
 # -- Shapes / ROITrees -- #
 
 
@@ -197,6 +221,8 @@ def _shapes_to_realmasks(ij, layer: Shapes):
             shape = _polygon_layer_to_mask(pts)
         elif shape_type == 'line':
             shape = _line_layer_to_mask(pts)
+        elif shape_type == 'path':
+            shape = _path_layer_to_mask(pts)
         else:
             raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
         masks.add(shape)
@@ -241,13 +267,18 @@ def _java_to_napari_converters(ij) -> List[Converter]:
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Polyshape),
+            predicate=lambda obj: isinstance(obj, Polygon2D),
             converter=lambda obj: _polygon_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Line),
             converter=lambda obj: _line_mask_to_layer(ij, obj),
+            priority=Priority.VERY_HIGH
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Polyline),
+            converter=lambda obj: _path_mask_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
     ]
@@ -266,13 +297,15 @@ def init_napari_converters(ij):
     global DefaultROITree
     global SuperEllipsoid
     global Box
-    global Polyshape
+    global Polygon2D
     global Line
+    global Polyline
     global ImgLabeling
     global ClosedWritableEllipsoid
     global ClosedWritablePolygon2D
     global ClosedWritableBox
     global DefaultWritableLine
+    global DefaultWritablePolyline
     global RealPoint
     global Point
     global PointMatch
@@ -298,11 +331,14 @@ def init_napari_converters(ij):
     Box = jimport(
         'net.imglib2.roi.geom.real.Box'
     )
-    Polyshape = jimport(
-        'net.imglib2.roi.geom.real.Polyshape'
+    Polygon2D = jimport(
+        'net.imglib2.roi.geom.real.Polygon2D'
     )
     Line = jimport(
         'net.imglib2.roi.geom.real.Line'
+    )
+    Polyline = jimport(
+        'net.imglib2.roi.geom.real.Polyline'
     )
     ClosedWritableEllipsoid = jimport(
         'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
@@ -315,6 +351,9 @@ def init_napari_converters(ij):
     )
     DefaultWritableLine = jimport(
         'net.imglib2.roi.geom.real.DefaultWritableLine'
+    )
+    DefaultWritablePolyline = jimport(
+        'net.imglib2.roi.geom.real.DefaultWritablePolyline'
     )
     ImgLabeling = jimport(
         'net.imglib2.roi.labeling.ImgLabeling'

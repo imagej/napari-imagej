@@ -336,3 +336,74 @@ def test_line_layer_to_mask(ij_fixture, line_layer):
     point_assertion(j_mask, [4, -4], True)
     point_assertion(j_mask, [2, -2], True)
     point_assertion(j_mask, [5, 6], False)
+
+
+# -- PATHS -- #
+
+
+@pytest.fixture
+def path_mask():
+    DefaultWritablePolyline = jimport('net.imglib2.roi.geom.real.DefaultWritablePolyline')
+    p1 = JArray(JDouble)(2)
+    p1[:] = [0, 0]
+    p2 = JArray(JDouble)(2)
+    p2[:] = [1, 1]
+    p3 = JArray(JDouble)(2)
+    p3[:] = [2, 0]
+    RealPoint = jimport('net.imglib2.RealPoint')
+    pts = [RealPoint(p) for p in [p1, p2, p3]]
+    ArrayList = jimport('java.util.ArrayList')
+    ptList = ArrayList()
+    ptList.addAll(pts)
+    return DefaultWritablePolyline(ptList)
+
+
+@pytest.fixture
+def path_layer():
+    shp = Shapes()
+    data = np.zeros((3, 2))
+    data[0, :] = [0, 0]
+    data[1, :] = [4, -4]
+    data[2, :] = [8, 0]
+    shp.add_paths(data)
+    return shp
+
+
+def test_path_mask_to_layer(ij_fixture, path_mask):
+    py_mask = ij_fixture.py.from_java(path_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'path'
+    data = py_mask.data
+    assert len(data) == 1
+    path_data = data[0]
+    assert len(path_data) == 3
+    assert np.array_equal(path_data[0], np.array([0, 0]))
+    assert np.array_equal(path_data[1], np.array([1, 1]))
+    assert np.array_equal(path_data[2], np.array([2, 0]))
+
+
+def test_path_layer_to_mask(ij_fixture, path_layer):
+    # Assert shapes conversion to ellipse
+    children = assert_ROITree_conversion(ij_fixture, path_layer)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
+    DefaultWritablePolyline = jimport('net.imglib2.roi.geom.real.DefaultWritablePolyline')
+    assert isinstance(j_mask, DefaultWritablePolyline)
+    # Assert dimensionality
+    assert j_mask.numDimensions() == 2
+    # Assert endpoints
+    arr = JArray(JDouble)(2)
+    expected = [[0, 0], [4, -4], [8, 0]]
+    actual = j_mask.vertices()
+    for e, a in zip(expected, actual):
+        a.localize(arr)
+        assert ij_fixture.py.from_java(arr) == e
+    # Test some points
+    point_assertion(j_mask, [0, 0], True)
+    point_assertion(j_mask, [2, -2], True)
+    point_assertion(j_mask, [4, -4], True)
+    point_assertion(j_mask, [6, -2], True)
+    point_assertion(j_mask, [8, 0], True)
+    point_assertion(j_mask, [5, 6], False)
