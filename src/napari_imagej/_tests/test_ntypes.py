@@ -86,6 +86,16 @@ def box_mask(ij_fixture):
     return ClosedWritableBox([20, 20], [40, 40])
 
 @pytest.fixture
+def polygon_mask(ij_fixture):
+    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    DoubleArr = JArray(JDouble)
+    x = DoubleArr(3)
+    y = DoubleArr(3)
+    x[:] = [0, -3, 0]
+    y[:] = [0, 0, -4]
+    return ClosedWritablePolygon2D(x, y)
+
+@pytest.fixture
 def ellipse_layer():
     shp = Shapes()
     data = np.zeros((2, 2))
@@ -112,6 +122,16 @@ def rectangle_layer_rotated():
     data[2, :] = [0, -10]
     data[3, :] = [-10, 0]
     shp.add_rectangles(data)
+    return shp
+
+@pytest.fixture
+def polygon_layer():
+    shp = Shapes()
+    data = np.zeros((3, 2))
+    data[0, :] = [0, 0]
+    data[1, :] = [3, 0]
+    data[2, :] = [0, 4]
+    shp.add_polygons(data)
     return shp
 
 def test_ellipse_to_shapes(ij_fixture, ellipse_mask):
@@ -207,3 +227,34 @@ def test_shapes_to_rectangle_rotated(ij_fixture, rectangle_layer_rotated):
     point_assertion(j_mask, [0, 0], True)
     point_assertion(j_mask, [5, 5], True)
     point_assertion(j_mask, [5, 6], False)
+
+
+def test_shapes_to_polygon(ij_fixture, polygon_layer):
+    # Assert shapes conversion to ellipse
+    children = assert_ROITree_conversion(ij_fixture, polygon_layer)
+    assert children.size() == 1
+    j_mask = children.get(0).data()
+    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    assert isinstance(j_mask, ClosedWritablePolygon2D)
+    # Assert dimensionality
+    assert j_mask.numDimensions() == 2
+    # Test some points
+    point_assertion(j_mask, [0, 0], True)
+    point_assertion(j_mask, [3, 0], True)
+    point_assertion(j_mask, [2, 1], True)
+    point_assertion(j_mask, [5, 6], False)
+
+
+def test_polygon_to_shapes(ij_fixture, polygon_mask):
+    py_mask = ij_fixture.py.from_java(polygon_mask)
+    assert isinstance(py_mask, Shapes)
+    types = py_mask.shape_type
+    assert len(types) == 1
+    assert types[0] == 'polygon'
+    data = py_mask.data
+    assert len(data) == 1
+    polygon_data = data[0]
+    assert len(polygon_data) == 3
+    assert np.array_equal(polygon_data[0], np.array([0, 0]))
+    assert np.array_equal(polygon_data[1], np.array([-3, 0]))
+    assert np.array_equal(polygon_data[2], np.array([0, -4]))
