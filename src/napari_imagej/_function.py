@@ -103,7 +103,7 @@ def _ptype(java_type):
         if jtype.class_.isAssignableFrom(java_type):
             return ptype
     for jtype, ptype in _ptypes.ptypes.items():
-        if ij.convert().supports(java_type, jtype):
+        if ij.convert().supports(jtype, java_type):
             return ptype
     raise ValueError(f"Unsupported Java type: {java_type}")
 
@@ -171,6 +171,14 @@ def _preprocess_remaining_inputs(
 
     return resolved_java_args
 
+def _resolvable_or_required(input):
+    if input.isRequired(): return True
+    try:
+        type = _ptype(input.getType())
+        return True
+    except ValueError:
+        return False
+
 
 def _filter_unresolved_inputs(module, inputs):
     """Returns a list of all inputs that can only be resolved by the user."""
@@ -186,6 +194,14 @@ def _filter_unresolved_inputs(module, inputs):
             unresolved
         )
     )
+    # Only leave in the optional parameters that we know how to resolve
+    unresolved = list(
+        filter(
+            _resolvable_or_required,
+            unresolved
+        )
+    )
+
     return unresolved
 
 
