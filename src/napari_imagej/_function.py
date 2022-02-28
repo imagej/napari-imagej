@@ -8,7 +8,7 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 import imagej
 from scyjava import config, jimport, when_jvm_starts
 from qtpy.QtWidgets import (
@@ -77,6 +77,9 @@ Initializable = jimport(
 )
 ModuleSearcher = jimport(
     "org.scijava.search.module.ModuleSearcher"
+)
+OpSearcher = jimport(
+    "net.imagej.ops.search.OpSearcher"
 )
 Searcher = jimport(
     "org.scijava.search.Searcher"
@@ -399,13 +402,16 @@ class ImageJWidget(QWidget):
 
         self.layout().addWidget(self._search_widget)
 
-        self.searcher: QLineEdit = self._generate_searcher()
+        self.searchers, self.resultConverters = self._generate_searchers()
         self.searchService = self._generate_search_service()
 
         # Results box
-        self.results = []  # type: ignore
-        self.tableWidget: QTableWidget = self._generate_results_widget()
-        self.layout().addWidget(self.tableWidget)
+        self.results = [[] for _ in range(len(self.searchers))]
+        print(self.results)
+        self.resultTables: QWidget
+        self.tableWidgets: List[QTableWidget]
+        self.resultTables, self.tableWidgets = self._generate_results_widget()
+        self.layout().addWidget(self.resultTables)
 
         # Module highlighter
         self.focus_widget = QWidget()
@@ -424,51 +430,70 @@ class ImageJWidget(QWidget):
         searchbar.returnPressed.connect(lambda: self._highlight_module(0, 0))
         return searchbar
 
-    def _generate_searcher(self):
+    def _generate_searchers(self) -> List[Any]:
+        searcherClasses = [ModuleSearcher, OpSearcher]
+        resultToModuleInfoConverters = [
+            lambda result: result.info(),
+            lambda result: result.info().cInfo(),
+        ]
         pluginService = ij.get("org.scijava.plugin.PluginService")
-        info = pluginService.getPlugin(ModuleSearcher, Searcher)
-        searcher = info.createInstance()
-        ij.context().inject(searcher)
-        return searcher
+        infos = [pluginService.getPlugin(cls, Searcher) for cls in searcherClasses]
+        searchers = [info.createInstance() for info in infos]
+        [ij.context().inject(searcher) for searcher in searchers]
+        return searchers, resultToModuleInfoConverters
 
     def _generate_search_service(self):
         return ij.get("org.scijava.search.SearchService")
+    
+    def _highlight_from_results_table(self, searcher_index):
+        index = searcher_index
+        return lambda row, col: self._highlight_module(index, row, col)
 
     def _generate_results_widget(self) -> QTableWidget:
-        # GUI properties
-        labels = ["Module: "]
-        max_results = 12
-        tableWidget = QTableWidget(max_results, len(labels))
-        # Modules take up a row, so highlight the entire thing
-        tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # Label the columns with labels
-        tableWidget.setHorizontalHeaderLabels(labels)
-        tableWidget.horizontalHeader().setSectionResizeMode(
-            0,
-            QHeaderView.Stretch
-        )
-        tableWidget.verticalHeader().hide()
-        tableWidget.setShowGrid(False)
-        tableWidget.cellClicked.connect(self._highlight_module)
+        resultTables = []
+        for i in range(len(self.searchers)):
+            searcher = self.searchers[i]
+            # GUI properties
+            labels = [ij.py.from_java(searcher.title())]
+            max_results = 12
+            tableWidget = QTableWidget(max_results, len(labels))
+            # Modules take up a row, so highlight the entire thing
+            tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+            # Label the columns with labels
+            tableWidget.setHorizontalHeaderLabels(labels)
+            tableWidget.horizontalHeader().setSectionResizeMode(
+                0,
+                QHeaderView.Stretch
+            )
+            tableWidget.verticalHeader().hide()
+            tableWidget.setShowGrid(False)
+            tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            tableWidget.cellClicked.connect(self._highlight_from_results_table(i))
+            resultTables.append(tableWidget)
 
-        return tableWidget
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        [container.layout().addWidget(w) for w in resultTables]
+        return (container, resultTables)
 
     def _search(self, text):
         # TODO: Consider adding a button to toggle fuzziness
-        breakpoint()
-        self.results = self.searcher.search(text, True)
-        for i in range(len(self.results)):
-            name = ij.py.from_java(self.results[i].name())
-            self.tableWidget.setItem(i, 0, QTableWidgetItem(name))
-        for i in range(len(self.results), self.tableWidget.rowCount()):
-            self.tableWidget.setItem(i, 0, QTableWidgetItem(""))
+        for i in range(len(self.searchers)):
+            self.results[i] = self.searchers[i].search(text, True)
+            for j in range(len(self.results[i])):
+                name = ij.py.from_java(self.results[i][j].name())
+                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(name))
+                self.tableWidgets[i].showRow(j)
+            for j in range(len(self.results[i]), self.tableWidgets[i].rowCount()):
+                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(""))
+                self.tableWidgets[i].hideRow(j)
 
-    def _highlight_module(self, row: int, col: int):
+    def _highlight_module(self, table: int, row: int, col: int):
         # Ensure the clicked module is an actual selection
-        if (row >= len(self.results)):
+        if (row >= len(self.results[table])):
             return
         # Print highlighted module
-        self.focused_module = self.results[row]
+        self.focused_module = self.results[table][row]
         name = ij.py.from_java(self.focused_module.name())  # type: ignore
         self.focused_module_label.setText(name)
 
@@ -493,7 +518,7 @@ class ImageJWidget(QWidget):
             if action_name == "Run":
                 self.focused_action_buttons[i].clicked.connect(
                     lambda: self._execute_module(
-                        self.focused_module.info()  # type: ignore
+                        self.resultConverters[table](self.focused_module)
                     )
                 )
             else:
