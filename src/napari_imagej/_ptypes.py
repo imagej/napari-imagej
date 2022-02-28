@@ -41,6 +41,7 @@ class PTypes:
 
         # Images
         self._images = {
+            jimport('net.imglib2.RandomAccessible'):                  'napari.types.ImageData',
             jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
             jimport('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
             jimport('ij.ImagePlus'):                                  'napari.types.ImageData'
