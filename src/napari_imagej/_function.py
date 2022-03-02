@@ -8,7 +8,7 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import imagej
 from scyjava import config, jimport, when_jvm_starts
 from qtpy.QtWidgets import (
@@ -253,6 +253,22 @@ def _napari_module_param_additions(module_info) -> Dict[str, Tuple[type, Any]]:
     return additional_params
 
 
+def _param_default_or_none(input):
+    default = input.getDefaultValue()
+    if default is not None:
+        try:
+            default = ij.py.from_java(default)
+        except Exception:
+            pass
+    return default
+
+def _param_annotation(input):
+    type = _ptype(input.getType())
+    if not input.isRequired():
+        type = Optional[type]
+    return type
+
+
 def _modify_function_signature(function, inputs, module_info):
     """Rewrites function with type annotations for all module I/O items."""
 
@@ -349,7 +365,27 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
-def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
+def _add_scijava_metadata(info, unresolved_inputs):
+    metadata = {}
+    for input in unresolved_inputs:
+        key = ij.py.from_java(input.getName())
+        value = {}
+        # Add default value
+        max_val = input.getMaximumValue()
+        if max_val is not None:
+            try:
+                max_val = ij.py.from_java(max_val)
+            except Exception:
+                pass
+            value["max"] = max_val
+
+        metadata[key] = value
+
+    return metadata
+
+
+
+def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
     _preprocess_non_inputs(module)
@@ -358,7 +394,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
 
     # Package the rest of the execution into a widget
-    def execute_module(
+    def module_execute(
         *user_resolved_inputs,
         # display_results_in_new_window: bool = False
     ):
@@ -370,7 +406,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
 
         # run module
         logger.debug(
-            f"run_module: {execute_module.__qualname__} \
+            f"run_module: {module_execute.__qualname__} \
                 ({resolved_java_args}) -- {info.getIdentifier()}"
         )
         _initialize_module(module)
@@ -387,7 +423,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
 
         # display result 
         display_externally = _napari_specific_parameter(
-            execute_module,
+            module_execute,
             user_resolved_inputs,
             'display_results_in_new_window'
         )
@@ -397,9 +433,9 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         return result
 
     # Add metadata for widget creation
-    _add_napari_metadata(execute_module, info, unresolved_inputs)
+    _add_napari_metadata(module_execute, info, unresolved_inputs)
 
-    return execute_module
+    return module_execute
 
 
 class ImageJWidget(QWidget):
