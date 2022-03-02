@@ -10,6 +10,7 @@ import os
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import imagej
+from pytest import param
 from scyjava import config, jimport, when_jvm_starts
 from qtpy.QtWidgets import (
     QWidget,
@@ -279,7 +280,8 @@ def _modify_function_signature(function, inputs, module_info):
             Parameter(
                 str(i.getName()),
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=_ptype(i.getType()),
+                default=_param_default_or_none(i),
+                annotation=_param_annotation(i),
             )
             for i in inputs
         ]
@@ -365,7 +367,7 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
-def _add_scijava_metadata(info, unresolved_inputs):
+def _add_scijava_metadata(info, unresolved_inputs) -> dict[str, dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
         key = ij.py.from_java(input.getName())
@@ -434,8 +436,9 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callabl
 
     # Add metadata for widget creation
     _add_napari_metadata(module_execute, info, unresolved_inputs)
+    magic_kwargs = _add_scijava_metadata(info, unresolved_inputs)
 
-    return module_execute
+    return (module_execute, magic_kwargs)
 
 
 class ImageJWidget(QWidget):
@@ -585,7 +588,8 @@ class ImageJWidget(QWidget):
 
         # preprocess using napari GUI
         logging.debug("Processing...")
-        func = _functionify_module_execution(module, moduleInfo, self.viewer)
+        func, param_options = _functionify_module_execution(module, moduleInfo, self.viewer)
+        magic_kwargs = {'param_options': param_options}
         self.viewer.window.add_function_widget(
-            func, name=ij.py.from_java(moduleInfo.getTitle())
+            func, name=ij.py.from_java(moduleInfo.getTitle()), magic_kwargs=magic_kwargs
         )
