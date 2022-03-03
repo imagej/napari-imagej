@@ -10,8 +10,9 @@ import os
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import imagej
-from pytest import param
 from scyjava import config, jimport, when_jvm_starts
+from magicgui import magicgui
+from napari import Viewer
 from qtpy.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -24,9 +25,7 @@ from qtpy.QtWidgets import (
     QTableWidgetItem,
     QLabel,
 )
-from magicgui import magicgui
-from napari import Viewer
-from inspect import signature, Signature, Parameter
+from inspect import signature, Signature, Parameter, _empty
 from napari_imagej._ptypes import PTypes
 from napari_imagej._napari_converters import init_napari_converters
 
@@ -269,6 +268,17 @@ def _param_annotation(input):
         type = Optional[type]
     return type
 
+def _module_param(input):
+    name = ij.py.from_java(input.getName())
+    kind = Parameter.POSITIONAL_OR_KEYWORD
+    default = _param_default_or_none(input)
+    annotation = _param_annotation(input)
+
+    if default is not None:
+        return Parameter(name=name, kind=kind, default=default, annotation=annotation)
+    else:
+        return Parameter(name=name, kind=kind, annotation=annotation)
+
 
 def _modify_function_signature(function, inputs, module_info):
     """Rewrites function with type annotations for all module I/O items."""
@@ -276,15 +286,7 @@ def _modify_function_signature(function, inputs, module_info):
     try:
         sig: Signature = signature(function)
         # Grab all options after the module inputs
-        module_params = [
-            Parameter(
-                str(i.getName()),
-                kind=Parameter.POSITIONAL_OR_KEYWORD,
-                default=_param_default_or_none(i),
-                annotation=_param_annotation(i),
-            )
-            for i in inputs
-        ]
+        module_params = [_module_param(i) for i in inputs]
         other_params = [
             Parameter(
                 i[0],
@@ -367,7 +369,7 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
-def _add_scijava_metadata(info, unresolved_inputs) -> dict[str, dict[str, Any]]:
+def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
         key = ij.py.from_java(input.getName())
@@ -381,7 +383,8 @@ def _add_scijava_metadata(info, unresolved_inputs) -> dict[str, dict[str, Any]]:
                 pass
             value["max"] = max_val
 
-        metadata[key] = value
+        if len(value) > 0:
+            metadata[key] = value
 
     return metadata
 
@@ -589,7 +592,6 @@ class ImageJWidget(QWidget):
         # preprocess using napari GUI
         logging.debug("Processing...")
         func, param_options = _functionify_module_execution(module, moduleInfo, self.viewer)
-        magic_kwargs = {'param_options': param_options}
         self.viewer.window.add_function_widget(
-            func, name=ij.py.from_java(moduleInfo.getTitle()), magic_kwargs=magic_kwargs
+            func, name=ij.py.from_java(moduleInfo.getTitle()), magic_kwargs=param_options
         )
