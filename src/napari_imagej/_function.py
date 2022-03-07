@@ -381,46 +381,27 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
+def _add_choice(map: dict, key: str, value: Any):
+    if value is None: return
+    try:
+        map[key] = ij.py.from_java(value)
+    except Exception:
+        pass
+
+
 def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
         key = ij.py.from_java(input.getName())
-        value = {}
-        # Add max value
-        max_val = input.getMaximumValue()
-        if max_val is not None:
-            try:
-                max_val = ij.py.from_java(max_val)
-            except Exception:
-                pass
-            value["max"] = max_val
-        # Add min value
-        min_val = input.getMinimumValue()
-        if min_val is not None:
-            try:
-                min_val = ij.py.from_java(min_val)
-            except Exception:
-                pass
-            value["min"] = min_val
-        # Add step value
-        step_size = input.getStepSize()
-        if step_size is not None:
-            try:
-                step_size = ij.py.from_java(step_size)
-            except Exception:
-                pass
-            value["step"] = step_size
-        # Add label
-        label = input.getLabel()
-        if label is not None:
-            try:
-                label = ij.py.from_java(label)
-            except Exception:
-                pass
-            value["label"] = label
+        param_map = {}
+        _add_choice(param_map, "max", input.getMaximumValue())
+        _add_choice(param_map, "min", input.getMinimumValue())
+        _add_choice(param_map, "step", input.getStepSize())
+        _add_choice(param_map, "label", input.getLabel())
+        _add_choice(param_map, "tooltip", input.getDescription())
 
-        if len(value) > 0:
-            metadata[key] = value
+        if len(param_map) > 0:
+            metadata[key] = param_map
 
     return metadata
 
