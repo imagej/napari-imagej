@@ -8,9 +8,9 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 import imagej
-from scyjava import config, jimport, when_jvm_starts
+from scyjava import config, jimport, when_jvm_starts, Priority
 from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtWidgets import (
@@ -95,16 +95,44 @@ _ptypes: PTypes  = PTypes()
 # Install napari <-> java converters
 when_jvm_starts(lambda: init_napari_converters(ij))
 
+_PTYPE_CONVERTERS = []
+
+def ptype_converter(priority: int) -> Callable[[Type], Optional[Type]]:
+    def converter(func: Callable[[Type], Optional[Type]]): 
+        _PTYPE_CONVERTERS.append((func, priority))
+        return func
+    return converter
+
+# @ptype_converter(priority = Priority.HIGH)
+# def stringAsEnumChecker(java_type: Type) -> Optional[Type]:
+#     String = jimport('java.lang.String')
+#     if String.class_.isAssignableFrom(java_type):
+#         if jtype.class_.isAssignableFrom(java_type):
+#             return ptype
+#     return None
+
+@ptype_converter(priority = Priority.NORMAL)
+def isAssignableChecker(java_type: Type) -> Optional[Type]:
+    for jtype, ptype in _ptypes.ptypes.items():
+        if jtype.class_.isAssignableFrom(java_type):
+            return ptype
+    return None
+
+@ptype_converter(priority = Priority.LOW)
+def canConvertChecker(java_type: Type) -> Optional[Type]:
+    for jtype, ptype in _ptypes.ptypes.items():
+        if ij.convert().supports(jtype, java_type):
+            return ptype
+    return None
+
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
     """Returns the Python type associated with the passed java type."""
-    for jtype, ptype in _ptypes.ptypes.items():
-        if jtype.class_.isAssignableFrom(java_type):
-            return ptype
-    for jtype, ptype in _ptypes.ptypes.items():
-        if ij.convert().supports(jtype, java_type):
-            return ptype
+    for converter, _ in sorted(_PTYPE_CONVERTERS, reverse=True, key=lambda x: x[1]):
+        converted = converter(java_type)
+        if converted is not None:
+            return converted
     raise ValueError(f"Unsupported Java type: {java_type}")
 
 
@@ -399,6 +427,7 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
         _add_choice(param_map, "step", input.getStepSize())
         _add_choice(param_map, "label", input.getLabel())
         _add_choice(param_map, "tooltip", input.getDescription())
+        _add_choice(param_map, "choices", [ij.py.from_java(c) for c in input.getChoices()])
 
         if len(param_map) > 0:
             metadata[key] = param_map
