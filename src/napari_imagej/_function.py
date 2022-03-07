@@ -6,11 +6,12 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 
 Replace code below according to your needs.
 """
+import enum
 import os
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 import imagej
-from scyjava import config, jimport, when_jvm_starts
+from scyjava import config, jimport, when_jvm_starts, Priority
 from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtWidgets import (
@@ -87,6 +88,9 @@ Searcher = jimport(
 SearchResult = jimport(
     "org.scijava.search.SearchResult"
 )
+ModuleItem = jimport(
+    "org.scijava.module.ModuleItem"
+)
 
 # Create Java -> Python type mapper
 _ptypes: PTypes  = PTypes()
@@ -95,26 +99,48 @@ _ptypes: PTypes  = PTypes()
 # Install napari <-> java converters
 when_jvm_starts(lambda: init_napari_converters(ij))
 
+_PTYPE_CONVERTERS = []
 
-# TODO: Move this function to scyjava.convert and/or ij.py.
-def _ptype(java_type):
-    """Returns the Python type associated with the passed java type."""
+def ptype_converter(priority: int) -> Callable[[ModuleItem], Optional[Type]]:
+    def converter(func: Callable[[ModuleItem], Optional[Type]]): 
+        _PTYPE_CONVERTERS.append((func, priority))
+        return func
+    return converter
+
+@ptype_converter(priority = Priority.NORMAL)
+def isAssignableChecker(item: ModuleItem) -> Optional[Type]:
+    java_type = item.getType()
     for jtype, ptype in _ptypes.ptypes.items():
         if jtype.class_.isAssignableFrom(java_type):
             return ptype
+    return None
+
+@ptype_converter(priority = Priority.LOW)
+def canConvertChecker(item: ModuleItem) -> Optional[Type]:
+    java_type = item.getType()
     for jtype, ptype in _ptypes.ptypes.items():
         if ij.convert().supports(jtype, java_type):
             return ptype
-    raise ValueError(f"Unsupported Java type: {java_type}")
+    return None
+
+
+# TODO: Move this function to scyjava.convert and/or ij.py.
+def _ptype(module_item):
+    """Returns the Python type associated with the passed java type."""
+    for converter, _ in sorted(_PTYPE_CONVERTERS, reverse=True, key=lambda x: x[1]):
+        converted = converter(module_item)
+        if converted is not None:
+            return converted
+    raise ValueError(f"Unsupported Java ModuleItem: {module_item}")
 
 
 def _return_type(info):
     """Returns the output type of info."""
-    out_types = [o.getType() for o in info.outputs()]
-    if len(out_types) == 0:
+    outs = info.outputs()
+    if len(outs) == 0:
         return None
-    if len(out_types) == 1:
-        return _ptype(out_types[0])
+    if len(outs) == 1:
+        return _ptype(outs[0])
     return dict
 
 
@@ -174,7 +200,7 @@ def _preprocess_remaining_inputs(
 def _resolvable_or_required(input):
     if input.isRequired(): return True
     try:
-        type = _ptype(input.getType())
+        type = _ptype(input)
         return True
     except ValueError:
         return False
@@ -273,7 +299,7 @@ def _param_default_or_none(input):
 
 
 def _param_annotation(input):
-    type = _ptype(input.getType())
+    type = _ptype(input)
     if not input.isRequired():
         type = Optional[type]
     return type
@@ -371,10 +397,9 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {
-        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
+        str(i.getName()): _ptype(i) for i in unresolved_inputs
     }
-    out_types = [o.getType() for o in info.outputs()]
-    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    return_annotation = _ptype(info.outputs()[0]) if len(info.outputs()) == 1 else dict
     type_hints["return"] = return_annotation
     execute_module.__annotation__ = type_hints  # type: ignore
 
@@ -399,6 +424,9 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
         _add_choice(param_map, "step", input.getStepSize())
         _add_choice(param_map, "label", input.getLabel())
         _add_choice(param_map, "tooltip", input.getDescription())
+        choices = [ij.py.from_java(c) for c in input.getChoices()]
+        if (len(choices) > 0):
+            _add_choice(param_map, "choices", choices)
 
         if len(param_map) > 0:
             metadata[key] = param_map
