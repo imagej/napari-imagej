@@ -155,7 +155,7 @@ def _preprocess_remaining_inputs(
     for i in range(len(unresolved_inputs)):
         name = unresolved_inputs[i].getName()
         obj = resolved_java_args[i]
-        if obj is None:
+        if obj is None and unresolved_inputs[i].isRequired():
             raise ValueError(
                 "No selection was made for input {}!".format(name)
             )
@@ -252,6 +252,15 @@ def _napari_module_param_additions(module_info) -> Dict[str, Tuple[type, Any]]:
         additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
 
+def _is_non_default(input):
+    if not input.isRequired(): return False
+    if input.getDefaultValue() is not None: return False
+    return True
+
+
+def _sink_optional_inputs(inputs):
+    return sorted(inputs, key=lambda x: -1 if _is_non_default(x) else 1)
+
 
 def _param_default_or_none(input):
     default = input.getDefaultValue()
@@ -262,11 +271,13 @@ def _param_default_or_none(input):
             pass
     return default
 
+
 def _param_annotation(input):
     type = _ptype(input.getType())
     if not input.isRequired():
         type = Optional[type]
     return type
+
 
 def _module_param(input):
     name = ij.py.from_java(input.getName())
@@ -274,10 +285,10 @@ def _module_param(input):
     default = _param_default_or_none(input)
     annotation = _param_annotation(input)
 
-    if default is not None:
-        return Parameter(name=name, kind=kind, default=default, annotation=annotation)
-    else:
+    if _is_non_default(input):
         return Parameter(name=name, kind=kind, annotation=annotation)
+    else:
+        return Parameter(name=name, kind=kind, default=default, annotation=annotation)
 
 
 def _modify_function_signature(function, inputs, module_info):
@@ -286,6 +297,7 @@ def _modify_function_signature(function, inputs, module_info):
     try:
         sig: Signature = signature(function)
         # Grab all options after the module inputs
+        inputs = _sink_optional_inputs(inputs)
         module_params = [_module_param(i) for i in inputs]
         other_params = [
             Parameter(
@@ -348,10 +360,10 @@ def _display_result(result: Any, info, viewer: Viewer, external: bool):
 
 
 def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
-    menu_string = " > ".join(str(p) for p in info.getMenuPath())
-    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
-    execute_module.__name__ = re.sub("[^a-zA-Z0-9_]", "_", menu_string)
-    execute_module.__qualname__ = menu_string
+    module_name = ij.py.from_java(info.getTitle())
+    execute_module.__doc__ = f"Invoke ImageJ2's {module_name}"
+    execute_module.__name__ = module_name
+    execute_module.__qualname__ = module_name
 
     # Rewrite the function signature to match the module inputs.
     _modify_function_signature(execute_module, unresolved_inputs, info)
@@ -374,7 +386,7 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
     for input in unresolved_inputs:
         key = ij.py.from_java(input.getName())
         value = {}
-        # Add default value
+        # Add max value
         max_val = input.getMaximumValue()
         if max_val is not None:
             try:
@@ -382,6 +394,22 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
             except Exception:
                 pass
             value["max"] = max_val
+        # Add min value
+        min_val = input.getMinimumValue()
+        if min_val is not None:
+            try:
+                min_val = ij.py.from_java(min_val)
+            except Exception:
+                pass
+            value["min"] = min_val
+        # Add label
+        label = input.getLabel()
+        if label is not None:
+            try:
+                label = ij.py.from_java(label)
+            except Exception:
+                pass
+            value["label"] = label
 
         if len(value) > 0:
             metadata[key] = value
@@ -397,6 +425,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callabl
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
+    unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
     # Package the rest of the execution into a widget
     def module_execute(
@@ -465,7 +494,6 @@ class ImageJWidget(QWidget):
 
         # Results box
         self.results = [[] for _ in range(len(self.searchers))]
-        print(self.results)
         self.resultTables: QWidget
         self.tableWidgets: List[QTableWidget]
         self.resultTables, self.tableWidgets = self._generate_results_widget()
@@ -593,5 +621,5 @@ class ImageJWidget(QWidget):
         logging.debug("Processing...")
         func, param_options = _functionify_module_execution(module, moduleInfo, self.viewer)
         self.viewer.window.add_function_widget(
-            func, name=ij.py.from_java(moduleInfo.getTitle()), magic_kwargs=param_options
+            func, magic_kwargs=param_options
         )
