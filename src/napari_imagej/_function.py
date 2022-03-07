@@ -402,6 +402,14 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
             except Exception:
                 pass
             value["min"] = min_val
+        # Add step value
+        step_size = input.getStepSize()
+        if step_size is not None:
+            try:
+                step_size = ij.py.from_java(step_size)
+            except Exception:
+                pass
+            value["step"] = step_size
         # Add label
         label = input.getLabel()
         if label is not None:
