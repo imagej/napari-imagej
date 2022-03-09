@@ -178,14 +178,21 @@ def _preprocess_remaining_inputs(
     """Resolves each input in unresolved_inputs"""
     resolved_java_args = _convert_inputs(user_resolved_inputs)
     # resolve remaining inputs
-    for i in range(len(unresolved_inputs)):
-        name = unresolved_inputs[i].getName()
-        obj = resolved_java_args[i]
-        if obj is None and unresolved_inputs[i].isRequired():
+    for module_item, input in zip(unresolved_inputs, resolved_java_args):
+        name = module_item.getName()
+        if input is None and module_item.isRequired():
             raise ValueError(
                 "No selection was made for input {}!".format(name)
             )
-        module.setInput(name, obj)
+        item_class = module_item.getType()
+        if not item_class.isInstance(input):
+            if ij.convert().supports(input, item_class):
+                input = ij.convert().convert(input, item_class)
+            else:
+                raise ValueError(
+                    f"{input} is not a {module_item.getType()}!"
+                )
+        module.setInput(name, input)
         module.resolveInput(name)
 
     # sanity check: ensure all inputs resolved
