@@ -2,10 +2,10 @@ from typing import Any, Dict, List
 from jpype import JArray, JDouble
 import pytest
 import numpy as np
-from scyjava import jimport
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
 from napari.layers import Labels, Shapes
+from napari_imagej.setup_imagej import ij, java_import
 
 def assert_labels_equality(
     exp: Dict[str, Any], act: Dict[str, Any], ignored_keys: List[str]
@@ -14,6 +14,11 @@ def assert_labels_equality(
         if key in ignored_keys:
             continue
         assert exp[key] == act[key]
+
+@pytest.fixture()
+def ij_fixture():
+    return ij()
+
 
 @pytest.fixture(scope="module")
 def py_labeling() -> Labeling:
@@ -58,7 +63,7 @@ def imgLabeling(ij):
     sets = [set(l) for l in sets]
     sets_java = ij.py.to_java(sets)
 
-    ImgLabeling = jimport("net.imglib2.roi.labeling.ImgLabeling")
+    ImgLabeling = java_import("net.imglib2.roi.labeling.ImgLabeling")
     return ImgLabeling.fromImageAndLabelSets(img_java, sets_java)
 
 
@@ -97,7 +102,7 @@ def test_labels_to_labeling(py_labeling):
     assert np.array_equal(exp_img, act_img)
 
 def test_labels_with_metadata_to_imgLabeling(ij, labels_with_metadata):
-    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    ImgLabeling = java_import('net.imglib2.roi.labeling.ImgLabeling')
     converted: ImgLabeling = ij.py.to_java(labels_with_metadata)
     exp_img: np.ndarray= labels_with_metadata.data
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
@@ -105,7 +110,7 @@ def test_labels_with_metadata_to_imgLabeling(ij, labels_with_metadata):
 
 
 def test_labels_with_metadata_circular(ij, labels_with_metadata):
-    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    ImgLabeling = java_import('net.imglib2.roi.labeling.ImgLabeling')
     converted: ImgLabeling = ij.py.to_java(labels_with_metadata)
     converted_back: Labels = ij.py.from_java(converted)
     exp_img: np.ndarray = labels_with_metadata.data
@@ -137,7 +142,7 @@ def _assert_image_mapping(exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int,
 
 
 def test_labels_without_metadata_to_imgLabeling(ij, labels_without_metadata):
-    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    ImgLabeling = java_import('net.imglib2.roi.labeling.ImgLabeling')
     converted: ImgLabeling = ij.py.to_java(labels_without_metadata)
     exp_img: np.ndarray= labels_without_metadata.data
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
@@ -147,7 +152,7 @@ def test_labels_without_metadata_to_imgLabeling(ij, labels_without_metadata):
 
 
 def test_labels_without_metadata_circular(ij, labels_without_metadata):
-    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    ImgLabeling = java_import('net.imglib2.roi.labeling.ImgLabeling')
     converted: ImgLabeling = ij.py.to_java(labels_without_metadata)
     converted_back: Labels = ij.py.from_java(converted)
     exp_img: np.ndarray = labels_without_metadata.data
@@ -172,7 +177,7 @@ def test_imgLabeling_to_labels(ij, imgLabeling):
 
 def _assert_ROITree_conversion(ij, layer):
     roitree = ij.py.to_java(layer)
-    ROITree = jimport('net.imagej.roi.ROITree')
+    ROITree = java_import('net.imagej.roi.ROITree')
     assert isinstance(roitree, ROITree)
     return roitree.children()
 
@@ -180,7 +185,7 @@ def _assert_ROITree_conversion(ij, layer):
 def _point_assertion(mask, pt: list, expected: bool) -> None:
     arr = JArray(JDouble)(len(pt))
     arr[:] = pt
-    RealPoint = jimport('net.imglib2.RealPoint')
+    RealPoint = java_import('net.imglib2.RealPoint')
     r = RealPoint(arr)
     assert mask.test(r) == expected
 
@@ -189,7 +194,7 @@ def _point_assertion(mask, pt: list, expected: bool) -> None:
 
 @pytest.fixture
 def ellipse_mask(ij):
-    ClosedWritableEllipsoid = jimport('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
+    ClosedWritableEllipsoid = java_import('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
     return ClosedWritableEllipsoid([20, 20], [10, 10])
 
 @pytest.fixture
@@ -221,7 +226,7 @@ def test_ellipse_layer_to_mask(ij, ellipse_layer):
     children = _assert_ROITree_conversion(ij, ellipse_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    ClosedWritableEllipsoid = jimport('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
+    ClosedWritableEllipsoid = java_import('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
     assert isinstance(j_mask, ClosedWritableEllipsoid)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -239,7 +244,7 @@ def test_ellipse_layer_to_mask(ij, ellipse_layer):
 
 @pytest.fixture
 def rectangle_mask():
-    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
+    ClosedWritableBox = java_import('net.imglib2.roi.geom.real.ClosedWritableBox')
     return ClosedWritableBox([20, 20], [40, 40])
 
 
@@ -286,7 +291,7 @@ def test_rectangle_layer_to_mask_box(ij, rectangle_layer_axis_aligned):
     children = _assert_ROITree_conversion(ij, rectangle_layer_axis_aligned)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
+    ClosedWritableBox = java_import('net.imglib2.roi.geom.real.ClosedWritableBox')
     assert isinstance(j_mask, ClosedWritableBox)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -304,7 +309,7 @@ def test_rectangle_layer_to_mask_polygon(ij, rectangle_layer_rotated):
     children = _assert_ROITree_conversion(ij, rectangle_layer_rotated)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    ClosedWritablePolygon2D = java_import('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
     assert isinstance(j_mask, ClosedWritablePolygon2D)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -319,7 +324,7 @@ def test_rectangle_layer_to_mask_polygon(ij, rectangle_layer_rotated):
 
 @pytest.fixture
 def polygon_mask():
-    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    ClosedWritablePolygon2D = java_import('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
     DoubleArr = JArray(JDouble)
     x = DoubleArr(3)
     y = DoubleArr(3)
@@ -359,7 +364,7 @@ def test_polygon_layer_to_mask(ij, polygon_layer):
     children = _assert_ROITree_conversion(ij, polygon_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+    ClosedWritablePolygon2D = java_import('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
     assert isinstance(j_mask, ClosedWritablePolygon2D)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -375,7 +380,7 @@ def test_polygon_layer_to_mask(ij, polygon_layer):
 
 @pytest.fixture
 def line_mask():
-    DefaultWritableLine = jimport('net.imglib2.roi.geom.real.DefaultWritableLine')
+    DefaultWritableLine = java_import('net.imglib2.roi.geom.real.DefaultWritableLine')
     DoubleArr = JArray(JDouble)
     p1 = DoubleArr(2)
     p2 = DoubleArr(2)
@@ -413,7 +418,7 @@ def test_line_layer_to_mask(ij, line_layer):
     children = _assert_ROITree_conversion(ij, line_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    DefaultWritableLine = jimport('net.imglib2.roi.geom.real.DefaultWritableLine')
+    DefaultWritableLine = java_import('net.imglib2.roi.geom.real.DefaultWritableLine')
     assert isinstance(j_mask, DefaultWritableLine)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -435,16 +440,16 @@ def test_line_layer_to_mask(ij, line_layer):
 
 @pytest.fixture
 def path_mask():
-    DefaultWritablePolyline = jimport('net.imglib2.roi.geom.real.DefaultWritablePolyline')
+    DefaultWritablePolyline = java_import('net.imglib2.roi.geom.real.DefaultWritablePolyline')
     p1 = JArray(JDouble)(2)
     p1[:] = [0, 0]
     p2 = JArray(JDouble)(2)
     p2[:] = [1, 1]
     p3 = JArray(JDouble)(2)
     p3[:] = [2, 0]
-    RealPoint = jimport('net.imglib2.RealPoint')
+    RealPoint = java_import('net.imglib2.RealPoint')
     pts = [RealPoint(p) for p in [p1, p2, p3]]
-    ArrayList = jimport('java.util.ArrayList')
+    ArrayList = java_import('java.util.ArrayList')
     ptList = ArrayList()
     ptList.addAll(pts)
     return DefaultWritablePolyline(ptList)
@@ -481,7 +486,7 @@ def test_path_layer_to_mask(ij, path_layer):
     children = _assert_ROITree_conversion(ij, path_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
-    DefaultWritablePolyline = jimport('net.imglib2.roi.geom.real.DefaultWritablePolyline')
+    DefaultWritablePolyline = java_import('net.imglib2.roi.geom.real.DefaultWritablePolyline')
     assert isinstance(j_mask, DefaultWritablePolyline)
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
@@ -527,8 +532,8 @@ def multiple_layer():
 
 def test_multiple_masks_to_layer(ij, multiple_masks):
     # Make a tree frmo an ellipse and a rectangle
-    DefaultROITree = jimport('net.imagej.roi.DefaultROITree')
-    ArrayList = jimport('java.util.ArrayList')
+    DefaultROITree = java_import('net.imagej.roi.DefaultROITree')
+    ArrayList = java_import('java.util.ArrayList')
     mask_list = ArrayList(multiple_masks)
     tree = DefaultROITree()
     tree.addROIs(mask_list)
@@ -560,11 +565,11 @@ def test_multiple_masks_to_layer(ij, multiple_masks):
 def test_multiple_layer_to_masks(ij, multiple_layer):
     # Convert the napari shapes layer into a tree
     masks = ij.py.to_java(multiple_layer)
-    ROITree = jimport('net.imagej.roi.ROITree')
+    ROITree = java_import('net.imagej.roi.ROITree')
     assert isinstance(masks, ROITree)
     rois = [child.data() for child in masks.children()]
     # Assert ellipsoid of first child
-    SuperEllipsoid = jimport('net.imglib2.roi.geom.real.SuperEllipsoid')
+    SuperEllipsoid = java_import('net.imglib2.roi.geom.real.SuperEllipsoid')
     assert isinstance(rois[0], SuperEllipsoid)
     # Assert dimensionality
     assert rois[0].numDimensions() == 2
@@ -576,7 +581,7 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     assert rois[0].semiAxisLength(0) == 10
     assert rois[0].semiAxisLength(1) == 10
     # Assert Box of second child
-    Box = jimport('net.imglib2.roi.geom.real.Box')
+    Box = java_import('net.imglib2.roi.geom.real.Box')
     assert isinstance(rois[1], Box)
     # Assert dimensionality
     assert rois[1].numDimensions() == 2

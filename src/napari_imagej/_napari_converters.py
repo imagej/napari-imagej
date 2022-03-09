@@ -1,34 +1,34 @@
-import os
-from typing import Any, Callable, Dict, List
+from typing import List
 from jpype import JArray, JDouble
 import numpy as np
+from napari_imagej.setup_imagej import ij, java_import
 from napari.layers import Labels, Shapes
 from napari_imagej import _ntypes
-from scyjava import Converter, Priority, jimport, add_py_converter, add_java_converter, jvm_started
+from scyjava import Converter, Priority, when_jvm_starts, add_py_converter, add_java_converter
 from labeling.Labeling import Labeling
 
 
 # -- Labels / ImgLabelings -- #
 
 
-def _imglabeling_to_layer(ij, imgLabeling) -> Labels:
+def _imglabeling_to_layer(imgLabeling) -> Labels:
     """
     Converts a Java ImgLabeling to a napari Labels layer
     :param imgLabeling: the Java ImgLabeling
     :return: a Labels layer
     """
-    labeling: Labeling = ij.py._imglabeling_to_labeling(imgLabeling)
+    labeling: Labeling = ij().py._imglabeling_to_labeling(imgLabeling)
     return _ntypes._labeling_to_layer(labeling)
 
 
-def _layer_to_imglabeling(ij, layer: Labels):
+def _layer_to_imglabeling(layer: Labels):
     """
     Converts a napari Labels layer to a Java ImgLabeling
     :param layer: a Labels layer
     :return: the Java ImgLabeling
     """
     labeling: Labeling = _ntypes._layer_to_labeling(layer)
-    return ij.py.to_java(labeling)
+    return ij().py.to_java(labeling)
 
 
 # -- Shapes Utils -- #
@@ -269,11 +269,11 @@ def _layer_to_roitree(layer: Shapes):
 # -- Converters -- #
 
 
-def _napari_to_java_converters(ij) -> List[Converter]:
+def _napari_to_java_converters() -> List[Converter]:
     return [
         Converter(
             predicate=lambda obj: isinstance(obj, Labels),
-            converter=lambda obj: _layer_to_imglabeling(ij, obj),
+            converter=lambda obj: _layer_to_imglabeling(obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
@@ -284,11 +284,11 @@ def _napari_to_java_converters(ij) -> List[Converter]:
     ]
 
 
-def _java_to_napari_converters(ij) -> List[Converter]:
+def _java_to_napari_converters() -> List[Converter]:
     return [
         Converter(
             predicate=lambda obj: isinstance(obj, ImgLabeling.class_),
-            converter=lambda obj: _imglabeling_to_layer(ij, obj),
+            converter=lambda obj: _imglabeling_to_layer(obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
@@ -331,13 +331,10 @@ class Java_Class(object):
 
     @property
     def class_(self):
-        if not jvm_started:
-            raise RuntimeError('Must start JVM first!')
-        return jimport(self._name)
+        return java_import(self._name)
     
     def __call__(self, *args):
         return self.class_(*args)
-
 
 
 Double: Java_Class = Java_Class('java.lang.Double')
@@ -374,16 +371,18 @@ ImgLabeling: Java_Class = Java_Class('net.imglib2.roi.labeling.ImgLabeling')
 
 RealPoint: Java_Class = Java_Class('net.imglib2.RealPoint')
 
-def init_napari_converters(ij):
+def init_napari_converters():
     """
     Adds all converters to the ScyJava converter framework.
     :param ij: An ImageJ gateway
     """
-
     # Add napari -> Java converters
-    for converter in _napari_to_java_converters(ij):
+    for converter in _napari_to_java_converters():
         add_java_converter(converter)
 
     # Add Java -> napari converters
-    for converter in _java_to_napari_converters(ij):
+    for converter in _java_to_napari_converters():
         add_py_converter(converter)
+
+# Install napari <-> java converters
+when_jvm_starts(lambda: init_napari_converters())
