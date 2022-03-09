@@ -1,104 +1,109 @@
-from scyjava import jimport
+from napari_imagej.setup_imagej import java_import
+
 
 class PTypes:
     def __init__(self):
         # Numbers
         self._numbers = {
-            jimport('[B'):                                            int,
-            jimport('[S'):                                            int,
-            jimport('[I'):                                            int,
-            jimport('[J'):                                            int,
-            jimport('[F'):                                            float,
-            jimport('[D'):                                            float,
-            jimport('java.lang.Byte'):                                int,
-            jimport('java.lang.Short'):                               int,
-            jimport('java.lang.Integer'):                             int,
-            jimport('java.lang.Long'):                                int,
-            jimport('java.lang.Float'):                               float,
-            jimport('java.lang.Double'):                              float,
-            jimport('java.math.BigInteger'):                          int,
-            jimport('net.imglib2.type.numeric.IntegerType'):          int,
-            jimport('net.imglib2.type.numeric.RealType'):             float,
-            jimport('net.imglib2.type.numeric.ComplexType'):          complex,
+            java_import('[B'):                                            int,
+            java_import('[S'):                                            int,
+            java_import('[I'):                                            int,
+            java_import('[J'):                                            int,
+            java_import('[F'):                                            float,
+            java_import('[D'):                                            float,
+            java_import('java.lang.Byte'):                                int,
+            java_import('java.lang.Short'):                               int,
+            java_import('java.lang.Integer'):                             int,
+            java_import('java.lang.Long'):                                int,
+            java_import('java.lang.Float'):                               float,
+            java_import('java.lang.Double'):                              float,
+            java_import('java.math.BigInteger'):                          int,
+            java_import('net.imglib2.type.numeric.IntegerType'):          int,
+            java_import('net.imglib2.type.numeric.RealType'):             float,
+            java_import('net.imglib2.type.numeric.ComplexType'):          complex,
         }
 
         # Booleans
         self._booleans = {
-            jimport('[Z'):                                            bool,
-            jimport('java.lang.Boolean'):                             bool,
-            jimport('net.imglib2.type.BooleanType'):                  bool,
+            java_import('[Z'):                                            bool,
+            java_import('java.lang.Boolean'):                             bool,
+            java_import('net.imglib2.type.BooleanType'):                  bool,
         }
 
         # Strings
         self._strings = {
-            jimport('[C'):                                            str,
-            jimport('java.lang.Character'):                           str,
-            jimport('java.lang.String'):                              str,
+            java_import('[C'):                                            str,
+            java_import('java.lang.Character'):                           str,
+            java_import('java.lang.String'):                              str,
         }
 
         # Images
         self._images = {
-            jimport('net.imglib2.RandomAccessible'):                  'napari.types.ImageData',
-            jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
-            jimport('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
-            jimport('ij.ImagePlus'):                                  'napari.types.ImageData'
+            java_import('net.imglib2.RandomAccessible'):                  'napari.types.ImageData',
+            java_import('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
+            java_import('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
+            # TODO: remove 'add_legacy=False' -> struggles with LegacyService
+            # This change is waiting on a new pyimagej release
+            # java_import('ij.ImagePlus'):                                  'napari.types.ImageData'
         }
 
         # Points
         self._points = {
-            jimport('net.imglib2.roi.geom.real.PointMask'):           'napari.types.PointsData',
-            jimport('net.imglib2.roi.geom.real.RealPointCollection'): 'napari.types.PointsData',
+            java_import('net.imglib2.roi.geom.real.PointMask'):           'napari.types.PointsData',
+            java_import('net.imglib2.roi.geom.real.RealPointCollection'): 'napari.types.PointsData',
         }
 
         # Shapes
         self._shapes = {
-            jimport('net.imglib2.roi.geom.real.Line'):                'napari.layers.Shapes',
-            jimport('net.imglib2.roi.geom.real.Box'):                 'napari.layers.Shapes',
-            jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.layers.Shapes',
-            jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.layers.Shapes',
-            jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.layers.Shapes',
-            jimport('net.imagej.roi.ROITree'):                        'napari.layers.Shapes',
+            java_import('net.imglib2.roi.geom.real.Line'):                'napari.layers.Shapes',
+            java_import('net.imglib2.roi.geom.real.Box'):                 'napari.layers.Shapes',
+            java_import('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.layers.Shapes',
+            java_import('net.imglib2.roi.geom.real.Polygon2D'):           'napari.layers.Shapes',
+            java_import('net.imglib2.roi.geom.real.Polyline'):            'napari.layers.Shapes',
+            java_import('net.imagej.roi.ROITree'):                        'napari.layers.Shapes',
         }
 
         # Surfaces
         self._surfaces = {
-            jimport('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
+            java_import('net.imagej.mesh.Mesh'):                          'napari.types.SurfaceData'
         }
 
         # Labels
         self._labels = {
-            jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.layers.Labels'
+            java_import('net.imglib2.roi.labeling.ImgLabeling'):          'napari.layers.Labels'
         }
 
         # Color tables
         self._color_tables = {
-            jimport('net.imglib2.display.ColorTable'):                'vispy.color.Colormap',
+            java_import('net.imglib2.display.ColorTable'):                'vispy.color.Colormap',
         }
 
         # Pandas dataframe
         self._pd = {
-            jimport('org.scijava.table.Table'):                       'pandas.DataFrame',
+            java_import('org.scijava.table.Table'):                       'pandas.DataFrame',
         }
 
         # Paths
         self._paths = {
-            jimport('java.io.File'):                                  'pathlib.PosixPath',
-            jimport('java.nio.file.Path'):                            'pathlib.PosixPath',
+            java_import('java.io.File'):                                  'pathlib.PosixPath',
+            java_import('java.nio.file.Path'):                            'pathlib.PosixPath',
         }
 
         # Enums
         self._enums = {
-            jimport('java.lang.Enum'):                                'enum.Enum',
+            java_import('java.lang.Enum'):                                'enum.Enum',
         }
 
         # Dates
         self._dates = {
-            jimport('java.util.Date'):                                'datetime.datetime',
+            java_import('java.util.Date'):                                'datetime.datetime',
         }
 
+        # NB we put booleans over numbers because otherwise some of the boolean types will satisfy a numbers type.
+        # TODO: Consider adding priorities
         self.ptypes = {
-            **self._numbers,
             **self._booleans,
+            **self._numbers,
             **self._strings,
             **self._labels,
             **self._images,

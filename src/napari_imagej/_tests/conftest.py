@@ -2,14 +2,15 @@ from typing import Generator
 import pytest
 import imagej
 
-from napari_imagej._function import ImageJWidget
+from napari_imagej.widget import ImageJWidget
 from napari import Viewer
 # This import is mistakenly considered unused; we need it for imagej_widget!
 from napari.utils._testsupport import make_napari_viewer
 
 @pytest.fixture(scope="module")
 def ij():
-    return imagej.init()
+    from napari_imagej.setup_imagej import ij
+    return ij()
 
 @pytest.fixture
 def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:

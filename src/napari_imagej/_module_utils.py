@@ -1,113 +1,30 @@
-"""
-This module is an example of a barebones function plugin for napari
-
-It implements the ``napari_experimental_provide_function`` hook specification.
-see: https://napari.org/docs/dev/plugins/hook_specifications.html
-
-Replace code below according to your needs.
-"""
-import enum
-import os
-import re
+from functools import lru_cache
 from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
-import imagej
-from jpype import JClass
-from scyjava import config, jimport, when_jvm_starts, Priority
+from scyjava import Priority
+from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
-from qtpy.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QVBoxLayout,
-    QPushButton,
-    QLineEdit,
-    QTableWidget,
-    QAbstractItemView,
-    QHeaderView,
-    QTableWidgetItem,
-    QLabel,
-)
-from inspect import signature, Signature, Parameter, _empty
 from napari_imagej._ptypes import PTypes
-from napari_imagej._napari_converters import init_napari_converters
-
-import logging
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # TEMP
-
-# TEMP: Avoid issues caused by https://github.com/imagej/pyimagej/issues/160
-config.add_repositories(
-    {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-)
-config.endpoints.append("io.scif:scifio:0.43.1")
-
-# Initialize ImageJ
-logger.debug("Initializing ImageJ2")
-config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
-# TODO: change 'headless=True' -> 'mode=imagej.Mode.HEADLESS'
-# This change is waiting on a new pyimagej release
-ij = imagej.init(headless=True)
-logger.debug(f"Initialized at version {ij.getVersion()}")
-# ij.log().setLevel(4)
-
-# Import useful classes
-
-Collections = jimport(
-    "java.util.Collections"
-)
-ImgLabeling = jimport(
-    "net.imglib2.roi.labeling.ImgLabeling"
-)
-PreprocessorPlugin = jimport(
-    "org.scijava.module.process.PreprocessorPlugin"
-)
-PostprocessorPlugin = jimport(
-    "org.scijava.module.process.PostprocessorPlugin"
-)
-InputHarvester = jimport(
-    "org.scijava.widget.InputHarvester"
-)
-LoadInputsPreprocessor = jimport(
-    "org.scijava.module.process.LoadInputsPreprocessor"
-)
-DisplayPostprocessor = jimport(
-    "org.scijava.display.DisplayPostprocessor"
-)
-Initializable = jimport(
-    "net.imagej.ops.Initializable"
-)
-ModuleItem = jimport(
-    "org.scijava.module.ModuleItem"
-)
-ModuleSearcher = jimport(
-    "org.scijava.search.module.ModuleSearcher"
-)
-OpSearcher = jimport(
-    "net.imagej.ops.search.OpSearcher"
-)
-Searcher = jimport(
-    "org.scijava.search.Searcher"
-)
-SearchResult = jimport(
-    "org.scijava.search.SearchResult"
-)
+from napari_imagej.setup_imagej import ij, java_import
 
 # Create Java -> Python type mapper
-_ptypes: PTypes  = PTypes()
+@lru_cache(maxsize=None)
+def type_mappings():
+    return PTypes()
+
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
 
 def module_item_converter(
     priority: int = Priority.NORMAL
-    ) -> Callable[[ModuleItem], Optional[Type]]:
+    ) -> Callable:
     """
     A decorator used to register the annotated function among the
     available module item converters
     :param priority: How much this converter should be prioritized
     :return: The annotated function
     """
-    def converter(func: Callable[[ModuleItem], Optional[Type]]): 
+    def converter(func: Callable): 
         """Registers the annotated function with its priority"""
         _MODULE_ITEM_CONVERTERS.append((func, priority))
         return func
@@ -125,13 +42,13 @@ def python_type_of(module_item):
 
 
 def _checkerUsingFunc(
-    item: ModuleItem,
+    item,
     func: Callable[[Type, Type], bool]
     ) -> Optional[Type]:
     """
     The logic of this checker is as follows:
 
-    _ptypes.ptypes.items() contains (java_type, python_type) pairs.
+    type_mappings().ptypes.items() contains (java_type, python_type) pairs.
     These pairs are considered to be equivalent types; i.e. we can freely
     convert between these types.
 
@@ -156,19 +73,19 @@ def _checkerUsingFunc(
     java_type = item.getType()
     # Case 1
     if item.isInput() and not item.isOutput():
-        for jtype, ptype in _ptypes.ptypes.items():
+        for jtype, ptype in type_mappings().ptypes.items():
             # can we go from jtype to java_type?
             if func(jtype, java_type):
                 return ptype
     # Case 2
     elif item.isOutput() and not item.isInput():
-        for jtype, ptype in _ptypes.ptypes.items():
+        for jtype, ptype in type_mappings().ptypes.items():
             # can we go from java_type to jtype?
             if func(java_type, jtype):
                 return ptype
     # Case 3
     elif item.isInput() and item.isOutput():
-        for jtype, ptype in _ptypes.ptypes.items():
+        for jtype, ptype in type_mappings().ptypes.items():
             # can we go both ways?
             if func(java_type, jtype) and func(jtype, java_type):
                 return ptype
@@ -177,13 +94,13 @@ def _checkerUsingFunc(
 
 
 @module_item_converter()
-def isAssignableChecker(item: ModuleItem) -> Optional[Type]:
+def isAssignableChecker(item) -> Optional[Type]:
     """
     Determines whether we can simply cast from ptype to item's type java_type
     """
     def isAssignable(from_type, to_type) -> bool:
         # Use Types to get the raw type of each
-        Types = jimport("org.scijava.util.Types")
+        Types = java_import("org.scijava.util.Types")
         from_raw = Types.raw(from_type)
         to_raw = Types.raw(to_type)
         return from_raw.isAssignableFrom(to_raw)
@@ -191,16 +108,13 @@ def isAssignableChecker(item: ModuleItem) -> Optional[Type]:
 
 
 @module_item_converter(priority = Priority.LOW)
-def canConvertChecker(item: ModuleItem) -> Optional[Type]:
+def canConvertChecker(item) -> Optional[Type]:
     """
     Determines whether imagej can do a conversion from ptype to item's type java_type.
     """
     def isAssignable(from_type, to_type) -> bool:
-        return ij.convert().supports(from_type, to_type)
+        return ij().convert().supports(from_type, to_type)
     return _checkerUsingFunc(item, isAssignable)
-
-# Install napari <-> java converters
-when_jvm_starts(lambda: init_napari_converters(ij))
 
 def _return_type(info):
     """Returns the output type of info."""
@@ -215,29 +129,21 @@ def _return_type(info):
 def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
-    logging.debug("Preprocessing...")
-    preprocessors = ij.plugin() \
+    PreprocessorPlugin = java_import("org.scijava.module.process.PreprocessorPlugin")
+    preprocessors = ij().plugin() \
         .createInstancesOfType(PreprocessorPlugin)
-    # for i in preprocessors:
+    # we want to avoid these processors
+    problematic_processors = (
+        java_import("org.scijava.widget.InputHarvester"),
+        java_import("org.scijava.module.process.LoadInputsPreprocessor")
+    )
     for preprocessor in preprocessors:
-        if isinstance(preprocessor, InputHarvester) or isinstance(
-            preprocessor, LoadInputsPreprocessor
-        ):
+        if isinstance(preprocessor, problematic_processors):
             # STOP AT INPUT HARVESTING
             break
         else:
             preprocessor.process(module)
 
-
-def _convert_inputs(napari_args):
-    """Converts napari inputs to java inputs"""
-    return ij.py.jargs(*napari_args)
-
-
-def _convert_output(j_result):
-    """Converts a java output to a napari output"""
-    # Convert java type to python type
-    return ij.py.from_java(j_result)
 
 def _resolve_user_input(
     module, # an org.scijava.module.Module
@@ -254,8 +160,8 @@ def _resolve_user_input(
     # if isinstance(input, python_type_of(module_item)):
     item_class = module_item.getType()
     if not item_class.isInstance(input):
-        if ij.convert().supports(input, item_class):
-            input = ij.convert().convert(input, item_class)
+        if ij().convert().supports(input, item_class):
+            input = ij().convert().convert(input, item_class)
         else:
             raise ValueError(
                 f"{input} is not a {module_item.getType()}!"
@@ -264,12 +170,11 @@ def _resolve_user_input(
     module.resolveInput(name)
 
 
-
 def _preprocess_remaining_inputs(
     module, inputs, unresolved_inputs, user_resolved_inputs
 ):
     """Resolves each input in unresolved_inputs"""
-    resolved_java_args = _convert_inputs(user_resolved_inputs)
+    resolved_java_args = ij().py.jargs(*user_resolved_inputs)
     # resolve remaining inputs
     for module_item, input in zip(unresolved_inputs, resolved_java_args):
         _resolve_user_input(module, module_item, input)
@@ -324,6 +229,7 @@ def _initialize_module(module):
         module.initialize()
         # HACK: module.initialize() does not seem to call
         # Initializable.initialize()
+        Initializable = java_import("net.imagej.ops.Initializable")
         if isinstance(module.getDelegateObject(), Initializable):
             module.getDelegateObject().initialize()
     except Exception as e:
@@ -343,10 +249,15 @@ def _run_module(module):
 def _postprocess_module(module):
     """Runs all known postprocessors on the passed module."""
     # Discover all postprocessors
-    postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
+    PostprocessorPlugin = java_import("org.scijava.module.process.PostprocessorPlugin")
+    postprocessors = ij().plugin().createInstancesOfType(PostprocessorPlugin)
+
+    problematic_postprocessors = (
+        java_import("org.scijava.display.DisplayPostprocessor")
+    )
     # Run all discovered postprocessors
     for postprocessor in postprocessors:
-        if isinstance(postprocessor, DisplayPostprocessor):
+        if isinstance(postprocessor, problematic_postprocessors):
             # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
             # We are going to ignore it until it behaves (see https://github.com/imagej/imagej-common/issues/100 )
             continue
@@ -361,7 +272,7 @@ def _napari_module_param_additions(module_info) -> Dict[str, Tuple[type, Any]]:
     # additional parameters are in the form "name": (type, default value)
     additional_params: Dict[str, Tuple[type, Any]] = {}
     output_item = module_info.outputs().iterator().next()
-    if not _ptypes.type_displayable_in_napari(output_item.getType()):
+    if not type_mappings().type_displayable_in_napari(output_item.getType()):
         additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
 
@@ -380,7 +291,7 @@ def _is_non_default(input):
     return True
 
 
-def _sink_optional_inputs(inputs):
+def _sink_default_inputs(inputs):
     """
     Python functions cannot have required args after an optional arg.
     We need to move all default inputs after the required ones.
@@ -396,7 +307,7 @@ def _param_default_or_none(input):
     default = input.getDefaultValue()
     if default is not None:
         try:
-            default = ij.py.from_java(default)
+            default = ij().py.from_java(default)
         except Exception:
             pass
     return default
@@ -404,7 +315,7 @@ def _param_default_or_none(input):
 
 def _param_annotation(input):
     """
-    Gets the (Python) type hint for input
+    Gets the (Python) type hint for a (Java) input
     """
     type = python_type_of(input)
     if not input.isRequired():
@@ -414,7 +325,7 @@ def _param_annotation(input):
 
 def _module_param(input):
     """Converts a java ModuleItem into a python Parameter"""
-    name = ij.py.from_java(input.getName())
+    name = ij().py.from_java(input.getName())
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
     annotation = _param_annotation(input)
@@ -435,7 +346,7 @@ def _modify_function_signature(function, inputs, module_info):
     try:
         sig: Signature = signature(function)
         # Grab all options after the module inputs
-        inputs = _sink_optional_inputs(inputs)
+        inputs = _sink_default_inputs(inputs)
         module_params = [_module_param(i) for i in inputs]
         other_params = [
             Parameter(
@@ -479,7 +390,7 @@ def _napari_specific_parameter(
 def _display_result(result: Any, info, viewer: Viewer, external: bool):
     """Displays result in a new widget"""
     def show_tabular_output():
-        return ij.py.from_java(result)
+        return ij().py.from_java(result)
 
     sig: Signature = signature(show_tabular_output)
     show_tabular_output.__signature__ = sig.replace(
@@ -492,13 +403,13 @@ def _display_result(result: Any, info, viewer: Viewer, external: bool):
     if external:
         result_widget.show(run=True)
     else:
-        name = "Result: " + ij.py.from_java(info.getTitle())
+        name = "Result: " + ij().py.from_java(info.getTitle())
         viewer.window.add_dock_widget(result_widget, name=name)
     result_widget.update()
 
 
 def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
-    module_name = ij.py.from_java(info.getTitle())
+    module_name = ij().py.from_java(info.getTitle())
     execute_module.__doc__ = f"Invoke ImageJ2's {module_name}"
     execute_module.__name__ = module_name
     execute_module.__qualname__ = module_name
@@ -541,10 +452,10 @@ def _add_param_metadata(metadata: dict, key: str, value: Any, add_empty_list = T
         pass
 
 
-def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
+def _add_scijava_metadata(unresolved_inputs) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
-        key = ij.py.from_java(input.getName())
+        key = ij().py.from_java(input.getName())
         param_map = {}
         _add_param_metadata(param_map, "max", input.getMaximumValue())
         _add_param_metadata(param_map, "min", input.getMinimumValue())
@@ -560,19 +471,18 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
 
 
 
-def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callable, dict]:
+def functionify_module_execution(viewer: Viewer, logger, module, info) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
     _preprocess_non_inputs(module)
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
-    unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
+    unresolved_inputs = _sink_default_inputs(unresolved_inputs)
 
     # Package the rest of the execution into a widget
     def module_execute(
         *user_resolved_inputs,
-        # display_results_in_new_window: bool = False
     ):
 
         # Resolve remaining inputs
@@ -594,7 +504,7 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callabl
         # get output
         logger.debug("run_module: execution complete")
         j_result = _module_output(module)
-        result = _convert_output(j_result) 
+        result = ij().py.from_java(j_result) 
         logger.debug(f"run_module: result = {result}")
 
         # display result 
@@ -610,165 +520,6 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Tuple[Callabl
 
     # Add metadata for widget creation
     _add_napari_metadata(module_execute, info, unresolved_inputs)
-    magic_kwargs = _add_scijava_metadata(info, unresolved_inputs)
+    magic_kwargs = _add_scijava_metadata(unresolved_inputs)
 
     return (module_execute, magic_kwargs)
-
-
-class ImageJWidget(QWidget):
-    """The top-level ImageJ widget for napari."""
-    def __init__(self, napari_viewer: Viewer):
-        super().__init__()
-        self.viewer = napari_viewer
-        self._ij = ij
-
-        self.setLayout(QVBoxLayout())
-
-        # Search Bar
-        self._search_widget: QWidget = QWidget()
-        self._search_widget.setLayout(QHBoxLayout())
-        self._search_widget.layout().addWidget(self._generate_searchbar())
-
-        self.layout().addWidget(self._search_widget)
-
-        self.searchers = self._generate_searchers()
-        self.searchService = self._generate_search_service()
-
-        # Results box
-        # We need one list PER searcher, hence the list of lists
-        self.results: List[List[SearchResult]] = [[] for _ in range(len(self.searchers))]
-        self.resultTables: QWidget
-        self.tableWidgets: List[QTableWidget] = self._generate_results_tables()
-        self.resultTables = self._generate_results_widget(self.tableWidgets)
-        self.layout().addWidget(self.resultTables)
-
-        # Module highlighter
-        self.focus_widget = QWidget()
-        self.focus_widget.setLayout(QVBoxLayout())
-        self.focused_module = None
-        self.focused_module_label = QLabel()
-        self.focus_widget.layout().addWidget(self.focused_module_label)
-        self.focused_module_label.setText("Display Module Here")
-        self.layout().addWidget(self.focus_widget)
-        self.focused_action_buttons = []  # type: ignore
-
-
-    def _generate_searchbar(self) -> QLineEdit:
-        searchbar = QLineEdit()
-        searchbar.textChanged.connect(self._search)
-        searchbar.returnPressed.connect(lambda: self._highlight_module(0, 0))
-        return searchbar
-
-    def _convert_searchResult_to_info(self, search_result):
-        info = search_result.info()
-        # There is an extra step for Ops - we actually need the CommandInfo
-        OpInfo = jimport('net.imagej.ops.OpInfo')
-        if isinstance(info, OpInfo):
-            info = info.cInfo()
-        return info
-
-    def _generate_searchers(self) -> List[Any]:
-        searcherClasses = [ModuleSearcher, OpSearcher]
-        pluginService = ij.get("org.scijava.plugin.PluginService")
-        searchers = [pluginService.getPlugin(cls, Searcher).createInstance() for cls in searcherClasses]
-        for searcher in searchers:
-            ij.context().inject(searcher)
-        return searchers
-
-    def _generate_search_service(self):
-        return ij.get("org.scijava.search.SearchService")
-    
-    def _highlight_from_results_table(self, searcher_index):
-        return lambda row, col: self._highlight_module(searcher_index, row, col)
-
-    def _generate_results_tables(self) -> List[QTableWidget]:
-        resultTables = []
-        for i, searcher in enumerate(self.searchers):
-            # GUI properties
-            labels = [ij.py.from_java(searcher.title())]
-            max_results = 12
-            tableWidget = QTableWidget(max_results, len(labels))
-            # Modules take up a row, so highlight the entire thing
-            tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-            # Label the columns with labels
-            tableWidget.setHorizontalHeaderLabels(labels)
-            tableWidget.horizontalHeader().setSectionResizeMode(
-                0,
-                QHeaderView.Stretch
-            )
-            tableWidget.verticalHeader().hide()
-            tableWidget.setShowGrid(False)
-            tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-            tableWidget.cellClicked.connect(self._highlight_from_results_table(i))
-            resultTables.append(tableWidget)
-        return resultTables
-
-
-    def _generate_results_widget(self, resultTables) -> QTableWidget:
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        for table in resultTables:
-            container.layout().addWidget(table)
-        return container
-
-    def _search(self, text):
-        # TODO: Consider adding a button to toggle fuzziness
-        for i in range(len(self.searchers)):
-            self.results[i] = self.searchers[i].search(text, True)
-            for j in range(len(self.results[i])):
-                name = ij.py.from_java(self.results[i][j].name())
-                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(name))
-                self.tableWidgets[i].showRow(j)
-            for j in range(len(self.results[i]), self.tableWidgets[i].rowCount()):
-                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(""))
-                self.tableWidgets[i].hideRow(j)
-
-    def _highlight_module(self, table: int, row: int, col: int):
-        # Ensure the clicked module is an actual selection
-        if (row >= len(self.results[table])):
-            return
-        # Print highlighted module
-        self.focused_module = self.results[table][row]
-        name = ij.py.from_java(self.focused_module.name())  # type: ignore
-        self.focused_module_label.setText(name)
-
-        # Create buttons for each action
-        self.focused_actions = self.searchService.actions(self.focused_module)
-        activated_actions = len(self.focused_action_buttons)
-        # Hide buttons if we have more than needed
-        while activated_actions > len(self.focused_actions):
-            activated_actions = activated_actions - 1
-            self.focused_action_buttons[activated_actions].hide()
-        # Create buttons if we need more than we have
-        while len(self.focused_action_buttons) < len(self.focused_actions):
-            button = QPushButton()
-            self.focused_action_buttons.append(button)
-            self.focus_widget.layout().addWidget(button)
-        # Rename buttons to reflect focused module's actions
-        for i in range(len(self.focused_actions)):
-            action_name = ij.py.from_java(self.focused_actions[i].toString())
-            self.focused_action_buttons[i].show()
-            self.focused_action_buttons[i].setText(action_name)
-            self.focused_action_buttons[i].disconnect()
-            if action_name == "Run":
-                self.focused_action_buttons[i].clicked.connect(
-                    lambda: self._execute_module(
-                        self._convert_searchResult_to_info(self.focused_module)
-                    )
-                )
-            else:
-                self.focused_action_buttons[i].clicked.connect(
-                    self.focused_actions[i].run
-                )
-            self.focused_action_buttons[i].show()
-
-    def _execute_module(self, moduleInfo):
-        logging.debug("Creating module...")
-        module = ij.module().createModule(moduleInfo)
-
-        # preprocess using napari GUI
-        logging.debug("Processing...")
-        func, param_options = _functionify_module_execution(module, moduleInfo, self.viewer)
-        self.viewer.window.add_function_widget(
-            func, magic_kwargs=param_options
-        )
