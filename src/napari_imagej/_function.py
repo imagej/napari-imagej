@@ -131,7 +131,7 @@ def _ptype(module_item):
         converted = converter(module_item)
         if converted is not None:
             return converted
-    raise ValueError(f"Unsupported Java ModuleItem: {module_item}")
+    raise ValueError(f"Unsupported Java ModuleItem: {module_item}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!")
 
 
 def _return_type(info):
@@ -192,12 +192,13 @@ def _preprocess_remaining_inputs(
     for input in inputs:
         if input.isRequired() and not module.isInputResolved(input.getName()):
             raise ValueError(
-                "No selection was made for input {}!".format(input.getName())
+                f"input {input.getName()} of type {input.getType()} was not resolved! If it is impossible to resolve, let us know at forum.image.sc or by filing an issue at https://github.com/imagej/napari-imagej!".format(input.getName())
             )
 
     return resolved_java_args
 
 def _resolvable_or_required(input):
+    """Determines whether input should be resolved in napari"""
     if input.isRequired(): return True
     try:
         type = _ptype(input)
@@ -285,10 +286,18 @@ def _is_non_default(input):
 
 
 def _sink_optional_inputs(inputs):
-    return sorted(inputs, key=lambda x: -1 if _is_non_default(x) else 1)
+    """
+    Python functions cannot have non-default args after a default arg.
+    We need to move all default inputs after the non-default ones.
+    """
+    sort_key = lambda x: -1 if _is_non_default(x) else 1
+    return sorted(inputs, key=sort_key)
 
 
 def _param_default_or_none(input):
+    """
+    Gets the Python function's default value, if it exists, for input.
+    """
     default = input.getDefaultValue()
     if default is not None:
         try:
@@ -299,6 +308,9 @@ def _param_default_or_none(input):
 
 
 def _param_annotation(input):
+    """
+    Gets the (Python) type hint for input
+    """
     type = _ptype(input)
     if not input.isRequired():
         type = Optional[type]
@@ -306,6 +318,7 @@ def _param_annotation(input):
 
 
 def _module_param(input):
+    """Converts a java ModuleItem into a python Parameter"""
     name = ij.py.from_java(input.getName())
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
@@ -406,10 +419,15 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
-def _add_choice(map: dict, key: str, value: Any):
+def _add_choice(map: dict, key: str, value: Any, add_empty_list = True):
     if value is None: return
     try:
-        map[key] = ij.py.from_java(value)
+        if (type(value) == list):
+            if (len(value) == 0 and not add_empty_list): return
+            value = [ij.py.from_java(v) for v in value]
+        else:
+            value = ij.py.from_java(value)
+        map[key] = value
     except Exception:
         pass
 
@@ -424,9 +442,7 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
         _add_choice(param_map, "step", input.getStepSize())
         _add_choice(param_map, "label", input.getLabel())
         _add_choice(param_map, "tooltip", input.getDescription())
-        choices = [ij.py.from_java(c) for c in input.getChoices()]
-        if (len(choices) > 0):
-            _add_choice(param_map, "choices", choices)
+        _add_choice(param_map, "choices", input.getChoices(), add_empty_list=False)
 
         if len(param_map) > 0:
             metadata[key] = param_map
