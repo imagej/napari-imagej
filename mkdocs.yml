@@ -1,10 +1,11 @@
 site_name: napari-imagej
 site_description: Use ImageJ functionality from napari
-site_author: Curtis Rueden
+site_author: ImageJ2 developers
 
 theme: readthedocs
 
-repo_url: https://github.com/ctrueden/napari-imagej
+
+repo_url: https://github.com/imagej/napari-imagej
 
 pages:
 - Home: index.md
