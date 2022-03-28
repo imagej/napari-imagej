@@ -2,7 +2,7 @@ from typing import List
 from jpype import JArray, JDouble
 import numpy as np
 from napari_imagej.setup_imagej import ij, java_import
-from napari.layers import Labels, Shapes
+from napari.layers import Labels, Shapes, Points
 from napari_imagej import _ntypes
 from scyjava import Converter, Priority, when_jvm_starts, add_py_converter, add_java_converter
 from labeling.Labeling import Labeling
@@ -266,6 +266,25 @@ def _layer_to_roitree(layer: Shapes):
     return rois
 
 
+# -- Points / RealPointCollection -- #
+
+
+def _points_to_realpointcollection(points):
+    pts = [realPoint_from(x) for x in points.data]
+    ptList = ArrayList(pts)
+    return DefaultWritableRealPointCollection(ptList)
+
+
+def _realpointcollection_to_points(collection):
+    data = np.zeros((collection.size(), collection.numDimensions()))
+    tmp_arr_dims = int(collection.numDimensions())
+    tmp_arr = JArray(JDouble)(tmp_arr_dims)
+    for i, pt in enumerate(collection.points()):
+        pt.localize(tmp_arr)
+        data[i, :] = tmp_arr
+    return Points(data=data)
+
+
 # -- Converters -- #
 
 
@@ -280,6 +299,11 @@ def _napari_to_java_converters() -> List[Converter]:
             predicate=lambda obj: isinstance(obj, Shapes),
             converter=lambda obj: _layer_to_roitree(obj),
             priority=Priority.VERY_HIGH
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Points),
+            converter=_points_to_realpointcollection,
+            priority=Priority.VERY_HIGH + 1
         ),
     ]
 
@@ -319,6 +343,11 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, ROITree.class_),
             converter=_roitree_to_layer,
+            priority=Priority.VERY_HIGH + 1
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, RealPointCollection.class_),
+            converter=_realpointcollection_to_points,
             priority=Priority.VERY_HIGH + 1
         ),
     ]
@@ -370,6 +399,10 @@ DefaultWritablePolyline: Java_Class = Java_Class('net.imglib2.roi.geom.real.Defa
 ImgLabeling: Java_Class = Java_Class('net.imglib2.roi.labeling.ImgLabeling')
 
 RealPoint: Java_Class = Java_Class('net.imglib2.RealPoint')
+
+RealPointCollection: Java_Class = Java_Class('net.imglib2.roi.geom.real.RealPointCollection')
+
+DefaultWritableRealPointCollection: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritableRealPointCollection')
 
 def init_napari_converters():
     """
