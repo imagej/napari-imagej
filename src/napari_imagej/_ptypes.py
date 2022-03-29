@@ -1,3 +1,4 @@
+from typing import List
 from napari_imagej.setup_imagej import java_import
 
 
@@ -5,18 +6,18 @@ class PTypes:
     def __init__(self):
         # Numbers
         self._numbers = {
-            java_import('[B'):                                            int,
-            java_import('[S'):                                            int,
-            java_import('[I'):                                            int,
-            java_import('[J'):                                            int,
-            java_import('[F'):                                            float,
-            java_import('[D'):                                            float,
             java_import('java.lang.Byte'):                                int,
+            java_import('[B'):                                            List[int],
             java_import('java.lang.Short'):                               int,
+            java_import('[S'):                                            List[int],
             java_import('java.lang.Integer'):                             int,
+            java_import('[I'):                                            List[int],
             java_import('java.lang.Long'):                                int,
+            java_import('[J'):                                            List[int],
             java_import('java.lang.Float'):                               float,
+            java_import('[F'):                                            List[float],
             java_import('java.lang.Double'):                              float,
+            java_import('[D'):                                            List[float],
             java_import('java.math.BigInteger'):                          int,
             java_import('net.imglib2.type.numeric.IntegerType'):          int,
             java_import('net.imglib2.type.numeric.RealType'):             float,
@@ -25,7 +26,7 @@ class PTypes:
 
         # Booleans
         self._booleans = {
-            java_import('[Z'):                                            bool,
+            java_import('[Z'):                                            List[bool],
             java_import('java.lang.Boolean'):                             bool,
             java_import('net.imglib2.type.BooleanType'):                  bool,
         }

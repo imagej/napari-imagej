@@ -38,7 +38,7 @@ def python_type_of(module_item):
         converted = converter(module_item)
         if converted is not None:
             return converted
-    raise ValueError(f"Unsupported Java ModuleItem: {module_item}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!")
+    raise ValueError(f"Unsupported Java Type: {module_item.getType()}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!")
 
 
 def _checkerUsingFunc(
