@@ -21,9 +21,12 @@ dependencies:
   - numpy
   # Developer tools
   - build
+  - pyqt5-sip
   - pytest
   - pytest-cov
   - pytest-qt
+  - pytest-xvfb
+  - qtpy
   # Project from source
   - pip
   - pip:
