@@ -1,0 +1,30 @@
+# Use this file to construct an environment
+# for developing napari-imagej from source.
+#
+#   mamba env create -f dev-environment.yml
+#   conda activate napari-imagej-dev
+#
+# In addition to the dependencies needed for using napari-imagej, it includes tools
+# for developer-related actions like running automated tests (pytest),
+# linting the code (black), and generating the API documentation (sphinx).
+# If you want an environment without these tools, use environment.yml.
+name: napari-imagej-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Project dependencies
+  - napari
+  - pyimagej >= 1.2.0
+  - labeling >= 0.1.12
+  # Test dependencies
+  - numpy
+  # Developer tools
+  - build
+  - pytest
+  - pytest-cov
+  - pytest-qt
+  # Project from source
+  - pip
+  - pip:
+    - -e '.'

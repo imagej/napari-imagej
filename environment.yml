@@ -16,6 +16,7 @@ dependencies:
   # Project depenencies
   - napari
   - pyimagej >= 1.2.0
+  - labeling >= 0.1.12
   # Project from source
   - pip
   - pip:
