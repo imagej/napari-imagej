@@ -39,8 +39,6 @@ config.add_repositories(
     {"scijava.public": "https://maven.scijava.org/content/groups/public"}
 )
 config.endpoints.append("io.scif:scifio:0.43.1")
-# Used for Box ROI conversion
-config.endpoints.append("mpicbg:mpicbg:1.4.2")
 
 # Initialize ImageJ
 logger.debug("Initializing ImageJ2")

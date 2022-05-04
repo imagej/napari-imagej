@@ -346,11 +346,6 @@ def init_napari_converters(ij):
     global DefaultWritableLine
     global DefaultWritablePolyline
     global RealPoint
-    global Point
-    global PointMatch
-    global RigidModel2D
-    global AffineTransform
-    global RealViews
 
     Double = jimport(
         'java.lang.Double'
@@ -402,21 +397,6 @@ def init_napari_converters(ij):
     )
     RealPoint = jimport(
         'net.imglib2.RealPoint'
-    )
-    Point = jimport(
-        'mpicbg.models.Point'
-    )
-    PointMatch = jimport(
-        'mpicbg.models.PointMatch'
-    )
-    RigidModel2D = jimport(
-        'mpicbg.models.RigidModel2D'
-    )
-    AffineTransform = jimport(
-        'net.imglib2.realtransform.AffineTransform'
-    )
-    RealViews = jimport(
-        'net.imglib2.realtransform.RealViews'
     )
 
     # Add napari -> Java converters
