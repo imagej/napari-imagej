@@ -10,7 +10,8 @@ import os
 import re
 from typing import Any, Callable, Dict, List, Tuple
 import imagej
-from scyjava import config, jimport
+from matplotlib import container
+from scyjava import config, jimport, Converter, Priority, when_jvm_starts, add_java_converter, add_py_converter
 from qtpy.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -27,6 +28,9 @@ from magicgui import magicgui
 from napari import Viewer
 from inspect import signature, Signature, Parameter
 from napari_imagej._ptypes import PTypes
+from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
+from labeling.Labeling import Labeling
+from napari.layers import Labels
 
 import logging
 
@@ -46,12 +50,15 @@ config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
 # This change is waiting on a new pyimagej release
 ij = imagej.init(headless=True)
 logger.debug(f"Initialized at version {ij.getVersion()}")
-ij.log().setLevel(4)
+# ij.log().setLevel(4)
 
 # Import useful classes
 
 Collections = jimport(
     "java.util.Collections"
+)
+ImgLabeling = jimport(
+    "net.imglib2.roi.labeling.ImgLabeling"
 )
 PreprocessorPlugin = jimport(
     "org.scijava.module.process.PreprocessorPlugin"
@@ -82,7 +89,69 @@ SearchResult = jimport(
 )
 
 # Create Java -> Python type mapper
-_ptypes = PTypes()
+_ptypes: PTypes  = PTypes()
+
+def _delete_labeling_files(filepath):
+    """
+    Removes any Labeling data left over at filepath
+    :param filepath: the filepath where Labeling (might have) saved data
+    """
+    pth_bson = filepath + '.bson'
+    pth_tif = filepath + '.tif'
+    if os.path.exists(pth_tif):
+        os.remove(pth_tif)
+    if os.path.exists(pth_bson):
+        os.remove(pth_bson)
+
+def _imglabeling_to_layer(labeling):
+    """Converts a Labeling to a Labels layer"""
+    LabelingIOService = jimport('net.imglib2.labeling.LabelingIOService')
+    labels = ij.context().getService(LabelingIOService)
+    # Convert the data to an ImgLabeling
+    data = ij.convert().convert(labeling, ImgLabeling)
+
+    # Save the image on the java side
+    tmp_pth = os.getcwd() + '/tmp'
+    tmp_pth_bson = tmp_pth + '.bson'
+    tmp_pth_tif = tmp_pth + '.tif'
+    try:
+        _delete_labeling_files(tmp_pth)
+        labels.save(data, tmp_pth_tif) # TODO: improve, likely utilizing the data's name
+    except Exception:
+        print('Failed to save the data')
+    
+    # Load the labeling on the python side
+    labeling = Labeling.from_file(tmp_pth_bson)
+    _delete_labeling_files(tmp_pth)
+    return _labeling_to_layer(labeling)
+
+def _layer_to_imglabeling(layer: Labels):
+    """Converts a Labels layer to a Labeling"""
+    labeling = _layer_to_labeling(layer)
+    
+    return ij.py.to_java(labeling)
+
+
+py_to_java_converters: List[Converter] = [
+    Converter(
+        predicate=lambda obj: isinstance(obj, Labels),
+        converter=_layer_to_imglabeling,
+        priority=Priority.VERY_HIGH
+    ),
+]
+
+
+java_to_py_converters: List[Converter] = [
+    Converter(
+        predicate=lambda obj: isinstance(obj, ImgLabeling),
+        converter=_imglabeling_to_layer,
+        priority=Priority.VERY_HIGH
+    ),
+]
+
+when_jvm_starts(lambda: [add_java_converter(c) for c in py_to_java_converters])
+when_jvm_starts(lambda: [add_py_converter(c) for c in java_to_py_converters])
+
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def _ptype(java_type):
@@ -106,10 +175,12 @@ def _return_type(info):
     return dict
 
 
-def _preprocess_non_inputs(module, preprocessors):
+def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
     logging.debug("Preprocessing...")
+    preprocessors = ij.plugin() \
+        .createInstancesOfType(PreprocessorPlugin)
     # for i in preprocessors:
     for preprocessor in preprocessors:
         if isinstance(preprocessor, InputHarvester) or isinstance(
@@ -121,11 +192,22 @@ def _preprocess_non_inputs(module, preprocessors):
             preprocessor.process(module)
 
 
+def _convert_inputs(napari_args):
+    """Converts napari inputs to java inputs"""
+    return ij.py.jargs(*napari_args)
+
+
+def _convert_output(j_result):
+    """Converts a java output to a napari output"""
+    # Convert java type to python type
+    return ij.py.from_java(j_result)
+
+
 def _preprocess_remaining_inputs(
     module, inputs, unresolved_inputs, user_resolved_inputs
 ):
     """Resolves each input in unresolved_inputs"""
-    resolved_java_args = ij.py.jargs(*user_resolved_inputs)
+    resolved_java_args = _convert_inputs(user_resolved_inputs)
     # resolve remaining inputs
     for i in range(len(unresolved_inputs)):
         name = unresolved_inputs[i].getName()
@@ -186,8 +268,11 @@ def _run_module(module):
         print(e.stacktrace())
 
 
-def _postprocess_module(module, postprocessors):
+def _postprocess_module(module):
     """Runs all known postprocessors on the passed module."""
+    # Discover all postprocessors
+    postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
+    # Run all discovered postprocessors
     for postprocessor in postprocessors:
         if isinstance(postprocessor, DisplayPostprocessor):
             # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
@@ -262,13 +347,53 @@ def _napari_specific_parameter(
 
     return args[index]
 
+def _display_result(result: Any, info, viewer: Viewer, external: bool):
+    """Displays result in a new widget"""
+    def show_tabular_output():
+        return ij.py.from_java(result)
+
+    sig: Signature = signature(show_tabular_output)
+    show_tabular_output.__signature__ = sig.replace(
+        return_annotation=_return_type(info)
+    )
+    result_widget = magicgui(
+        show_tabular_output, result_widget=True, auto_call=True
+    )
+
+    if external:
+        result_widget.show(run=True)
+    else:
+        name = "Result: " + ij.py.from_java(info.getTitle())
+        viewer.window.add_dock_widget(result_widget, name=name)
+    result_widget.update()
+
+
+def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
+    menu_string = " > ".join(str(p) for p in info.getMenuPath())
+    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
+    execute_module.__name__ = re.sub("[^a-zA-Z0-9_]", "_", menu_string)
+    execute_module.__qualname__ = menu_string
+
+    # Rewrite the function signature to match the module inputs.
+    _modify_function_signature(execute_module, unresolved_inputs, info)
+
+    # Add the type hints as annotations metadata as well.
+    # Without this, magicgui doesn't pick up on the types.
+    type_hints = {
+        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
+    }
+    out_types = [o.getType() for o in info.outputs()]
+    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
+    type_hints["return"] = return_annotation
+    execute_module.__annotation__ = type_hints  # type: ignore
+
+    execute_module._info = info  # type: ignore
+
 
 def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
-    preprocessors = ij.plugin() \
-        .createInstancesOfType(PreprocessorPlugin)
-    _preprocess_non_inputs(module, preprocessors)
+    _preprocess_non_inputs(module)
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -293,62 +418,28 @@ def _functionify_module_execution(module, info, viewer: Viewer) -> Callable:
         _run_module(module)
 
         # postprocess
-        postprocessors = ij.plugin().createInstancesOfType(PostprocessorPlugin)
-        _postprocess_module(module, postprocessors)
+        _postprocess_module(module)
 
-        # t output
+        # get output
         logger.debug("run_module: execution complete")
-        result = _module_output(module)
+        j_result = _module_output(module)
+        result = _convert_output(j_result) 
         logger.debug(f"run_module: result = {result}")
-        display_in_window = _napari_specific_parameter(
+
+        # display result 
+        display_externally = _napari_specific_parameter(
             execute_module,
             user_resolved_inputs,
             'display_results_in_new_window'
         )
-        if display_in_window is not None:
-            def show_tabular_output():
-                return ij.py.from_java(result)
+        if display_externally is not None:
+            _display_result(result, info, viewer, display_externally)
 
-            sig: Signature = signature(show_tabular_output)
-            show_tabular_output.__signature__ = sig.replace(
-                return_annotation=_return_type(info)
-            )
-            result_widget = magicgui(
-                show_tabular_output, result_widget=True, auto_call=True
-            )
+        return result
 
-            if display_in_window:
-                result_widget.show(run=True)
-            else:
-                name = "Result: " + ij.py.from_java(info.getTitle())
-                viewer.window.add_dock_widget(result_widget, name=name)
-            result_widget.update()
+    # Add metadata for widget creation
+    _add_napari_metadata(execute_module, info, unresolved_inputs)
 
-        if _ptypes.displayable_in_napari(result):
-            return ij.py.from_java(result)
-        else:
-            return result
-
-    # Format napari metadata
-    menu_string = " > ".join(str(p) for p in info.getMenuPath())
-    execute_module.__doc__ = f"Invoke ImageJ2's {menu_string} command"
-    execute_module.__name__ = re.sub("[^a-zA-Z0-9_]", "_", menu_string)
-    execute_module.__qualname__ = menu_string
-
-    # Rewrite the function signature to match the module inputs.
-    _modify_function_signature(execute_module, unresolved_inputs, info)
-
-    # Add the type hints as annotations metadata as well.
-    # Without this, magicgui doesn't pick up on the types.
-    type_hints = {
-        str(i.getName()): _ptype(i.getType()) for i in unresolved_inputs
-    }
-    out_types = [o.getType() for o in info.outputs()]
-    return_annotation = _ptype(out_types[0]) if len(out_types) == 1 else dict
-    type_hints["return"] = return_annotation
-    execute_module.__annotation__ = type_hints  # type: ignore
-
-    execute_module._info = info  # type: ignore
     return execute_module
 
 

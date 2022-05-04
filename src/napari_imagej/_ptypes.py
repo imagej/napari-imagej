@@ -1,4 +1,6 @@
+from typing import Any, Callable, Dict, Tuple, Type
 from scyjava import jimport
+import numpy as np
 
 
 class PTypes:
@@ -66,7 +68,7 @@ class PTypes:
 
         # Labels
         self._labels = {
-            jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.types.LabelsData',
+            jimport('net.imglib2.roi.labeling.ImgLabeling'):          'napari.layers.Labels'
         }
 
         # Color tables
@@ -99,11 +101,11 @@ class PTypes:
             **self._numbers,
             **self._booleans,
             **self._strings,
+            **self._labels,
             **self._images,
             **self._points,
             **self._shapes,
             **self._surfaces,
-            **self._labels,
             **self._color_tables,
             **self._pd,
             **self._paths,
