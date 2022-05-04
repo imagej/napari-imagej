@@ -11,45 +11,23 @@ from labeling.Labeling import Labeling
 # -- Labels / ImgLabelings -- #
 
 
-def _delete_labeling_files(filepath):
+def _imglabeling_to_layer(ij, imgLabeling) -> Labels:
     """
-    Removes any Labeling data left over at filepath
-    :param filepath: the filepath where Labeling (might have) saved data
+    Converts a Java ImgLabeling to a napari Labels layer
+    :param imgLabeling: the Java ImgLabeling
+    :return: a Labels layer
     """
-    pth_bson = filepath + '.bson'
-    pth_tif = filepath + '.tif'
-    if os.path.exists(pth_tif):
-        os.remove(pth_tif)
-    if os.path.exists(pth_bson):
-        os.remove(pth_bson)
-
-
-def _imglabeling_to_layer(ij, labeling):
-    """Converts a Labeling to a Labels layer"""
-    labels = ij.context().getService(LabelingIOService)
-    # Convert the data to an ImgLabeling
-    data = ij.convert().convert(labeling, ImgLabeling)
-
-    # Save the image on the java side
-    tmp_pth = os.getcwd() + '/tmp'
-    tmp_pth_bson = tmp_pth + '.bson'
-    tmp_pth_tif = tmp_pth + '.tif'
-    try:
-        _delete_labeling_files(tmp_pth)
-        labels.save(data, tmp_pth_tif) # TODO: improve, likely utilizing the data's name
-    except Exception:
-        print('Failed to save the data')
-    
-    # Load the labeling on the python side
-    labeling = Labeling.from_file(tmp_pth_bson)
-    _delete_labeling_files(tmp_pth)
+    labeling: Labeling = ij.py._imglabeling_to_labeling(imgLabeling)
     return _ntypes._labeling_to_layer(labeling)
 
 
 def _layer_to_imglabeling(ij, layer: Labels):
-    """Converts a Labels layer to a Labeling"""
-    labeling = _ntypes._layer_to_labeling(layer)
-    
+    """
+    Converts a napari Labels layer to a Java ImgLabeling
+    :param layer: a Labels layer
+    :return: the Java ImgLabeling
+    """
+    labeling: Labeling = _ntypes._layer_to_labeling(layer)
     return ij.py.to_java(labeling)
 
 
@@ -282,11 +260,11 @@ def _napari_to_java_converters(ij) -> List[Converter]:
     ]
 
 
-def _java_to_napari_converters() -> List[Converter]:
+def _java_to_napari_converters(ij) -> List[Converter]:
     return [
         Converter(
             predicate=lambda obj: isinstance(obj, ImgLabeling),
-            converter=_imglabeling_to_layer,
+            converter=lambda obj: _imglabeling_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
@@ -404,5 +382,5 @@ def init_napari_converters(ij):
         add_java_converter(converter)
 
     # Add Java -> napari converters
-    for converter in _java_to_napari_converters():
+    for converter in _java_to_napari_converters(ij):
         add_py_converter(converter)

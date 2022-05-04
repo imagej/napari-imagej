@@ -8,7 +8,7 @@ from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
 from napari.layers import Labels, Shapes
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def ij_fixture():
     return imagej.init()
 
@@ -21,7 +21,7 @@ def assert_labels_equality(
         assert exp[key] == act[key]
 
 @pytest.fixture(scope="module")
-def py_labeling():
+def py_labeling() -> Labeling:
 
     a = np.zeros((4,4), np.int32)
     a[:2] = 1
@@ -40,6 +40,32 @@ def py_labeling():
     merger = Labeling.fromValues(np.zeros((4, 4), np.int32))
     merger.iterate_over_images(example1_images, source_ids=['a', 'b', 'c', 'd'])
     return merger
+
+@pytest.fixture(scope="module")
+def labels_with_metadata(py_labeling: Labeling) -> Labels:
+    img, data = py_labeling.get_result()
+    return Labels(img, metadata={"pyLabelingData": data})
+
+@pytest.fixture(scope="module")
+def labels_without_metadata(py_labeling: Labeling) -> Labels:
+    img, _ = py_labeling.get_result()
+    return Labels(img)
+
+@pytest.fixture(scope="module")
+def imgLabeling(ij_fixture):
+    img = np.zeros((4, 4), dtype=np.int32)
+    img[:2, :2] = 6
+    img[:2, 2:] = 3
+    img[2:, :2] = 7
+    img[2:, 2:] = 4
+    img_java = ij_fixture.py.to_java(img)
+    sets = [[], [1], [2], [1, 2], [2, 3], [3], [1, 4], [3, 4]]
+    sets = [set(l) for l in sets]
+    sets_java = ij_fixture.py.to_java(sets)
+
+    ImgLabeling = jimport("net.imglib2.roi.labeling.ImgLabeling")
+    return ImgLabeling.fromImageAndLabelSets(img_java, sets_java)
+
 
 def test_labeling_circular_equality(py_labeling):
     expected: Labeling = py_labeling
@@ -74,6 +100,77 @@ def test_labels_to_labeling(py_labeling):
     exp_img = labels.data
     act_img, _ = labeling.get_result()
     assert np.array_equal(exp_img, act_img)
+
+def test_labels_with_metadata_to_imgLabeling(ij_fixture, labels_with_metadata):
+    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    converted: ImgLabeling = ij_fixture.py.to_java(labels_with_metadata)
+    exp_img: np.ndarray= labels_with_metadata.data
+    act_img: np.ndarray = ij_fixture.py.from_java(converted.getIndexImg())
+    assert np.array_equal(exp_img, act_img)
+
+
+def test_labels_with_metadata_circular(ij_fixture, labels_with_metadata):
+    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    converted: ImgLabeling = ij_fixture.py.to_java(labels_with_metadata)
+    converted_back: Labels = ij_fixture.py.from_java(converted)
+    exp_img: np.ndarray = labels_with_metadata.data
+    act_img: np.ndarray = converted_back.data
+    assert np.array_equal(exp_img, act_img)
+
+
+def _assert_image_mapping(exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int, int]:
+    """
+    Asserts a CONSISTENT mapping between values in exp_img and act_img.
+
+    i.e. if
+    exp_img[x, y] = a and act_img[x, y] = b for any x,y
+    then
+    np.where(exp_img == a) == np.where(act_img == b)
+
+    :param exp_img: the first image
+    :param act_img: the second image
+    :return: the mappings of a -> b
+    """
+    mapping: Dict[int, int] = {}
+    for e_x, a_x in zip(exp_img, act_img):
+        for e, a in zip(e_x, a_x):
+            if e in mapping:
+                assert mapping[e] == a
+            else:
+                mapping[e] = a
+    return mapping
+
+
+def test_labels_without_metadata_to_imgLabeling(ij_fixture, labels_without_metadata):
+    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    converted: ImgLabeling = ij_fixture.py.to_java(labels_without_metadata)
+    exp_img: np.ndarray= labels_without_metadata.data
+    act_img: np.ndarray = ij_fixture.py.from_java(converted.getIndexImg())
+    # We cannot assert image equality due to https://github.com/Labelings/Labeling/issues/16
+    # So we do the next best thing
+    _assert_image_mapping(exp_img, act_img)
+
+
+def test_labels_without_metadata_circular(ij_fixture, labels_without_metadata):
+    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    converted: ImgLabeling = ij_fixture.py.to_java(labels_without_metadata)
+    converted_back: Labels = ij_fixture.py.from_java(converted)
+    exp_img: np.ndarray = labels_without_metadata.data
+    act_img: np.ndarray = converted_back.data
+    # We cannot assert image equality due to https://github.com/Labelings/Labeling/issues/16
+    # So we do the next best thing
+    _assert_image_mapping(exp_img, act_img)
+
+
+def test_imgLabeling_to_labels(ij_fixture, imgLabeling):
+    converted: Labels = ij_fixture.py.from_java(imgLabeling)
+    exp_img: np.ndarray = ij_fixture.py.from_java(imgLabeling.getIndexImg())
+    act_img: np.ndarray= converted.data
+    # We cannot assert image equality due to https://github.com/Labelings/Labeling/issues/16
+    # So we do the next best thing
+    _assert_image_mapping(exp_img, act_img)
+
+
 
 # -- SHAPES / ROIS -- #
 
