@@ -10,7 +10,7 @@ def _labeling_to_layer(labeling: Labeling):
 
 def _layer_to_labeling(layer: Labels):
     """Converts a Labels layer to a Labeling"""
-    if layer.metadata["pyLabelingData"] is not None:
+    if "pyLabelingData" in layer.metadata:
         metadata = vars(layer.metadata["pyLabelingData"])
         labeling = Labeling(shape=layer.data.shape)
         labeling.result_image = layer.data

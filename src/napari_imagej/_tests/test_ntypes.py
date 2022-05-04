@@ -21,7 +21,7 @@ def assert_labels_equality(
         assert exp[key] == act[key]
 
 @pytest.fixture(scope="module")
-def py_labeling():
+def py_labeling() -> Labeling:
 
     a = np.zeros((4,4), np.int32)
     a[:2] = 1
@@ -40,6 +40,11 @@ def py_labeling():
     merger = Labeling.fromValues(np.zeros((4, 4), np.int32))
     merger.iterate_over_images(example1_images, source_ids=['a', 'b', 'c', 'd'])
     return merger
+
+@pytest.fixture(scope="module")
+def labels_layer(py_labeling: Labeling) -> Labels:
+    img, _ = py_labeling.get_result()
+    return Labels(img)
 
 def test_labeling_circular_equality(py_labeling):
     expected: Labeling = py_labeling
@@ -74,6 +79,15 @@ def test_labels_to_labeling(py_labeling):
     exp_img = labels.data
     act_img, _ = labeling.get_result()
     assert np.array_equal(exp_img, act_img)
+
+def test_labels_to_imgLabeling(ij_fixture, labels_layer):
+    ImgLabeling = jimport('net.imglib2.roi.labeling.ImgLabeling')
+    converted: ImgLabeling = ij_fixture.py.to_java(labels_layer)
+    exp_img: np.ndarray= labels_layer.data
+    act_img: np.ndarray = ij_fixture.py.from_java(converted.getIndexImg())
+    breakpoint()
+    assert np.array_equal(exp_img, act_img)
+
 
 # -- SHAPES / ROIS -- #
 
