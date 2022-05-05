@@ -59,6 +59,7 @@ class PTypes:
             jimport('net.imglib2.roi.geom.real.SuperEllipsoid'):      'napari.layers.Shapes',
             jimport('net.imglib2.roi.geom.real.Polygon2D'):           'napari.layers.Shapes',
             jimport('net.imglib2.roi.geom.real.Polyline'):            'napari.layers.Shapes',
+            jimport('net.imagej.roi.ROITree'):                        'napari.layers.Shapes',
         }
 
         # Surfaces
