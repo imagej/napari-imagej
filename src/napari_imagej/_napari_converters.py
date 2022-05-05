@@ -1,10 +1,10 @@
 import os
-from typing import List
+from typing import Any, Callable, Dict, List
 from jpype import JArray, JDouble
 import numpy as np
 from napari.layers import Labels, Shapes
 from napari_imagej import _ntypes
-from scyjava import Converter, Priority, jimport, add_py_converter, add_java_converter
+from scyjava import Converter, Priority, jimport, add_py_converter, add_java_converter, jvm_started
 from labeling.Labeling import Labeling
 
 
@@ -229,15 +229,15 @@ def _roitree_to_layer(roitree):
     layer = Shapes()
     rois = [child.data() for child in roitree.children()]
     for roi in rois:
-        if isinstance(roi, SuperEllipsoid):
+        if isinstance(roi, SuperEllipsoid.class_):
             layer.add_ellipses(_ellipse_mask_to_data(roi))
-        elif isinstance(roi, Box):
+        elif isinstance(roi, Box.class_):
             layer.add_rectangles(_rectangle_mask_to_data(roi))
-        elif isinstance(roi, Polygon2D):
+        elif isinstance(roi, Polygon2D.class_):
             layer.add_polygons(_polygon_mask_to_data(roi))
-        elif isinstance(roi, Line):
+        elif isinstance(roi, Line.class_):
             layer.add_lines(_line_mask_to_data(roi))
-        elif isinstance(roi, Polyline):
+        elif isinstance(roi, Polyline.class_):
             layer.add_paths(_path_mask_to_data(roi))
         else:
             raise NotImplementedError(f'Cannot convert {roi}: conversion not implemented!')
@@ -287,119 +287,98 @@ def _napari_to_java_converters(ij) -> List[Converter]:
 def _java_to_napari_converters(ij) -> List[Converter]:
     return [
         Converter(
-            predicate=lambda obj: isinstance(obj, ImgLabeling),
+            predicate=lambda obj: isinstance(obj, ImgLabeling.class_),
             converter=lambda obj: _imglabeling_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, SuperEllipsoid),
+            predicate=lambda obj: isinstance(obj, SuperEllipsoid.class_),
             converter=_ellipse_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Box),
+            predicate=lambda obj: isinstance(obj, Box.class_),
             converter=_rectangle_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Polygon2D),
+            predicate=lambda obj: isinstance(obj, Polygon2D.class_),
             converter=_polygon_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Line),
+            predicate=lambda obj: isinstance(obj, Line.class_),
             converter=_line_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Polyline),
+            predicate=lambda obj: isinstance(obj, Polyline.class_),
             converter=_path_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, ROITree),
+            predicate=lambda obj: isinstance(obj, ROITree.class_),
             converter=_roitree_to_layer,
             priority=Priority.VERY_HIGH + 1
         ),
     ]
 
+# -- Java classes -- #
+class Java_Class(object):
+
+    def __init__(self, name: str):
+        self._name = name
+
+    @property
+    def class_(self):
+        if not jvm_started:
+            raise RuntimeError('Must start JVM first!')
+        return jimport(self._name)
+    
+    def __call__(self, *args):
+        return self.class_(*args)
+
+
+
+Double: Java_Class = Java_Class('java.lang.Double')
+
+ArrayList: Java_Class = Java_Class('java.util.ArrayList')
+
+LabelingIOService: Java_Class = Java_Class('io.scif.labeling.LabelingIOService')
+
+DefaultROITree: Java_Class = Java_Class('net.imagej.roi.DefaultROITree')
+
+SuperEllipsoid: Java_Class = Java_Class('net.imglib2.roi.geom.real.SuperEllipsoid')
+
+Box: Java_Class = Java_Class('net.imglib2.roi.geom.real.Box')
+
+Polygon2D: Java_Class = Java_Class('net.imglib2.roi.geom.real.Polygon2D')
+
+Line: Java_Class = Java_Class('net.imglib2.roi.geom.real.Line')
+
+Polyline: Java_Class = Java_Class('net.imglib2.roi.geom.real.Polyline')
+
+ROITree: Java_Class = Java_Class('net.imagej.roi.ROITree')
+
+ClosedWritableEllipsoid: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
+
+ClosedWritablePolygon2D: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
+
+ClosedWritableBox: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritableBox')
+
+DefaultWritableLine: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritableLine')
+
+DefaultWritablePolyline: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritablePolyline')
+
+ImgLabeling: Java_Class = Java_Class('net.imglib2.roi.labeling.ImgLabeling')
+
+RealPoint: Java_Class = Java_Class('net.imglib2.RealPoint')
 
 def init_napari_converters(ij):
     """
-    Initializes all classes needed by the converters,
-    then adding them to the ScyJava converter framework.
+    Adds all converters to the ScyJava converter framework.
     :param ij: An ImageJ gateway
     """
-    # Initialize needed classes
-    global Double
-    global ArrayList
-    global LabelingIOService
-    global DefaultROITree
-    global SuperEllipsoid
-    global Box
-    global Polygon2D
-    global Line
-    global Polyline
-    global ROITree
-    global ImgLabeling
-    global ClosedWritableEllipsoid
-    global ClosedWritablePolygon2D
-    global ClosedWritableBox
-    global DefaultWritableLine
-    global DefaultWritablePolyline
-    global RealPoint
-
-    Double = jimport(
-        'java.lang.Double'
-    )
-    ArrayList = jimport(
-        'java.util.ArrayList'
-    )
-    LabelingIOService = jimport(
-        'io.scif.labeling.LabelingIOService'
-    )
-    DefaultROITree = jimport(
-        'net.imagej.roi.DefaultROITree'
-    )
-    SuperEllipsoid = jimport(
-        'net.imglib2.roi.geom.real.SuperEllipsoid'
-    )
-    Box = jimport(
-        'net.imglib2.roi.geom.real.Box'
-    )
-    Polygon2D = jimport(
-        'net.imglib2.roi.geom.real.Polygon2D'
-    )
-    Line = jimport(
-        'net.imglib2.roi.geom.real.Line'
-    )
-    Polyline = jimport(
-        'net.imglib2.roi.geom.real.Polyline'
-    )
-    ROITree = jimport(
-        'net.imagej.roi.DefaultROITree'
-    )
-    ClosedWritableEllipsoid = jimport(
-        'net.imglib2.roi.geom.real.ClosedWritableEllipsoid'
-    )
-    ClosedWritablePolygon2D = jimport(
-        'net.imglib2.roi.geom.real.ClosedWritablePolygon2D'
-    )
-    ClosedWritableBox = jimport(
-        'net.imglib2.roi.geom.real.ClosedWritableBox'
-    )
-    DefaultWritableLine = jimport(
-        'net.imglib2.roi.geom.real.DefaultWritableLine'
-    )
-    DefaultWritablePolyline = jimport(
-        'net.imglib2.roi.geom.real.DefaultWritablePolyline'
-    )
-    ImgLabeling = jimport(
-        'net.imglib2.roi.labeling.ImgLabeling'
-    )
-    RealPoint = jimport(
-        'net.imglib2.RealPoint'
-    )
 
     # Add napari -> Java converters
     for converter in _napari_to_java_converters(ij):
