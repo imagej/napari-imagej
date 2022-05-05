@@ -157,6 +157,10 @@ def _polygon_data_to_mask(points):
 
 
 def _polygon_mask_to_data(mask):
+    """
+    Polygons are described in the Shapes layer as a set of points.
+    This is all a Polyshape is, so a mask's data is just the Polyshape's data.
+    """
     return _polyshape_to_layer_data(mask)
 
 
@@ -205,6 +209,10 @@ def _path_data_to_mask(points):
 
 
 def _path_mask_to_data(mask):
+    """
+    Paths are described in the Shapes layer as a set of points.
+    This is all a Polyshape is, so a mask's data is just the Polyshape's data.
+    """
     return _polyshape_to_layer_data(mask)
 
 
