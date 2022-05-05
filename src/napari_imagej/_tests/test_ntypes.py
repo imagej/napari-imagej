@@ -170,14 +170,14 @@ def test_imgLabeling_to_labels(ij, imgLabeling):
 # -- SHAPES / ROIS -- #
 
 
-def assert_ROITree_conversion(ij, layer):
+def _assert_ROITree_conversion(ij, layer):
     roitree = ij.py.to_java(layer)
     ROITree = jimport('net.imagej.roi.ROITree')
     assert isinstance(roitree, ROITree)
     return roitree.children()
 
 
-def point_assertion(mask, pt: list, expected: bool) -> None:
+def _point_assertion(mask, pt: list, expected: bool) -> None:
     arr = JArray(JDouble)(len(pt))
     arr[:] = pt
     RealPoint = jimport('net.imglib2.RealPoint')
@@ -218,7 +218,7 @@ def test_ellipse_mask_to_layer(ij, ellipse_mask):
 
 def test_ellipse_layer_to_mask(ij, ellipse_layer):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, ellipse_layer)
+    children = _assert_ROITree_conversion(ij, ellipse_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
     ClosedWritableEllipsoid = jimport('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
@@ -283,7 +283,7 @@ def test_rectangle_mask_to_layer(ij, rectangle_mask):
 
 def test_rectangle_layer_to_mask_box(ij, rectangle_layer_axis_aligned):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, rectangle_layer_axis_aligned)
+    children = _assert_ROITree_conversion(ij, rectangle_layer_axis_aligned)
     assert children.size() == 1
     j_mask = children.get(0).data()
     ClosedWritableBox = jimport('net.imglib2.roi.geom.real.ClosedWritableBox')
@@ -301,7 +301,7 @@ def test_rectangle_layer_to_mask_box(ij, rectangle_layer_axis_aligned):
 
 def test_rectangle_layer_to_mask_polygon(ij, rectangle_layer_rotated):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, rectangle_layer_rotated)
+    children = _assert_ROITree_conversion(ij, rectangle_layer_rotated)
     assert children.size() == 1
     j_mask = children.get(0).data()
     ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
@@ -309,9 +309,9 @@ def test_rectangle_layer_to_mask_polygon(ij, rectangle_layer_rotated):
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
     # Test some points
-    point_assertion(j_mask, [0, 0], True)
-    point_assertion(j_mask, [5, 5], True)
-    point_assertion(j_mask, [5, 6], False)
+    _point_assertion(j_mask, [0, 0], True)
+    _point_assertion(j_mask, [5, 5], True)
+    _point_assertion(j_mask, [5, 6], False)
 
 
 # -- POLYGONS -- #
@@ -356,7 +356,7 @@ def test_polygon_mask_to_layer(ij, polygon_mask):
 
 def test_polygon_layer_to_mask(ij, polygon_layer):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, polygon_layer)
+    children = _assert_ROITree_conversion(ij, polygon_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
     ClosedWritablePolygon2D = jimport('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
@@ -364,10 +364,10 @@ def test_polygon_layer_to_mask(ij, polygon_layer):
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
     # Test some points
-    point_assertion(j_mask, [0, 0], True)
-    point_assertion(j_mask, [3, 0], True)
-    point_assertion(j_mask, [2, 1], True)
-    point_assertion(j_mask, [5, 6], False)
+    _point_assertion(j_mask, [0, 0], True)
+    _point_assertion(j_mask, [3, 0], True)
+    _point_assertion(j_mask, [2, 1], True)
+    _point_assertion(j_mask, [5, 6], False)
 
 
 # -- LINES -- #
@@ -410,7 +410,7 @@ def test_line_mask_to_layer(ij, line_mask):
 
 def test_line_layer_to_mask(ij, line_layer):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, line_layer)
+    children = _assert_ROITree_conversion(ij, line_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
     DefaultWritableLine = jimport('net.imglib2.roi.geom.real.DefaultWritableLine')
@@ -424,10 +424,10 @@ def test_line_layer_to_mask(ij, line_layer):
     j_mask.endpointTwo().localize(arr)
     assert ij.py.from_java(arr) == [4, -4]
     # Test some points
-    point_assertion(j_mask, [0, 0], True)
-    point_assertion(j_mask, [4, -4], True)
-    point_assertion(j_mask, [2, -2], True)
-    point_assertion(j_mask, [5, 6], False)
+    _point_assertion(j_mask, [0, 0], True)
+    _point_assertion(j_mask, [4, -4], True)
+    _point_assertion(j_mask, [2, -2], True)
+    _point_assertion(j_mask, [5, 6], False)
 
 
 # -- PATHS -- #
@@ -478,7 +478,7 @@ def test_path_mask_to_layer(ij, path_mask):
 
 def test_path_layer_to_mask(ij, path_layer):
     # Assert shapes conversion to ellipse
-    children = assert_ROITree_conversion(ij, path_layer)
+    children = _assert_ROITree_conversion(ij, path_layer)
     assert children.size() == 1
     j_mask = children.get(0).data()
     DefaultWritablePolyline = jimport('net.imglib2.roi.geom.real.DefaultWritablePolyline')
@@ -493,12 +493,12 @@ def test_path_layer_to_mask(ij, path_layer):
         a.localize(arr)
         assert ij.py.from_java(arr) == e
     # Test some points
-    point_assertion(j_mask, [0, 0], True)
-    point_assertion(j_mask, [2, -2], True)
-    point_assertion(j_mask, [4, -4], True)
-    point_assertion(j_mask, [6, -2], True)
-    point_assertion(j_mask, [8, 0], True)
-    point_assertion(j_mask, [5, 6], False)
+    _point_assertion(j_mask, [0, 0], True)
+    _point_assertion(j_mask, [2, -2], True)
+    _point_assertion(j_mask, [4, -4], True)
+    _point_assertion(j_mask, [6, -2], True)
+    _point_assertion(j_mask, [8, 0], True)
+    _point_assertion(j_mask, [5, 6], False)
 
 
 # -- ROITrees -- #
