@@ -80,20 +80,40 @@ def _ellipse_mask_to_layer(mask):
 # -- Boxes -- #
 
 
-def _rectangle_data_to_mask(points):
-    # find rectangle min
-    origin = np.array([0, 0])
-    dists = [np.linalg.norm(origin - pt) for pt in points]
-    min = points[np.argmin(dists)]
-    # find rectangle max
-    min_dists = [np.linalg.norm(min - pt) for pt in points]
-    max = points[np.argmax(min_dists)]
-    # determine whether the rectangle is axis aligned
+def _is_axis_aligned(
+    min: np.ndarray,
+    max: np.ndarray,
+    points: np.ndarray
+    ) -> bool:
+    """
+    Our rectangle consists of four points. We have:
+    * The "minimum" point, the point closest to the origin
+    * The "maximum" point, the point farthest from the origin
+    * Two other points
+    If our rectangle is axis aligned, then the distance vector between
+    the minimum and another NON-MAXIMUM point will be zero in at least
+    one dimension.
+
+    :param min: The minimum corner of the rectangle
+    :param max: The maximum corner of the rectangle
+    :param points: The four corners of the rectangle
+    :return: true iff the rectangle defined by points is axis-aligned.
+    """
     other = next(filter(lambda p2: not np.array_equal(min, p2) and not np.array_equal(max, p2), points), None)
     min_diff = other - min
-    is_box = any(d == 0 for d in min_diff)
+    return any(d == 0 for d in min_diff)
+
+
+def _rectangle_data_to_mask(points):
+    # find rectangle min - closest point to origin
+    origin = np.array([0, 0])
+    distances = [np.linalg.norm(origin - pt) for pt in points]
+    min = points[np.argmin(distances)]
+    # find rectangle max - farthest point from minimum
+    min_distances = [np.linalg.norm(min - pt) for pt in points]
+    max = points[np.argmax(min_distances)]
     # Return box if axis aligned
-    if is_box:
+    if _is_axis_aligned(min, max, points):
         return ClosedWritableBox(arr(min), arr(max))
     # Return polygon if not
     else:
