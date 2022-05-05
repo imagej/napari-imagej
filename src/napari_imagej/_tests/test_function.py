@@ -1,7 +1,3 @@
-from typing import Generator
-from napari import Viewer
-
-import pytest
 from napari_imagej._function import ImageJWidget
 from qtpy.QtWidgets import (
     QWidget,
@@ -12,16 +8,6 @@ from qtpy.QtWidgets import (
     QLineEdit,
 )
 
-@pytest.fixture
-def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:
-    # Create widget
-    viewer: Viewer = make_napari_viewer()
-    ij_widget: ImageJWidget = ImageJWidget(viewer)
-
-    yield ij_widget
-
-    # Cleanup -> Close the widget, trigger ImageJ shutdown
-    ij_widget.close()
 
 def test_widget_layout(imagej_widget: ImageJWidget):
     """Ensures a vertical widget layout."""
