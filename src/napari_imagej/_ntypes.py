@@ -18,5 +18,5 @@ def _layer_to_labeling(layer: Labels):
         labeling.metadata = metadata["metadata"]
         return labeling
     else :
-        return Labeling.fromValues(layer.data, layer.data.shape)
+        return Labeling.fromValues(layer.data)
     

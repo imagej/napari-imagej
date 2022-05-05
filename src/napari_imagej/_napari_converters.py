@@ -260,11 +260,11 @@ def _napari_to_java_converters(ij) -> List[Converter]:
     ]
 
 
-def _java_to_napari_converters() -> List[Converter]:
+def _java_to_napari_converters(ij) -> List[Converter]:
     return [
         Converter(
             predicate=lambda obj: isinstance(obj, ImgLabeling),
-            converter=_imglabeling_to_layer,
+            converter=lambda obj: _imglabeling_to_layer(ij, obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
@@ -382,5 +382,5 @@ def init_napari_converters(ij):
         add_java_converter(converter)
 
     # Add Java -> napari converters
-    for converter in _java_to_napari_converters():
+    for converter in _java_to_napari_converters(ij):
         add_py_converter(converter)
