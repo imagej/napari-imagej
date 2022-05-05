@@ -8,10 +8,9 @@ Replace code below according to your needs.
 """
 import os
 import re
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, Tuple
 import imagej
-from matplotlib import container
-from scyjava import config, jimport, Converter, Priority, when_jvm_starts, add_java_converter, add_py_converter
+from scyjava import config, jimport, when_jvm_starts
 from qtpy.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -28,9 +27,7 @@ from magicgui import magicgui
 from napari import Viewer
 from inspect import signature, Signature, Parameter
 from napari_imagej._ptypes import PTypes
-from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
-from labeling.Labeling import Labeling
-from napari.layers import Labels
+from napari_imagej._napari_converters import init_napari_converters
 
 import logging
 
@@ -91,66 +88,9 @@ SearchResult = jimport(
 # Create Java -> Python type mapper
 _ptypes: PTypes  = PTypes()
 
-def _delete_labeling_files(filepath):
-    """
-    Removes any Labeling data left over at filepath
-    :param filepath: the filepath where Labeling (might have) saved data
-    """
-    pth_bson = filepath + '.bson'
-    pth_tif = filepath + '.tif'
-    if os.path.exists(pth_tif):
-        os.remove(pth_tif)
-    if os.path.exists(pth_bson):
-        os.remove(pth_bson)
 
-def _imglabeling_to_layer(labeling):
-    """Converts a Labeling to a Labels layer"""
-    LabelingIOService = jimport('net.imglib2.labeling.LabelingIOService')
-    labels = ij.context().getService(LabelingIOService)
-    # Convert the data to an ImgLabeling
-    data = ij.convert().convert(labeling, ImgLabeling)
-
-    # Save the image on the java side
-    tmp_pth = os.getcwd() + '/tmp'
-    tmp_pth_bson = tmp_pth + '.bson'
-    tmp_pth_tif = tmp_pth + '.tif'
-    try:
-        _delete_labeling_files(tmp_pth)
-        labels.save(data, tmp_pth_tif) # TODO: improve, likely utilizing the data's name
-    except Exception:
-        print('Failed to save the data')
-    
-    # Load the labeling on the python side
-    labeling = Labeling.from_file(tmp_pth_bson)
-    _delete_labeling_files(tmp_pth)
-    return _labeling_to_layer(labeling)
-
-def _layer_to_imglabeling(layer: Labels):
-    """Converts a Labels layer to a Labeling"""
-    labeling = _layer_to_labeling(layer)
-    
-    return ij.py.to_java(labeling)
-
-
-py_to_java_converters: List[Converter] = [
-    Converter(
-        predicate=lambda obj: isinstance(obj, Labels),
-        converter=_layer_to_imglabeling,
-        priority=Priority.VERY_HIGH
-    ),
-]
-
-
-java_to_py_converters: List[Converter] = [
-    Converter(
-        predicate=lambda obj: isinstance(obj, ImgLabeling),
-        converter=_imglabeling_to_layer,
-        priority=Priority.VERY_HIGH
-    ),
-]
-
-when_jvm_starts(lambda: [add_java_converter(c) for c in py_to_java_converters])
-when_jvm_starts(lambda: [add_py_converter(c) for c in java_to_py_converters])
+# Install napari <-> java converters
+when_jvm_starts(lambda: init_napari_converters(ij))
 
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
