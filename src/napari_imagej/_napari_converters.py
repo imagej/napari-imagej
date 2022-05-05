@@ -63,9 +63,7 @@ def _ellipse_layer_to_mask(pts):
 
 def _ellipse_mask_to_data(mask):
     center = mask.center().positionAsDoubleArray()
-    # center = ij.py.from_java(center)
     radii = mask.minAsDoubleArray()
-    # radii = ij.py.from_java(radii)
     for i in range(radii.length):
         radii[i] = mask.semiAxisLength(i)
     data = np.zeros((2, center.length))
