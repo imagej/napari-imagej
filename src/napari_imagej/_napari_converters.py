@@ -53,7 +53,7 @@ def _polyshape_to_layer_data(mask):
 # -- Ellipses -- #
 
 
-def _ellipse_layer_to_mask(pts):
+def _ellipse_data_to_mask(pts):
     center = np.mean(pts, axis=0)
     radii = np.abs(pts[0, :] - center)
     return ClosedWritableEllipsoid(center, radii)
@@ -80,7 +80,7 @@ def _ellipse_mask_to_layer(mask):
 # -- Boxes -- #
 
 
-def _rectangle_layer_to_mask(points):
+def _rectangle_data_to_mask(points):
     # find rectangle min
     origin = np.array([0, 0])
     dists = [np.linalg.norm(origin - pt) for pt in points]
@@ -97,7 +97,7 @@ def _rectangle_layer_to_mask(points):
         return ClosedWritableBox(arr(min), arr(max))
     # Return polygon if not
     else:
-        return _polygon_layer_to_mask(points)
+        return _polygon_data_to_mask(points)
 
 
 def _rectangle_mask_to_data(mask):
@@ -118,7 +118,7 @@ def _rectangle_mask_to_layer(mask):
 # -- Polygons -- ##
 
 
-def _polygon_layer_to_mask(points):
+def _polygon_data_to_mask(points):
     # HACK: JPype doesn't know whether to call the float or double
     def point_from_coords(coords):
         arr = JArray(JDouble)(2)
@@ -142,7 +142,7 @@ def _polygon_mask_to_layer(mask):
 # -- Lines -- ##
 
 
-def _line_layer_to_mask(points):
+def _line_data_to_mask(points):
     # HACK: JPype doesn't know whether to call the float or double
     def point_from_coords(coords):
         arr = JArray(JDouble)(2)
@@ -175,7 +175,7 @@ def _line_mask_to_layer(mask):
 # -- Paths -- ##
 
 
-def _path_layer_to_mask(points):
+def _path_data_to_mask(points):
     def point_from_coords(coords):
         arr = JArray(JDouble)(2)
         arr[:] = coords
@@ -222,15 +222,15 @@ def _layer_to_roitree(layer: Shapes):
     masks = ArrayList()
     for pts, shape_type in zip(layer.data, layer.shape_type):
         if shape_type == 'ellipse':
-            shape = _ellipse_layer_to_mask(pts)
+            shape = _ellipse_data_to_mask(pts)
         elif shape_type == 'rectangle':
-            shape = _rectangle_layer_to_mask(pts)
+            shape = _rectangle_data_to_mask(pts)
         elif shape_type == 'polygon':
-            shape = _polygon_layer_to_mask(pts)
+            shape = _polygon_data_to_mask(pts)
         elif shape_type == 'line':
-            shape = _line_layer_to_mask(pts)
+            shape = _line_data_to_mask(pts)
         elif shape_type == 'path':
-            shape = _path_layer_to_mask(pts)
+            shape = _path_data_to_mask(pts)
         else:
             raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
         masks.add(shape)
