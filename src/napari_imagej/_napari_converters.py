@@ -62,13 +62,14 @@ def _ellipse_layer_to_mask(pts):
 
 
 def _ellipse_mask_to_data(mask):
+    # Make data array
+    data = np.zeros((2, mask.numDimensions()))
+    # Write center into the first column
     center = mask.center().positionAsDoubleArray()
-    radii = mask.minAsDoubleArray()
-    for i in range(radii.length):
-        radii[i] = mask.semiAxisLength(i)
-    data = np.zeros((2, center.length))
     data[0, :] = center[:] # Slice needed for JArray
-    data[1, :] = radii[:] # Slice needed for JArray
+    # Write radii into the second column
+    for i in range(data.shape[1]):
+        data[1, i] = mask.semiAxisLength(i)
     return data
 
 
