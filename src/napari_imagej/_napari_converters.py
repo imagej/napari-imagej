@@ -39,6 +39,18 @@ def arr(coords):
     arr[:] = coords
     return arr
 
+
+def realPoint_from(coords: np.ndarray):
+    """
+    Creates a RealPoint from a numpy [1, D] array of coordinates.
+    :param coords: The [1, D] numpy array of coordinates
+    :return: a RealPoint
+    """
+    # JPype doesn't know whether to call the float or double.
+    # We make the choice for them using the function arr
+    return RealPoint(arr(coords))
+
+
 def _polyshape_to_layer_data(mask):
     vertices = mask.vertices()
     num_dims = mask.numDimensions()
@@ -139,12 +151,7 @@ def _rectangle_mask_to_layer(mask):
 
 
 def _polygon_data_to_mask(points):
-    # HACK: JPype doesn't know whether to call the float or double
-    def point_from_coords(coords):
-        arr = JArray(JDouble)(2)
-        arr[:] = coords
-        return RealPoint(arr)
-    pts = [point_from_coords(x) for x in points]
+    pts = [realPoint_from(x) for x in points]
     ptList = ArrayList(pts)
     return ClosedWritablePolygon2D(ptList)
 
@@ -163,13 +170,9 @@ def _polygon_mask_to_layer(mask):
 
 
 def _line_data_to_mask(points):
-    # HACK: JPype doesn't know whether to call the float or double
-    def point_from_coords(coords):
-        arr = JArray(JDouble)(2)
-        arr[:] = coords
-        return RealPoint(arr)
-    pts = [point_from_coords(x) for x in points]
-    return DefaultWritableLine(pts[0], pts[1])
+    start = realPoint_from(points[0])
+    end = realPoint_from(points[1])
+    return DefaultWritableLine(start, end)
 
 
 def _line_mask_to_data(mask):
@@ -196,11 +199,7 @@ def _line_mask_to_layer(mask):
 
 
 def _path_data_to_mask(points):
-    def point_from_coords(coords):
-        arr = JArray(JDouble)(2)
-        arr[:] = coords
-        return RealPoint(arr)
-    pts = [point_from_coords(x) for x in points]
+    pts = [realPoint_from(x) for x in points]
     ptList = ArrayList(pts)
     return DefaultWritablePolyline(ptList)
 
