@@ -54,8 +54,6 @@ def _polyshape_to_layer_data(mask):
 
 
 def _ellipse_layer_to_mask(pts):
-    if pts.shape[0] == 2:
-        return pts[0, :], pts[1, :]
     center = np.mean(pts, axis=0)
     radii = np.abs(pts[0, :] - center)
     return ClosedWritableEllipsoid(center, radii)
