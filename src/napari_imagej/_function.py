@@ -383,7 +383,7 @@ def _is_non_default(input):
 def _sink_optional_inputs(inputs):
     """
     Python functions cannot have required args after an optional arg.
-    We need to move all optional inputs after the required ones.
+    We need to move all default inputs after the required ones.
     """
     sort_key = lambda x: -1 if _is_non_default(x) else 1
     return sorted(inputs, key=sort_key)
@@ -518,14 +518,25 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     execute_module._info = info  # type: ignore
 
 
-def _add_choice(map: dict, key: str, value: Any, add_empty_list = True):
+def _add_param_metadata(metadata: dict, key: str, value: Any, add_empty_list = True):
+    """
+    Adds a particular aspect of ModuleItem metadata to map
+
+    e.g. a numerical input "foo" might want to require a minimum value of 0.
+    Then map would be the dict of "foo", key would be "min", and value would be 0.
+    :param metadata: The dict of metadata for some parameter
+    :param key: The name of a metadata type on that parameter
+    :param value: The value of that metadata type
+    :param add_empty_list: An option for denoting whether empty collections should be added.
+        We usually don't want it if it is e.g. the choices, but we usually want it otherwise.
+    """
     if value is None: return
     try:
         py_value = ij.py.from_java(value)
         if isinstance(py_value, Collection):
             if (len(value) == 0 and not add_empty_list): return
             value = [ij.py.from_java(v) for v in value]
-        map[key] = value
+        metadata[key] = value
     except Exception:
         pass
 
@@ -535,12 +546,12 @@ def _add_scijava_metadata(info, unresolved_inputs) -> Dict[str, Dict[str, Any]]:
     for input in unresolved_inputs:
         key = ij.py.from_java(input.getName())
         param_map = {}
-        _add_choice(param_map, "max", input.getMaximumValue())
-        _add_choice(param_map, "min", input.getMinimumValue())
-        _add_choice(param_map, "step", input.getStepSize())
-        _add_choice(param_map, "label", input.getLabel())
-        _add_choice(param_map, "tooltip", input.getDescription())
-        _add_choice(param_map, "choices", input.getChoices(), add_empty_list=False)
+        _add_param_metadata(param_map, "max", input.getMaximumValue())
+        _add_param_metadata(param_map, "min", input.getMinimumValue())
+        _add_param_metadata(param_map, "step", input.getStepSize())
+        _add_param_metadata(param_map, "label", input.getLabel())
+        _add_param_metadata(param_map, "tooltip", input.getDescription())
+        _add_param_metadata(param_map, "choices", input.getChoices(), add_empty_list=False)
 
         if len(param_map) > 0:
             metadata[key] = param_map
