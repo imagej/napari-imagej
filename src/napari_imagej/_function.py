@@ -366,6 +366,15 @@ def _napari_module_param_additions(module_info) -> Dict[str, Tuple[type, Any]]:
     return additional_params
 
 def _is_non_default(input):
+    """
+    Determines whether the ModuleInfo input is optional,
+    as far as a python arg would be concerned.
+    For the python argument to be optional, we would need
+    EITHER a declaration of optionality by input.isRequired() == False,
+    OR a default value.
+    """
+    # TODO: I think this could be
+    # return input.isRequired() and input.getDefaultValue() is None
     if not input.isRequired(): return False
     if input.getDefaultValue() is not None: return False
     return True
