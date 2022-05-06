@@ -239,6 +239,29 @@ def _convert_output(j_result):
     # Convert java type to python type
     return ij.py.from_java(j_result)
 
+def _resolve_user_input(
+    module, # an org.scijava.module.Module
+    module_item, # an org.scijava.module.ModuleItem
+    input: Any
+):
+    """Resolves module_item, a ModuleItem in module, with input"""
+    name = module_item.getName()
+    if module_item.isRequired() and input is None:
+        raise ValueError(
+            "No selection was made for input {}!".format(name)
+        )
+    item_class = module_item.getType()
+    if not item_class.isInstance(input):
+        if ij.convert().supports(input, item_class):
+            input = ij.convert().convert(input, item_class)
+        else:
+            raise ValueError(
+                f"{input} is not a {module_item.getType()}!"
+            )
+    module.setInput(name, input)
+    module.resolveInput(name)
+
+
 
 def _preprocess_remaining_inputs(
     module, inputs, unresolved_inputs, user_resolved_inputs
@@ -247,21 +270,7 @@ def _preprocess_remaining_inputs(
     resolved_java_args = _convert_inputs(user_resolved_inputs)
     # resolve remaining inputs
     for module_item, input in zip(unresolved_inputs, resolved_java_args):
-        name = module_item.getName()
-        if input is None and module_item.isRequired():
-            raise ValueError(
-                "No selection was made for input {}!".format(name)
-            )
-        item_class = module_item.getType()
-        if not item_class.isInstance(input):
-            if ij.convert().supports(input, item_class):
-                input = ij.convert().convert(input, item_class)
-            else:
-                raise ValueError(
-                    f"{input} is not a {module_item.getType()}!"
-                )
-        module.setInput(name, input)
-        module.resolveInput(name)
+        _resolve_user_input(module, module_item, input)
 
     # sanity check: ensure all inputs resolved
     for input in inputs:
@@ -497,11 +506,10 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
 def _add_choice(map: dict, key: str, value: Any, add_empty_list = True):
     if value is None: return
     try:
-        if (type(value) == list):
+        py_value = ij.py.from_java(value)
+        if isinstance(py_value, Collection):
             if (len(value) == 0 and not add_empty_list): return
             value = [ij.py.from_java(v) for v in value]
-        else:
-            value = ij.py.from_java(value)
         map[key] = value
     except Exception:
         pass
