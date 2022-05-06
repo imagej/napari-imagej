@@ -382,8 +382,8 @@ def _is_non_default(input):
 
 def _sink_optional_inputs(inputs):
     """
-    Python functions cannot have non-default args after a default arg.
-    We need to move all default inputs after the non-default ones.
+    Python functions cannot have required args after an optional arg.
+    We need to move all optional inputs after the required ones.
     """
     sort_key = lambda x: -1 if _is_non_default(x) else 1
     return sorted(inputs, key=sort_key)
