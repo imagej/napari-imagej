@@ -419,10 +419,14 @@ def _module_param(input):
     default = _param_default_or_none(input)
     annotation = _param_annotation(input)
 
-    if _is_non_default(input):
-        return Parameter(name=name, kind=kind, annotation=annotation)
-    else:
+    # We have to be careful here about passing a default
+    # Parameter uses an internal type to denote a required parameter.
+    # Passing anything EXCEPT that internal type will make that arugment default.
+    # Thus we need to only specify default if we have one.
+    if default is not None:
         return Parameter(name=name, kind=kind, default=default, annotation=annotation)
+    else:
+        return Parameter(name=name, kind=kind, annotation=annotation)
 
 
 def _modify_function_signature(function, inputs, module_info):
