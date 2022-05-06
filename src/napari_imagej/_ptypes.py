@@ -1,7 +1,4 @@
-from typing import Any, Callable, Dict, Tuple, Type
 from scyjava import jimport
-import numpy as np
-
 
 class PTypes:
     def __init__(self):

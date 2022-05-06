@@ -9,8 +9,9 @@ Replace code below according to your needs.
 import enum
 import os
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
 import imagej
+from jpype import JClass
 from scyjava import config, jimport, when_jvm_starts, Priority
 from magicgui import magicgui
 from napari import Viewer
@@ -76,6 +77,9 @@ DisplayPostprocessor = jimport(
 Initializable = jimport(
     "net.imagej.ops.Initializable"
 )
+ModuleItem = jimport(
+    "org.scijava.module.ModuleItem"
+)
 ModuleSearcher = jimport(
     "org.scijava.search.module.ModuleSearcher"
 )
@@ -88,51 +92,115 @@ Searcher = jimport(
 SearchResult = jimport(
     "org.scijava.search.SearchResult"
 )
-ModuleItem = jimport(
-    "org.scijava.module.ModuleItem"
-)
 
 # Create Java -> Python type mapper
 _ptypes: PTypes  = PTypes()
+# List of Module Item Converters, along with their priority
+_MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
 
-
-# Install napari <-> java converters
-when_jvm_starts(lambda: init_napari_converters(ij))
-
-_PTYPE_CONVERTERS = []
-
-def ptype_converter(priority: int) -> Callable[[ModuleItem], Optional[Type]]:
+def module_item_converter(
+    priority: int = Priority.NORMAL
+    ) -> Callable[[ModuleItem], Optional[Type]]:
+    """
+    A decorator used to register the annotated function among the
+    available module item converters
+    :param priority: How much this converter should be prioritized
+    :return: The annotated function
+    """
     def converter(func: Callable[[ModuleItem], Optional[Type]]): 
-        _PTYPE_CONVERTERS.append((func, priority))
+        """Registers the annotated function with its priority"""
+        _MODULE_ITEM_CONVERTERS.append((func, priority))
         return func
     return converter
 
-@ptype_converter(priority = Priority.NORMAL)
-def isAssignableChecker(item: ModuleItem) -> Optional[Type]:
-    java_type = item.getType()
-    for jtype, ptype in _ptypes.ptypes.items():
-        if jtype.class_.isAssignableFrom(java_type):
-            return ptype
-    return None
-
-@ptype_converter(priority = Priority.LOW)
-def canConvertChecker(item: ModuleItem) -> Optional[Type]:
-    java_type = item.getType()
-    for jtype, ptype in _ptypes.ptypes.items():
-        if ij.convert().supports(jtype, java_type):
-            return ptype
-    return None
-
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
-def _ptype(module_item):
-    """Returns the Python type associated with the passed java type."""
-    for converter, _ in sorted(_PTYPE_CONVERTERS, reverse=True, key=lambda x: x[1]):
+def python_type_of(module_item):
+    """Returns the Python type associated with the passed ModuleItem."""
+    for converter, _ in sorted(_MODULE_ITEM_CONVERTERS, reverse=True, key=lambda x: x[1]):
         converted = converter(module_item)
         if converted is not None:
             return converted
     raise ValueError(f"Unsupported Java ModuleItem: {module_item}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!")
 
+
+def _checkerUsingFunc(
+    item: ModuleItem,
+    func: Callable[[Type, Type], bool]
+    ) -> Optional[Type]:
+    """
+    The logic of this checker is as follows:
+
+    _ptypes.ptypes.items() contains (java_type, python_type) pairs.
+    These pairs are considered to be equivalent types; i.e. we can freely
+    convert between these types.
+
+    There are 3 cases:
+    1) The ModuleItem is a PURE INPUT:
+        We can satisfy item with an object of ptype IF its corresponding
+        jtype can be converted to item's type. The conversion then goes
+        ptype -> jtype -> java_type
+    2) The ModuleItem is a PURE OUTPUT:
+        We can satisfy item with ptype IF java_type can be converted to jtype.
+        Then jtype can be converted to ptype. The conversion then goes
+        java_type -> jtype -> ptype
+    3) The ModuleItem is BOTH:
+        We can satisfy item with ptype IF we satisfy both 1 and 2.
+        ptype -> jtype -> java_type -> jtype -> ptype
+
+    :param item: the ModuleItem we'd like to convert 
+    :return: the python equivalent of ModuleItem's type, or None if that type
+    cannot be converted.
+    """
+    # Get the type of the Module item
+    java_type = item.getType()
+    # Case 1
+    if item.isInput() and not item.isOutput():
+        for jtype, ptype in _ptypes.ptypes.items():
+            # can we go from jtype to java_type?
+            if func(jtype, java_type):
+                return ptype
+    # Case 2
+    elif item.isOutput() and not item.isInput():
+        for jtype, ptype in _ptypes.ptypes.items():
+            # can we go from java_type to jtype?
+            if func(java_type, jtype):
+                return ptype
+    # Case 3
+    elif item.isInput() and item.isOutput():
+        for jtype, ptype in _ptypes.ptypes.items():
+            # can we go both ways?
+            if func(java_type, jtype) and func(jtype, java_type):
+                return ptype
+    # Didn't satisfy any cases!
+    return None
+
+
+@module_item_converter()
+def isAssignableChecker(item: ModuleItem) -> Optional[Type]:
+    """
+    Determines whether we can simply cast from ptype to item's type java_type
+    """
+    def isAssignable(from_type, to_type) -> bool:
+        # Use Types to get the raw type of each
+        Types = jimport("org.scijava.util.Types")
+        from_raw = Types.raw(from_type)
+        to_raw = Types.raw(to_type)
+        return from_raw.isAssignableFrom(to_raw)
+    return _checkerUsingFunc(item, isAssignable)
+
+
+@module_item_converter(priority = Priority.LOW)
+def canConvertChecker(item: ModuleItem) -> Optional[Type]:
+    """
+    Determines whether imagej can do a conversion from ptype to item's type java_type.
+    """
+    def isAssignable(from_type, to_type) -> bool:
+        return ij.convert().supports(from_type, to_type)
+    return _checkerUsingFunc(item, isAssignable)
+
+# Install napari <-> java converters
+when_jvm_starts(lambda: init_napari_converters(ij))
 
 def _return_type(info):
     """Returns the output type of info."""
@@ -140,7 +208,7 @@ def _return_type(info):
     if len(outs) == 0:
         return None
     if len(outs) == 1:
-        return _ptype(outs[0])
+        return python_type_of(outs[0])
     return dict
 
 
@@ -208,7 +276,7 @@ def _resolvable_or_required(input):
     """Determines whether input should be resolved in napari"""
     if input.isRequired(): return True
     try:
-        type = _ptype(input)
+        type = python_type_of(input)
         return True
     except ValueError:
         return False
@@ -318,7 +386,7 @@ def _param_annotation(input):
     """
     Gets the (Python) type hint for input
     """
-    type = _ptype(input)
+    type = python_type_of(input)
     if not input.isRequired():
         type = Optional[type]
     return type
@@ -417,9 +485,9 @@ def _add_napari_metadata(execute_module: Callable, info, unresolved_inputs):
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {
-        str(i.getName()): _ptype(i) for i in unresolved_inputs
+        str(i.getName()): python_type_of(i) for i in unresolved_inputs
     }
-    return_annotation = _ptype(info.outputs()[0]) if len(info.outputs()) == 1 else dict
+    return_annotation = python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
     type_hints["return"] = return_annotation
     execute_module.__annotation__ = type_hints  # type: ignore
 
