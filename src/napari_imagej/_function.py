@@ -250,6 +250,8 @@ def _resolve_user_input(
         raise ValueError(
             "No selection was made for input {}!".format(name)
         )
+    # TODO: Can we just something like:
+    # if isinstance(input, python_type_of(module_item)):
     item_class = module_item.getType()
     if not item_class.isInstance(input):
         if ij.convert().supports(input, item_class):
