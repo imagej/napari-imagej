@@ -635,7 +635,8 @@ class ImageJWidget(QWidget):
         self.searchService = self._generate_search_service()
 
         # Results box
-        self.results = [[] for _ in range(len(self.searchers))]
+        # We need one list PER searcher, hence the list of lists
+        self.results: List[List[SearchResult]] = [[] for _ in range(len(self.searchers))]
         self.resultTables: QWidget
         self.tableWidgets: List[QTableWidget] = self._generate_results_tables()
         self.resultTables = self._generate_results_widget(self.tableWidgets)
