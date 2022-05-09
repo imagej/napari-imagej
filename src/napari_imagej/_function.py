@@ -631,7 +631,7 @@ class ImageJWidget(QWidget):
 
         self.layout().addWidget(self._search_widget)
 
-        self.searchers, self.resultConverters = self._generate_searchers()
+        self.searchers = self._generate_searchers()
         self.searchService = self._generate_search_service()
 
         # Results box
@@ -658,18 +658,22 @@ class ImageJWidget(QWidget):
         searchbar.returnPressed.connect(lambda: self._highlight_module(0, 0))
         return searchbar
 
+    def _convert_searchResult_to_info(self, search_result):
+        info = search_result.info()
+        # There is an extra step for Ops - we actually need the CommandInfo
+        OpInfo = jimport('net.imagej.ops.OpInfo')
+        if isinstance(info, OpInfo):
+            info = info.cInfo()
+        return info
+
     def _generate_searchers(self) -> List[Any]:
         searcherClasses = [ModuleSearcher, OpSearcher]
-        resultToModuleInfoConverters = [
-            lambda result: result.info(),
-            lambda result: result.info().cInfo(),
-        ]
         pluginService = ij.get("org.scijava.plugin.PluginService")
         infos = [pluginService.getPlugin(cls, Searcher) for cls in searcherClasses]
         searchers = [info.createInstance() for info in infos]
         for searcher in searchers:
             ij.context().inject(searcher)
-        return searchers, resultToModuleInfoConverters
+        return searchers
 
     def _generate_search_service(self):
         return ij.get("org.scijava.search.SearchService")
@@ -750,7 +754,7 @@ class ImageJWidget(QWidget):
             if action_name == "Run":
                 self.focused_action_buttons[i].clicked.connect(
                     lambda: self._execute_module(
-                        self.resultConverters[table](self.focused_module)
+                        self._convert_searchResult_to_info(self.focused_module)
                     )
                 )
             else:
