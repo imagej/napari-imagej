@@ -1,7 +1,4 @@
-from typing import Any, Callable, Dict, Tuple, Type
 from scyjava import jimport
-import numpy as np
-
 
 class PTypes:
     def __init__(self):
@@ -41,6 +38,7 @@ class PTypes:
 
         # Images
         self._images = {
+            jimport('net.imglib2.RandomAccessible'):                  'napari.types.ImageData',
             jimport('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
             jimport('net.imglib2.IterableInterval'):                  'napari.types.ImageData',
             jimport('ij.ImagePlus'):                                  'napari.types.ImageData'
