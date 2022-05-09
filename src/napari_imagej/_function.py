@@ -670,8 +670,7 @@ class ImageJWidget(QWidget):
     def _generate_searchers(self) -> List[Any]:
         searcherClasses = [ModuleSearcher, OpSearcher]
         pluginService = ij.get("org.scijava.plugin.PluginService")
-        infos = [pluginService.getPlugin(cls, Searcher) for cls in searcherClasses]
-        searchers = [info.createInstance() for info in infos]
+        searchers = [pluginService.getPlugin(cls, Searcher).createInstance() for cls in searcherClasses]
         for searcher in searchers:
             ij.context().inject(searcher)
         return searchers
