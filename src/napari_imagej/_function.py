@@ -667,7 +667,8 @@ class ImageJWidget(QWidget):
         pluginService = ij.get("org.scijava.plugin.PluginService")
         infos = [pluginService.getPlugin(cls, Searcher) for cls in searcherClasses]
         searchers = [info.createInstance() for info in infos]
-        [ij.context().inject(searcher) for searcher in searchers]
+        for searcher in searchers:
+            ij.context().inject(searcher)
         return searchers, resultToModuleInfoConverters
 
     def _generate_search_service(self):
@@ -701,7 +702,8 @@ class ImageJWidget(QWidget):
 
         container = QWidget()
         container.setLayout(QVBoxLayout())
-        [container.layout().addWidget(w) for w in resultTables]
+        for table in resultTables:
+            container.layout().addWidget(table)
         return (container, resultTables)
 
     def _search(self, text):
