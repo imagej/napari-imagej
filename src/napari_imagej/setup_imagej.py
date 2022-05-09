@@ -20,12 +20,8 @@ def imagej_init():
     config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
 
     _logger.debug("Completed JVM Configuration")
-    # TODO: change 'headless=True' -> 'mode=imagej.Mode.HEADLESS'
-    # This change is waiting on a new pyimagej release
-    # TODO: remove 'add_legacy=False' -> struggles with LegacyService
-    # This change is waiting on a new pyimagej release
     global _ij
-    _ij = imagej.init(headless=True)
+    _ij = imagej.init(mode='headless')
     print(_ij)
 
     _logger.debug(f"Initialized at version {_ij.getVersion()}")
