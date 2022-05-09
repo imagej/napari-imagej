@@ -679,8 +679,7 @@ class ImageJWidget(QWidget):
         return ij.get("org.scijava.search.SearchService")
     
     def _highlight_from_results_table(self, searcher_index):
-        index = searcher_index
-        return lambda row, col: self._highlight_module(index, row, col)
+        return lambda row, col: self._highlight_module(searcher_index, row, col)
 
     def _generate_results_tables(self) -> List[QTableWidget]:
         resultTables = []
