@@ -637,8 +637,8 @@ class ImageJWidget(QWidget):
         # Results box
         self.results = [[] for _ in range(len(self.searchers))]
         self.resultTables: QWidget
-        self.tableWidgets: List[QTableWidget]
-        self.resultTables, self.tableWidgets = self._generate_results_widget()
+        self.tableWidgets: List[QTableWidget] = self._generate_results_tables()
+        self.resultTables = self._generate_results_widget(self.tableWidgets)
         self.layout().addWidget(self.resultTables)
 
         # Module highlighter
@@ -678,10 +678,9 @@ class ImageJWidget(QWidget):
         index = searcher_index
         return lambda row, col: self._highlight_module(index, row, col)
 
-    def _generate_results_widget(self) -> QTableWidget:
+    def _generate_results_tables(self) -> List[QTableWidget]:
         resultTables = []
-        for i in range(len(self.searchers)):
-            searcher = self.searchers[i]
+        for i, searcher in enumerate(self.searchers):
             # GUI properties
             labels = [ij.py.from_java(searcher.title())]
             max_results = 12
@@ -699,12 +698,15 @@ class ImageJWidget(QWidget):
             tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
             tableWidget.cellClicked.connect(self._highlight_from_results_table(i))
             resultTables.append(tableWidget)
+        return resultTables
 
+
+    def _generate_results_widget(self, resultTables) -> QTableWidget:
         container = QWidget()
         container.setLayout(QVBoxLayout())
         for table in resultTables:
             container.layout().addWidget(table)
-        return (container, resultTables)
+        return container
 
     def _search(self, text):
         # TODO: Consider adding a button to toggle fuzziness
