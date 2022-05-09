@@ -17,12 +17,7 @@ def imagej_init():
 
     # -- IMAGEJ CONFIG -- #
 
-    # TEMP: Avoid issues caused by https://github.com/imagej/pyimagej/issues/160
-    config.add_repositories(
-        {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-    )
     config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
-    config.endpoints.append("io.scif:scifio:0.43.1")
 
     _logger.debug("Completed JVM Configuration")
     # TODO: change 'headless=True' -> 'mode=imagej.Mode.HEADLESS'
