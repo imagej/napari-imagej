@@ -1,6 +1,6 @@
 from functools import lru_cache
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
-from scyjava import Priority
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
@@ -444,9 +444,12 @@ def _add_param_metadata(metadata: dict, key: str, value: Any, add_empty_list = T
     if value is None: return
     try:
         py_value = ij.py.from_java(value)
-        if isinstance(py_value, Collection):
-            if (len(value) == 0 and not add_empty_list): return
-            value = [ij.py.from_java(v) for v in value]
+        if isinstance(py_value, JavaMap):
+            value = dict(value)
+        elif isinstance(py_value, JavaSet):
+            value = set(value)
+        elif isinstance(py_value, JavaIterable):
+            value = list(value)
         metadata[key] = value
     except Exception:
         pass
