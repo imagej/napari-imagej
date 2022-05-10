@@ -1,4 +1,4 @@
-from napari_imagej._function import ImageJWidget
+from napari_imagej.widget import ImageJWidget
 from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
