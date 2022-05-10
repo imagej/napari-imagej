@@ -15,6 +15,7 @@ channels:
 dependencies:
   # Project depenencies
   - napari
+  - magicgui >= 0.4.0
   - pyimagej >= 1.2.0
   - labeling >= 0.1.12
   # Project from source
