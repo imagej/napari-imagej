@@ -1,6 +1,6 @@
 from functools import lru_cache
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
-from scyjava import Priority
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
@@ -470,9 +470,7 @@ def _add_napari_metadata(
     execute_module._info = info  # type: ignore
 
 
-def _add_param_metadata(
-    metadata: dict, key: str, value: Any, add_empty_list=True
-) -> None:
+def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
     """
     Adds a particular aspect of ModuleItem metadata to map
 
@@ -481,18 +479,17 @@ def _add_param_metadata(
     :param metadata: The dict of metadata for some parameter
     :param key: The name of a metadata type on that parameter
     :param value: The value of that metadata type
-    :param add_empty_list: An option for denoting whether empty collections should
-        be added. We usually don't want it if it is e.g. the choices, but we
-        usually want it otherwise.
     """
     if value is None:
         return
     try:
         py_value = ij().py.from_java(value)
-        if isinstance(py_value, Collection):
-            if len(value) == 0 and not add_empty_list:
-                return
-            value = [ij().py.from_java(v) for v in value]
+        if isinstance(py_value, JavaMap):
+            value = dict(value)
+        elif isinstance(py_value, JavaSet):
+            value = set(value)
+        elif isinstance(py_value, JavaIterable):
+            value = list(value)
         metadata[key] = value
     except TypeError:
         # If we cannot convert the value, we don't want to add anything to the dict.
@@ -511,9 +508,12 @@ def _add_scijava_metadata(
         _add_param_metadata(param_map, "step", input.getStepSize())
         _add_param_metadata(param_map, "label", input.getLabel())
         _add_param_metadata(param_map, "tooltip", input.getDescription())
-        _add_param_metadata(
-            param_map, "choices", input.getChoices(), add_empty_list=False
-        )
+        # SciJava parameters with no choices should be fully left to the user.
+        # With no choices, the returned list will be empty.
+        # Unfortunately, magicgui doesn't know how to handle an empty list,
+        # so we only add it if it is not empty.
+        if len(input.getChoices()) > 0:
+            _add_param_metadata(param_map, "choices", input.getChoices())
 
         if len(param_map) > 0:
             metadata[key] = param_map
