@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
-from napari.layers import Labels, Shapes
+from napari.layers import Labels, Shapes, Points
 from napari_imagej.setup_imagej import ij, java_import
 
 def assert_labels_equality(
@@ -592,4 +592,60 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     # Assert side lengths   
     assert rois[1].sideLength(0) == 20
     assert rois[1].sideLength(1) == 20
+
+
+# -- Points / RealPointCollections -- #
+
+
+@pytest.fixture
+def real_point_collection():
+    DefaultWritableRealPointCollection = java_import('net.imglib2.roi.geom.real.DefaultWritableRealPointCollection')
+    p1 = JArray(JDouble)(2)
+    p1[:] = [0, 0]
+    p2 = JArray(JDouble)(2)
+    p2[:] = [1, 1]
+    p3 = JArray(JDouble)(2)
+    p3[:] = [2, 0]
+    RealPoint = java_import('net.imglib2.RealPoint')
+    pts = [RealPoint(p) for p in [p1, p2, p3]]
+    ArrayList = java_import('java.util.ArrayList')
+    ptList = ArrayList()
+    ptList.addAll(pts)
+    return DefaultWritableRealPointCollection(ptList)
+
+
+@pytest.fixture
+def points():
+    data = np.zeros((3, 2))
+    data[0, :] = [0, 0]
+    data[1, :] = [4, -4]
+    data[2, :] = [8, 0]
+    return Points(data=data)
+
+
+def test_realpointcollection_to_points(ij_fixture, real_point_collection):
+    py_mask = ij_fixture.py.from_java(real_point_collection)
+    assert isinstance(py_mask, Points)
+    data = py_mask.data
+    assert len(data) == 3
+    assert np.array_equal(data[0], np.array([0, 0]))
+    assert np.array_equal(data[1], np.array([1, 1]))
+    assert np.array_equal(data[2], np.array([2, 0]))
+
+
+def test_points_to_realpointcollection(ij_fixture, points):
+    # Assert shapes conversion to ellipse
+    collection = ij_fixture.py.to_java(points)
+    RealPointCollection = java_import('net.imglib2.roi.geom.real.RealPointCollection')
+    assert isinstance(collection, RealPointCollection)
+    p1 = JArray(JDouble)(2)
+    p1[:] = [0, 0]
+    p2 = JArray(JDouble)(2)
+    p2[:] = [4, -4]
+    p3 = JArray(JDouble)(2)
+    p3[:] = [8, 0]
+    RealPoint = java_import('net.imglib2.RealPoint')
+    pts = [RealPoint(p) for p in [p1, p2, p3]]
+    for e, a in zip(pts, collection.points()):
+        assert e == a
 
