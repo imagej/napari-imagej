@@ -172,6 +172,15 @@ class JavaClasses(object):
     def LoadInputsPreprocessor(self): return "org.scijava.module.process.LoadInputsPreprocessor"
 
     @blocking_import
+    def Module(self): return "org.scijava.module.Module"
+
+    @blocking_import
+    def ModuleInfo(self): return "org.scijava.module.ModuleInfo"
+
+    @blocking_import
+    def ModuleItem(self): return "org.scijava.module.ModuleItem"
+
+    @blocking_import
     def ModuleSearcher(self): return "org.scijava.search.module.ModuleSearcher"
 
     @blocking_import
