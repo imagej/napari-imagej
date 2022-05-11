@@ -154,7 +154,7 @@ def _preprocess_non_inputs(module):
     for preprocessor in preprocessors:
         if isinstance(preprocessor, problematic_processors):
             # STOP AT INPUT HARVESTING
-            break
+            continue
         else:
             preprocessor.process(module)
 
