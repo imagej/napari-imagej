@@ -147,16 +147,8 @@ def _preprocess_non_inputs(module):
     preprocessors = ij().plugin() \
         .createInstancesOfType(jc.PreprocessorPlugin)
     # we want to avoid these processors
-    problematic_processors = (
-        jc.InputHarvester,
-        jc.LoadInputsPreprocessor,
-    )
     for preprocessor in preprocessors:
-        if isinstance(preprocessor, problematic_processors):
-            # STOP AT INPUT HARVESTING
-            continue
-        else:
-            preprocessor.process(module)
+        preprocessor.process(module)
 
 
 def _resolve_user_input(

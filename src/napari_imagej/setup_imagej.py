@@ -175,12 +175,6 @@ class JavaClasses(object):
     def DisplayPostprocessor(self): return "org.scijava.module.process.PostprocessorPlugin"
 
     @blocking_import
-    def InputHarvester(self): return "org.scijava.widget.InputHarvester"
-
-    @blocking_import
-    def LoadInputsPreprocessor(self): return "org.scijava.module.process.LoadInputsPreprocessor"
-
-    @blocking_import
     def Module(self): return "org.scijava.module.Module"
 
     @blocking_import
