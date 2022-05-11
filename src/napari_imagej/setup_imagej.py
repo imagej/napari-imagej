@@ -13,9 +13,18 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)  # TEMP
 
 # -- PUBLIC API -- #
+
+def log_debug(msg: str):
+    """
+    Provides a debug message to the logger, prefaced by 'napari-imagej: '
+    """
+    debug_msg = "napari-imagej: " + msg
+    _logger.debug(debug_msg)
+
+
 def imagej_init():
     # Initialize ImageJ
-    _logger.debug("Initializing ImageJ2")
+    log_debug("Initializing ImageJ2")
 
     # -- IMAGEJ CONFIG -- #
 
@@ -26,14 +35,14 @@ def imagej_init():
     config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
     config.endpoints.append("io.scif:scifio:0.43.1")
 
-    _logger.debug("Completed JVM Configuration")
+    log_debug("Completed JVM Configuration")
     # TODO: change 'headless=True' -> 'mode=imagej.Mode.HEADLESS'
     # This change is waiting on a new pyimagej release
     # TODO: remove 'add_legacy=False' -> struggles with LegacyService
     # This change is waiting on a new pyimagej release
     _ij = imagej.init(headless=True)
 
-    _logger.debug(f"Initialized at version {_ij.getVersion()}")
+    log_debug(f"Initialized at version {_ij.getVersion()}")
     return _ij
 
 # There is a good debate to be had whether to multithread or multiprocess.

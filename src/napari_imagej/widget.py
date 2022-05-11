@@ -21,7 +21,7 @@ from qtpy.QtWidgets import (
     QLabel,
 )
 from scyjava import when_jvm_starts
-from napari_imagej.setup_imagej import ij, logger, jc
+from napari_imagej.setup_imagej import ij, jc, log_debug
 from napari_imagej._module_utils import functionify_module_execution
 from napari_imagej._napari_converters import init_napari_converters
 from threading import Thread
@@ -188,12 +188,11 @@ class ImageJWidget(QWidget):
             self.focused_action_buttons[i].show()
 
     def _execute_module(self, moduleInfo):
-        logger().debug("Creating module...")
+        log_debug("Creating module...")
         module = ij().module().createModule(moduleInfo)
 
         # preprocess using napari GUI
-        logger().debug("Processing...")
-        func, param_options = functionify_module_execution(self.viewer, logger(), module, moduleInfo)
+        func, param_options = functionify_module_execution(self.viewer, module, moduleInfo)
         self.viewer.window.add_function_widget(
             func, magic_kwargs=param_options
         )

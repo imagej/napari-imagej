@@ -1,12 +1,11 @@
 from functools import lru_cache
-from logging import Logger
 from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
 from scyjava import Priority
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
 from napari_imagej._ptypes import TypeMappings
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.setup_imagej import ij, jc, log_debug
                 
 
 @lru_cache(maxsize=None)
@@ -144,6 +143,7 @@ def _return_type(info: "jc.ModuleInfo"):
 def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
+    log_debug("Preprocessing...")
     preprocessors = ij().plugin() \
         .createInstancesOfType(jc.PreprocessorPlugin)
     # we want to avoid these processors
@@ -264,6 +264,7 @@ def _run_module(module: "jc.Module"):
 
 def _postprocess_module(module: "jc.Module"):
     """Runs all known postprocessors on the passed module."""
+    log_debug("Postprocessing...")
     # Discover all postprocessors
     postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
@@ -276,7 +277,6 @@ def _postprocess_module(module: "jc.Module"):
             # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
             # We are going to ignore it until it behaves (see https://github.com/imagej/imagej-common/issues/100 )
             continue
-        print('Postprocessing with ', postprocessor)
         postprocessor.process(module)
 
 
@@ -506,7 +506,6 @@ def _add_scijava_metadata(unresolved_inputs: List["jc.ModuleItem"]) -> Dict[str,
 
 def functionify_module_execution(
     viewer: Viewer,
-    logger: Logger,
     module: "jc.Module",
     info: "jc.ModuleInfo"
     ) -> Tuple[Callable, dict]:
@@ -529,8 +528,8 @@ def functionify_module_execution(
         )
 
         # run module
-        logger.debug(
-            f"run_module: {module_execute.__qualname__} \
+        log_debug(
+            f"Running {module_execute.__qualname__} \
                 ({resolved_java_args}) -- {info.getIdentifier()}"
         )
         _initialize_module(module)
@@ -540,10 +539,10 @@ def functionify_module_execution(
         _postprocess_module(module)
 
         # get output
-        logger.debug("run_module: execution complete")
+        log_debug("Execution complete")
         j_result = _module_output(module)
         result = ij().py.from_java(j_result) 
-        logger.debug(f"run_module: result = {result}")
+        log_debug(f"Result = {result}")
 
         # display result 
         display_externally = _napari_specific_parameter(
