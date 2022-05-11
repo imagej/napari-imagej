@@ -86,21 +86,22 @@ def _checkerUsingFunc(
     """
     # Get the type of the Module item
     java_type = item.getType()
+    type_pairs = type_mappings().ptypes.items()
     # Case 1
     if item.isInput() and not item.isOutput():
-        for jtype, ptype in type_mappings().ptypes.items():
+        for jtype, ptype in type_pairs:
             # can we go from jtype to java_type?
             if func(jtype, java_type):
                 return ptype
     # Case 2
     elif item.isOutput() and not item.isInput():
-        for jtype, ptype in type_mappings().ptypes.items():
+        for jtype, ptype in type_pairs:
             # can we go from java_type to jtype?
             if func(java_type, jtype):
                 return ptype
     # Case 3
     elif item.isInput() and item.isOutput():
-        for jtype, ptype in type_mappings().ptypes.items():
+        for jtype, ptype in type_pairs:
             # can we go both ways?
             if func(java_type, jtype) and func(jtype, java_type):
                 return ptype
