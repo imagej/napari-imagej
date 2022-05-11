@@ -21,7 +21,7 @@ from qtpy.QtWidgets import (
     QLabel,
 )
 from scyjava import when_jvm_starts
-from napari_imagej.setup_imagej import ij, logger, java_import
+from napari_imagej.setup_imagej import ij, logger, jc
 from napari_imagej._module_utils import functionify_module_execution
 from napari_imagej._napari_converters import init_napari_converters
 from threading import Thread
@@ -90,16 +90,15 @@ class ImageJWidget(QWidget):
 
     def _generate_searchers(self) -> List[Any]:
         searcherClasses = [
-            java_import("org.scijava.search.module.ModuleSearcher"),
-            java_import("net.imagej.ops.search.OpSearcher"),
+            jc.ModuleSearcher,
+            jc.OpSearcher,
         ]
         resultToModuleInfoConverters = [
             lambda result: result.info(),
             lambda result: result.info().cInfo(),
         ]
         pluginService = ij().get("org.scijava.plugin.PluginService")
-        Searcher = java_import("org.scijava.search.Searcher")
-        infos = [pluginService.getPlugin(cls, Searcher) for cls in searcherClasses]
+        infos = [pluginService.getPlugin(cls, jc.Searcher) for cls in searcherClasses]
         searchers = [info.createInstance() for info in infos]
         [ij().context().inject(searcher) for searcher in searchers]
         return searchers, resultToModuleInfoConverters

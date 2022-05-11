@@ -3,7 +3,7 @@ from napari import Viewer
 
 import pytest
 from napari_imagej.widget import ImageJWidget
-from napari_imagej.setup_imagej import ij, java_import
+from napari_imagej.setup_imagej import JavaClasses, ij
 from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -12,6 +12,29 @@ from qtpy.QtWidgets import (
     QAbstractItemView,
     QLineEdit,
 )
+
+class JavaClassesTest(JavaClasses):
+    """
+    Here we override JavaClasses to get extra test imports
+    """
+    @JavaClasses.blocking_import
+    def ArrayImgs(self): return "net.imglib2.img.array.ArrayImgs"
+
+    @JavaClasses.blocking_import
+    def DefaultMutableModuleItem(self): return "org.scijava.module.DefaultMutableModuleItem"
+
+    @JavaClasses.blocking_import
+    def DefaultMutableModuleInfo(self): return "org.scijava.module.DefaultMutableModuleInfo"
+
+    @JavaClasses.blocking_import
+    def ItemIO(self): return "org.scijava.ItemIO"
+
+    @JavaClasses.blocking_import
+    def System(self): return "java.lang.System"
+
+
+jc = JavaClassesTest()
+
 
 @pytest.fixture
 def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:
@@ -57,7 +80,7 @@ class DummyModuleItem:
     def __init__(
         self,
         name='',
-        jtype=java_import('java.lang.String'),
+        jtype=jc.String,
         isRequired=True,
         isInput=True,
         isOutput=False,
@@ -99,8 +122,8 @@ from napari_imagej._module_utils import _return_type
 def test_return_type():
     outTypes = [
         [],
-        [java_import('java.lang.Double')],
-        [java_import('java.lang.Double'), java_import('java.lang.String')],
+        [jc.Double],
+        [jc.Double, jc.Double],
     ]
     expecteds = [None, float, dict]
     # Construct dummy ModuleInfos from outTypes
@@ -164,7 +187,7 @@ def test_preprocess_remaining_inputs(example_info):
     module = preresolved_module(example_info)
     all_inputs = module.getInfo().inputs()
     # Example user-resolved inputs
-    input = java_import('net.imglib2.img.array.ArrayImgs').bytes(10, 10)
+    input = jc.ArrayImgs.bytes(10, 10)
     doGauss = True
     spacingString = '1, 1'
     scaleString = '2 5'
@@ -185,9 +208,9 @@ example_inputs = [
     # Resolvable, not required
     (DummyModuleItem(isRequired=False), True),
     # Not resolvable, required
-    (DummyModuleItem(jtype=java_import('java.lang.System')), True),
+    (DummyModuleItem(jtype=jc.System), True),
     # Not resolvable, not required
-    (DummyModuleItem(jtype=java_import('java.lang.System'), isRequired=False), False),
+    (DummyModuleItem(jtype=jc.System, isRequired=False), False),
 ]
 
 @pytest.mark.parametrize('input, expected', example_inputs)
@@ -228,10 +251,8 @@ from napari_imagej._module_utils import _napari_module_param_additions
 from jpype import JArray, JObject
 
 def assert_new_window_checkbox_for_type(type, expected):
-    DefaultMutableModuleItem = java_import('org.scijava.module.DefaultMutableModuleItem')
-    DefaultMutableModuleInfo = java_import('org.scijava.module.DefaultMutableModuleInfo')
-    info = DefaultMutableModuleInfo()
-    item = DefaultMutableModuleItem(info, 'out', type)
+    info = jc.DefaultMutableModuleInfo()
+    item = jc.DefaultMutableModuleItem(info, 'out', type)
     info.addOutput(item)
 
     has_option = "display_results_in_new_window" in _napari_module_param_additions(info)
@@ -261,9 +282,8 @@ def assert_item_annotation(jtype, ptype, isRequired):
 
 def test_param_annotation(imagej_widget):
     # -- TEST CONVERTABLE ITEM --
-    String = java_import('java.lang.String')
-    assert_item_annotation(String, str, True)
-    assert_item_annotation(String, Optional[str], False)
+    assert_item_annotation(jc.String, str, True)
+    assert_item_annotation(jc.String, Optional[str], False)
 
 
 from napari_imagej._module_utils import _module_param
@@ -296,31 +316,26 @@ def test_modify_functional_signature(imagej_widget):
     creates a signature that describes all parameters that we'd want for both 
     napari-imagej and for the module.
     """
-    DefaultMutableModuleInfo = java_import('org.scijava.module.DefaultMutableModuleInfo')
-    ItemIO = java_import('org.scijava.ItemIO')
-    DefaultMutableModuleItem = java_import('org.scijava.module.DefaultMutableModuleItem')
-    String = java_import('java.lang.String')
-
-    info = DefaultMutableModuleInfo()
+    info = jc.DefaultMutableModuleInfo()
 
     # INPUTS
     # The first argument will be optional, so that we can test it sinking
-    in1 = DefaultMutableModuleItem(info, 'in1', String)
+    in1 = jc.DefaultMutableModuleItem(info, 'in1', jc.String)
     in1.setRequired(False)
     in1.setDefaultValue('foo')
     # The second argument will be required
-    in2 = DefaultMutableModuleItem(info, 'in2', String)
+    in2 = jc.DefaultMutableModuleItem(info, 'in2', jc.String)
     inputs = [in1, in2]
     for input in inputs:
-        input.setIOType(ItemIO.INPUT)
+        input.setIOType(jc.ItemIO.INPUT)
         info.addInput(input)
 
     # OUTPUTS
     outputs = [
-        DefaultMutableModuleItem(info, 'out', String)
+        jc.DefaultMutableModuleItem(info, 'out', jc.String)
     ]
     for out in outputs:
-        out.setIOType(ItemIO.OUTPUT)
+        out.setIOType(jc.ItemIO.OUTPUT)
         info.addOutput(out)
 
     def func(*inputs):

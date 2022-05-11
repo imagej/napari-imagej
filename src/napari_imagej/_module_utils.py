@@ -5,7 +5,8 @@ from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
 from napari_imagej._ptypes import TypeMappings
-from napari_imagej.setup_imagej import ij, java_import
+from napari_imagej.setup_imagej import ij, jc
+                
 
 @lru_cache(maxsize=None)
 def type_mappings():
@@ -113,9 +114,8 @@ def isAssignableChecker(item) -> Optional[Type]:
     """
     def isAssignable(from_type, to_type) -> bool:
         # Use Types to get the raw type of each
-        Types = java_import("org.scijava.util.Types")
-        from_raw = Types.raw(from_type)
-        to_raw = Types.raw(to_type)
+        from_raw = jc.Types.raw(from_type)
+        to_raw = jc.Types.raw(to_type)
         return from_raw.isAssignableFrom(to_raw)
     return _checkerUsingFunc(item, isAssignable)
 
@@ -142,13 +142,12 @@ def _return_type(info):
 def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
-    PreprocessorPlugin = java_import("org.scijava.module.process.PreprocessorPlugin")
     preprocessors = ij().plugin() \
-        .createInstancesOfType(PreprocessorPlugin)
+        .createInstancesOfType(jc.PreprocessorPlugin)
     # we want to avoid these processors
     problematic_processors = (
-        java_import("org.scijava.widget.InputHarvester"),
-        java_import("org.scijava.module.process.LoadInputsPreprocessor")
+        jc.InputHarvester,
+        jc.LoadInputsPreprocessor,
     )
     for preprocessor in preprocessors:
         if isinstance(preprocessor, problematic_processors):
@@ -242,8 +241,7 @@ def _initialize_module(module):
         module.initialize()
         # HACK: module.initialize() does not seem to call
         # Initializable.initialize()
-        Initializable = java_import("net.imagej.ops.Initializable")
-        if isinstance(module.getDelegateObject(), Initializable):
+        if isinstance(module.getDelegateObject(), jc.Initializable):
             module.getDelegateObject().initialize()
     except Exception as e:
         print("Initialization Error")
@@ -262,11 +260,10 @@ def _run_module(module):
 def _postprocess_module(module):
     """Runs all known postprocessors on the passed module."""
     # Discover all postprocessors
-    PostprocessorPlugin = java_import("org.scijava.module.process.PostprocessorPlugin")
-    postprocessors = ij().plugin().createInstancesOfType(PostprocessorPlugin)
+    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
     problematic_postprocessors = (
-        java_import("org.scijava.display.DisplayPostprocessor")
+        jc.DisplayPostprocessor,
     )
     # Run all discovered postprocessors
     for postprocessor in postprocessors:
