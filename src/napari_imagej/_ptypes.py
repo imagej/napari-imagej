@@ -40,6 +40,10 @@ class PTypes:
 
         # Images
         self._images = {
+            java_import('net.imagej.Dataset'):                            'napari.types.ImageData',
+            java_import('net.imagej.ImgPlus'):                            'napari.types.ImageData',
+            java_import('net.imagej.display.DatasetView'):                'napari.types.ImageData',
+            java_import('net.imagej.display.ImageDisplay'):               'napari.types.ImageData',
             java_import('net.imglib2.RandomAccessible'):                  'napari.types.ImageData',
             java_import('net.imglib2.RandomAccessibleInterval'):          'napari.types.ImageData',
             java_import('net.imglib2.IterableInterval'):                  'napari.types.ImageData',

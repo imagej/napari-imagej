@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
-from scyjava import Priority, JavaIterable, JavaMap, JavaSet
+from scyjava import jimport, Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
@@ -11,6 +11,45 @@ from napari_imagej.setup_imagej import ij, java_import
 @lru_cache(maxsize=None)
 def type_mappings():
     return PTypes()
+
+def is_java_image(obj):
+    return any(isinstance(obj, jtype) for jtype in type_mappings()._images)
+
+def coerce(obj, target_type):
+    if target_type.isInstance(obj):
+        return obj
+    if ij().convert().supports(obj, target_type):
+        return ij().convert().convert(obj, target_type)
+
+    # TEMP: Until fixed upstream. See:
+    # https://github.com/imagej/imagej-legacy/issues/229
+    #
+    # SUPPORTED Java-side conversions as of ImageJ2 v2.5.0:
+    # - ImagePlus    ->            RAI, Img,          Dataset, ImageDisplay
+    # - Img          ->            RAI,      ImgPlus
+    # - ImgPlus      ->            RAI, Img
+    # - Dataset      -> ImagePlus, RAI, Img, ImgPlus
+    # - ImageDisplay -> ImagePlus
+    try:
+        # Try coercing through a net.imagej.Dataset.
+        if isinstance(obj, jimport('net.imagej.display.ImageDisplay')):
+            # TEMP: PyImageJ 1.2.1 does not handle ImageDisplay objects yet.
+            dataset = ij().imageDisplay().getActiveDataset(obj)
+        else:
+            dataset = ij().py.to_dataset(obj)
+
+        # Can we convert from Dataset directly? Covers ImagePlus, RAI, Img, ImgPlus.
+        if ij().convert().supports(jimport('net.imagej.Dataset'), target_type):
+            return ij().convert().convert(dataset, target_type)
+
+        # Do we need an ImageDisplay, or superclass thereof?
+        if issubclass(target_type, jimport('net.imagej.display.ImageDisplay')):
+            # Wrap Dataset into an ImageDisplay.
+            return ij().display().createDisplay(dataset)
+    except TypeError:
+        # Cannot coerce object to a dataset via PyImageJ.
+        raise # FIXME: Fail better?
+
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
@@ -159,14 +198,8 @@ def _resolve_user_input(
     # TODO: Can we just something like:
     # if isinstance(input, python_type_of(module_item)):
     item_class = module_item.getType()
-    if not item_class.isInstance(input):
-        if ij().convert().supports(input, item_class):
-            input = ij().convert().convert(input, item_class)
-        else:
-            raise ValueError(
-                f"{input} is not a {module_item.getType()}!"
-            )
-    module.setInput(name, input)
+    typed_input = coerce(input, item_class)
+    module.setInput(name, typed_input)
     module.resolveInput(name)
 
 
@@ -207,6 +240,7 @@ def _filter_unresolved_inputs(module, inputs):
     # Delegate optional output construction to the module
     # We will leave those unresolved
     unresolved = list(
+        # FIXME: BOTH parameters are both input and output -- should not be checking isOutput here.
         filter(
             lambda i: not (i.isOutput() and not i.isRequired()),
             unresolved
@@ -229,6 +263,7 @@ def _initialize_module(module):
         module.initialize()
         # HACK: module.initialize() does not seem to call
         # Initializable.initialize()
+        # FIXME: There is an existing issue for this -- find it.
         Initializable = java_import("net.imagej.ops.Initializable")
         if isinstance(module.getDelegateObject(), Initializable):
             module.getDelegateObject().initialize()
@@ -507,6 +542,10 @@ def functionify_module_execution(viewer: Viewer, logger, module, info) -> Tuple[
         # get output
         logger.debug("run_module: execution complete")
         j_result = _module_output(module)
+        if isinstance(j_result, jimport("net.imagej.display.ImageDisplay")):
+            # HACK: Unwrap ImageDisplay so it doesn't get converted as a JavaList.
+            # FIXME: Fix this on the PyImageJ side.
+            j_result = ij().imageDisplay().getActiveDataset(j_result)
         result = ij().py.from_java(j_result) 
         logger.debug(f"run_module: result = {result}")
 

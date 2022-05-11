@@ -21,7 +21,7 @@ def imagej_init():
 
     _logger.debug("Completed JVM Configuration")
     global _ij
-    _ij = imagej.init(mode='headless')
+    _ij = imagej.init(mode='headless', add_legacy=False)
     print(_ij)
 
     _logger.debug(f"Initialized at version {_ij.getVersion()}")
