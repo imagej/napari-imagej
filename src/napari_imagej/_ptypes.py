@@ -2,7 +2,13 @@ from typing import List
 from napari_imagej.setup_imagej import java_import
 
 
-class PTypes:
+class TypeMappings:
+    """
+    The definitive set of "equal" Java and Python types.
+    This map allows us to determine the "best" Python type for the conversion
+    of any Java object, or the "best" Java type for the conversion of any
+    Python object.
+    """
     def __init__(self):
         # Numbers
         self._numbers = {

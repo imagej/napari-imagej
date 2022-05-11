@@ -4,13 +4,26 @@ from scyjava import Priority
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
-from napari_imagej._ptypes import PTypes
+from napari_imagej._ptypes import TypeMappings
 from napari_imagej.setup_imagej import ij, java_import
 
-# Create Java -> Python type mapper
 @lru_cache(maxsize=None)
 def type_mappings():
-    return PTypes()
+    """
+    Lazily creates a TypeMappings object.
+    This object is then cached upon function return,
+    effectively making this function a lazily initialized field.
+
+    This object should be lazily initialized as it will import java classes.
+    Those Java classes should not be imported until ImageJ has been able to set
+    up the JVM, adding its required JARs to the classpath. For that reason,
+    java class importing is done with java_import, which blocks UNTIL the imagej
+    gateway has been created (in a separate thread). Thus, prematurely calling this
+    function would block the calling thread.
+
+    By lazily initializing this function, we minimize the time this thread is blocked.
+    """
+    return TypeMappings()
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []

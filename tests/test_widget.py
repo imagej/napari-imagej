@@ -42,7 +42,7 @@ def test_widget_table_layout(imagej_widget: ImageJWidget):
     assert QAbstractItemView.SelectRows == table.selectionBehavior()
     assert False == table.showGrid()
 
-from napari_imagej._ptypes import PTypes
+from napari_imagej._ptypes import TypeMappings
 from napari_imagej._module_utils import python_type_of
 
 class DummyModuleInfo:
@@ -89,7 +89,7 @@ class DummyModuleItem:
         return self._default
 
 def test_ptype():
-    ptypes = PTypes()
+    ptypes = TypeMappings()
 
     for jtype, ptype in ptypes.ptypes.items():
         assert python_type_of(DummyModuleItem(jtype=jtype)) == ptype
@@ -238,7 +238,7 @@ def assert_new_window_checkbox_for_type(type, expected):
     assert expected == has_option
 
 def test_napari_param_new_window_checkbox(imagej_widget):
-    ptypes = PTypes()
+    ptypes = TypeMappings()
 
     types_absent = ptypes._napari_layer_types
 
