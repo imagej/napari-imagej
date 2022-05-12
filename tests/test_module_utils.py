@@ -58,6 +58,10 @@ def test_widget_table_layout(imagej_widget: ImageJWidget):
     assert False == table.showGrid()
 
 class DummyModuleInfo:
+    """
+    A mock of org.scijava.module.ModuleInfo that is created much easier
+    Fields can and should be added as needed for tests.
+    """
     def __init__(self, inputs=[], outputs=[]):
         self._inputs = inputs
         self._outputs = outputs
@@ -66,6 +70,10 @@ class DummyModuleInfo:
         return self._outputs
 
 class DummyModuleItem:
+    """
+    A mock of org.scijava.module.ModuleItem that is created much easier
+    Fields can and should be added as needed for tests.
+    """
     def __init__(
         self,
         name='',
