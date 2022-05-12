@@ -23,7 +23,6 @@ from qtpy.QtWidgets import (
 from scyjava import when_jvm_starts
 from napari_imagej.setup_imagej import ij, jc, log_debug
 from napari_imagej._module_utils import functionify_module_execution
-from napari_imagej._napari_converters import init_napari_converters
 from threading import Thread
 
 
@@ -31,9 +30,6 @@ class ImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
-
-        # Install napari <-> java converters
-        when_jvm_starts(lambda: init_napari_converters())
 
         self.viewer = napari_viewer
         

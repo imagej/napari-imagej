@@ -364,6 +364,3 @@ def init_napari_converters():
     # Add Java -> napari converters
     for converter in _java_to_napari_converters():
         add_py_converter(converter)
-
-# Install napari <-> java converters
-when_jvm_starts(lambda: init_napari_converters())
