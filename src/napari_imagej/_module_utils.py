@@ -325,7 +325,7 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
     return default
 
 
-def _param_annotation(input: "jc.ModuleItem") -> type:
+def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
     """
     Gets the (Python) type hint for a (Java) input
     """
@@ -340,16 +340,16 @@ def _module_param(input: "jc.ModuleItem") -> Parameter:
     name = ij().py.from_java(input.getName())
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
-    annotation = _param_annotation(input)
+    type_hint = _type_hint_for_module_item(input)
 
     # We have to be careful here about passing a default
     # Parameter uses an internal type to denote a required parameter.
     # Passing anything EXCEPT that internal type will make that arugment default.
     # Thus we need to only specify default if we have one.
     if default is not None:
-        return Parameter(name=name, kind=kind, default=default, annotation=annotation)
+        return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
     else:
-        return Parameter(name=name, kind=kind, annotation=annotation)
+        return Parameter(name=name, kind=kind, annotation=type_hint)
 
 
 def _modify_function_signature(

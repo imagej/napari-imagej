@@ -271,12 +271,12 @@ def test_napari_param_new_window_checkbox(imagej_widget):
         assert_new_window_checkbox_for_type(t, True)
 
 
-from napari_imagej._module_utils import _param_annotation
+from napari_imagej._module_utils import _type_hint_for_module_item
 
 
 def assert_item_annotation(jtype, ptype, isRequired):
     module_item = DummyModuleItem(jtype=jtype, isRequired=isRequired)
-    param_type = _param_annotation(module_item)
+    param_type = _type_hint_for_module_item(module_item)
     assert param_type == ptype
 
 
