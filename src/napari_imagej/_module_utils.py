@@ -156,14 +156,17 @@ def _resolve_user_input(
     module_item: "jc.ModuleInfo",
     input: Any
 ):
-    """Resolves module_item, a ModuleItem in module, with input"""
+    """
+    Resolves module_item, a ModuleItem in module, with JAVA object input
+    :param module: The module to be resolved
+    :param module_item: The particular item being resolved
+    :param input: The JAVA input that is resolving module_item.
+    """
     name = module_item.getName()
     if module_item.isRequired() and input is None:
         raise ValueError(
             "No selection was made for input {}!".format(name)
         )
-    # TODO: Can we just something like:
-    # if isinstance(input, python_type_of(module_item)):
     item_class = module_item.getType()
     if not item_class.isInstance(input):
         if ij().convert().supports(input, item_class):
