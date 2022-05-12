@@ -11,6 +11,20 @@ class TypeMappings:
     """
     def __init__(self):
 
+        # Strings
+        self._strings = {
+            jc.Character_Arr:                                             str,
+            jc.Character:                                                 str,
+            jc.String:                                                    str,
+        }
+
+        # Booleans
+        self._booleans = {
+            jc.Boolean_Arr:                                               List[bool],
+            jc.Boolean:                                                   bool,
+            jc.BooleanType:                                               bool,
+        }
+
         # Numbers
         self._numbers = {
             jc.Byte:                                                      int,
@@ -31,24 +45,10 @@ class TypeMappings:
             jc.ComplexType:                                               complex,
         }
 
-        # Booleans
-        self._booleans = {
-            jc.Boolean_Arr:                                               List[bool],
-            jc.Boolean:                                                   bool,
-            jc.BooleanType:                                               bool,
-        }
-
-        # Strings
-        self._strings = {
-            jc.Character_Arr:                                             str,
-            jc.Character:                                                 str,
-            jc.String:                                                    str,
-        }
-
         # Images
         self._images = {
-            jc.RandomAccessible:                                         'napari.types.ImageData',
             jc.RandomAccessibleInterval:                                 'napari.types.ImageData',
+            jc.RandomAccessible:                                         'napari.types.ImageData',
             jc.IterableInterval:                                         'napari.types.ImageData',
             # TODO: remove 'add_legacy=False' -> struggles with LegacyService
             # This change is waiting on a new pyimagej release

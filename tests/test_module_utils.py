@@ -36,6 +36,9 @@ class JavaClassesTest(JavaClasses):
     def DoubleArray(self): return "org.scijava.util.DoubleArray"
 
     @JavaClasses.blocking_import
+    def EuclideanSpace(self): return "net.imglib2.EuclideanSpace"
+
+    @JavaClasses.blocking_import
     def ItemIO(self): return "org.scijava.ItemIO"
 
     @JavaClasses.blocking_import
@@ -116,7 +119,7 @@ class DummyModuleItem:
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
-    (jc.ArrayImg, 'napari.types.ImageData') # ArrayImg assignable to Img
+    (jc.ArrayImg, 'napari.types.ImageData') # ArrayImg -> RAI -> ImageData
 ]
 convertible_match_pairs = [
     # We want to test that napari could tell that a DoubleArray ModuleItem
@@ -134,6 +137,38 @@ type_pairs = direct_match_pairs + assignable_match_pairs + convertible_match_pai
 @pytest.mark.parametrize('jtype, ptype', type_pairs)
 def test_python_type_of_input_only(jtype, ptype):
     module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=False)
+    assert _module_utils.python_type_of(module_item) == ptype
+
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+assignable_match_pairs = [
+    (jc.EuclideanSpace, 'napari.types.ImageData') # ImageData -> RAI -> EuclideanSpace
+]
+convertible_match_pairs = [
+    # We want to test that napari could tell that a DoubleArray ModuleItem
+    # could be satisfied by a List[float], as napari-imagej knows how to
+    # convert that List[float] into a Double[], and imagej knows how to
+    # convert that Double[] into a DoubleArray. Unfortunately, DefaultConverter
+    # can convert DoubleArrays into strings; because it comes first in
+    # TypeMappings, it is the python type that returns.
+    # This is really not napari-imagej's fault.
+    # Since the goal was just to test that python_type_of uses ij.convert()
+    # as an option, we will leave the conversion like this.
+    (jc.DoubleArray, str) # DoubleArray -> String -> str
+]
+type_pairs = direct_match_pairs + convertible_match_pairs
+@pytest.mark.parametrize('jtype, ptype', type_pairs)
+def test_python_type_of_output_only(jtype, ptype):
+    module_item = DummyModuleItem(jtype=jtype, isInput=False, isOutput=True)
+    assert _module_utils.python_type_of(module_item) == ptype
+
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+convertible_match_pairs = [
+    (jc.DoubleArray, List[float])
+]
+type_pairs = direct_match_pairs + convertible_match_pairs
+@pytest.mark.parametrize('jtype, ptype', type_pairs)
+def test_python_type_of_IO(jtype, ptype):
+    module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=True)
     assert _module_utils.python_type_of(module_item) == ptype
 
 

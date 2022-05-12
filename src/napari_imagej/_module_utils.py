@@ -94,7 +94,8 @@ def _checkerUsingFunc(
                 return ptype
     # Case 2
     elif item.isOutput() and not item.isInput():
-        for jtype, ptype in type_pairs:
+        # NB type_pairs is ordered from least to most specific.
+        for jtype, ptype in reversed(type_pairs):
             # can we go from java_type to jtype?
             if func(java_type, jtype):
                 return ptype
