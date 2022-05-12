@@ -288,7 +288,7 @@ def _napari_module_param_additions(module_info: "jc.ModuleInfo") -> Dict[str, Tu
         additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
 
-def _is_non_default(input: "jc.ModuleItem") -> bool:
+def _is_optional_arg(input: "jc.ModuleItem") -> bool:
     """
     Determines whether the ModuleInfo input is optional,
     as far as a python arg would be concerned.
@@ -303,12 +303,12 @@ def _is_non_default(input: "jc.ModuleItem") -> bool:
     return True
 
 
-def _sink_default_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
+def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
     """
     Python functions cannot have required args after an optional arg.
-    We need to move all default inputs after the required ones.
+    We need to move all optional inputs after the required ones.
     """
-    sort_key = lambda x: -1 if _is_non_default(x) else 1
+    sort_key = lambda x: -1 if _is_optional_arg(x) else 1
     return sorted(inputs, key=sort_key)
 
 
@@ -362,7 +362,7 @@ def _modify_function_signature(
     try:
         sig: Signature = signature(function)
         # Grab all options after the module inputs
-        inputs = _sink_default_inputs(inputs)
+        inputs = _sink_optional_inputs(inputs)
         module_params = [_module_param(i) for i in inputs]
         other_params = [
             Parameter(
@@ -512,7 +512,7 @@ def functionify_module_execution(
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
-    unresolved_inputs = _sink_default_inputs(unresolved_inputs)
+    unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
     # Package the rest of the execution into a widget
     def module_execute(

@@ -217,7 +217,7 @@ example_inputs = [
 def test_resolvable_or_required(input, expected):
     assert expected == _resolvable_or_required(input)
 
-from napari_imagej._module_utils import _is_non_default
+from napari_imagej._module_utils import _is_optional_arg
 
 is_non_default_example_inputs = [
     # default, required
@@ -231,17 +231,17 @@ is_non_default_example_inputs = [
 ]
 @pytest.mark.parametrize('input, expected', is_non_default_example_inputs)
 def test_is_non_default(input, expected):
-    assert expected == _is_non_default(input)
+    assert expected == _is_optional_arg(input)
 
-from napari_imagej._module_utils import _sink_default_inputs
+from napari_imagej._module_utils import _sink_optional_inputs
 
-def test_sink_default_inputs():
+def test_sink_optional_inputs():
     inputs = [
         DummyModuleItem(default='foo'),
         DummyModuleItem(),
         DummyModuleItem(default='bar')
     ]
-    sorted = _sink_default_inputs(inputs)
+    sorted = _sink_optional_inputs(inputs)
     # Ensure that foo went below
     assert sorted[0].getDefaultValue() == None
     assert sorted[1].getDefaultValue() == 'foo'
