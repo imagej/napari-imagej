@@ -5,7 +5,7 @@ import numpy as np
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from labeling.Labeling import Labeling
 from napari.layers import Labels, Shapes, Points
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.setup_imagej import jc
 
 def assert_labels_equality(
     exp: Dict[str, Any], act: Dict[str, Any], ignored_keys: List[str]
@@ -14,10 +14,6 @@ def assert_labels_equality(
         if key in ignored_keys:
             continue
         assert exp[key] == act[key]
-
-@pytest.fixture()
-def ij_fixture():
-    return ij()
 
 
 @pytest.fixture(scope="module")
@@ -595,8 +591,8 @@ def points():
     return Points(data=data)
 
 
-def test_realpointcollection_to_points(ij_fixture, real_point_collection):
-    py_mask = ij_fixture.py.from_java(real_point_collection)
+def test_realpointcollection_to_points(ij, real_point_collection):
+    py_mask = ij.py.from_java(real_point_collection)
     assert isinstance(py_mask, Points)
     data = py_mask.data
     assert len(data) == 3
@@ -605,9 +601,9 @@ def test_realpointcollection_to_points(ij_fixture, real_point_collection):
     assert np.array_equal(data[2], np.array([2, 0]))
 
 
-def test_points_to_realpointcollection(ij_fixture, points):
+def test_points_to_realpointcollection(ij, points):
     # Assert shapes conversion to ellipse
-    collection = ij_fixture.py.to_java(points)
+    collection = ij.py.to_java(points)
     assert isinstance(collection, jc.RealPointCollection)
     p1 = JArray(JDouble)(2)
     p1[:] = [0, 0]

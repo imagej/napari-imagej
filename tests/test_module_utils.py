@@ -3,7 +3,7 @@ from napari import Viewer
 
 import pytest
 from napari_imagej.widget import ImageJWidget
-from napari_imagej.setup_imagej import JavaClasses, ij
+from napari_imagej.setup_imagej import JavaClasses
 from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -135,16 +135,16 @@ def test_return_type():
         assert expected == actual
 
 @pytest.fixture
-def example_info():
-    return ij().module().getModuleById('command:net.imagej.ops.commands.filter.FrangiVesselness')
+def example_info(ij):
+    return ij.module().getModuleById('command:net.imagej.ops.commands.filter.FrangiVesselness')
 
 from napari_imagej._module_utils import _preprocess_non_inputs
 
-def test_preprocess_non_inputs(example_info):
-    module = ij().module().createModule(example_info)
+def test_preprocess_non_inputs(ij, example_info):
+    module = ij.module().createModule(example_info)
     all_inputs = module.getInfo().inputs()
     # We expect the log and opService to be resolved with _preprocess_non_inputs
-    non_input_names = [ij().py.to_java(s) for s in ['opService', 'log']]
+    non_input_names = [ij.py.to_java(s) for s in ['opService', 'log']]
     expected = filter(lambda x: x.getName() in non_input_names, all_inputs)
     # Get the list of 
     _preprocess_non_inputs(module)
@@ -155,27 +155,27 @@ def test_preprocess_non_inputs(example_info):
 
 from napari_imagej._module_utils import _filter_unresolved_inputs
 
-def preresolved_module(module_info):
-    module = ij().module().createModule(module_info)
+def preresolved_module(ij, module_info):
+    module = ij.module().createModule(module_info)
 
     # Resolve Logger
-    log = ij().context().getService('org.scijava.log.LogService')
+    log = ij.context().getService('org.scijava.log.LogService')
     module.setInput("log", log)
     module.resolveInput("log")
     # Resolve OpService
-    op = ij().context().getService('net.imagej.ops.OpService')
+    op = ij.context().getService('net.imagej.ops.OpService')
     module.setInput("opService", op)
     module.resolveInput("opService")
 
     return module
 
-def test_filter_unresolved_inputs(example_info):
-    module = preresolved_module(example_info)
+def test_filter_unresolved_inputs(ij, example_info):
+    module = preresolved_module(ij, example_info)
     all_inputs = module.getInfo().inputs()
     actual = _filter_unresolved_inputs(module, all_inputs)
 
     # We expect the log and opService to be resolved with _preprocess_non_inputs
-    non_input_names = [ij().py.to_java(s) for s in ['opService', 'log']]
+    non_input_names = [ij.py.to_java(s) for s in ['opService', 'log']]
     expected = filter(lambda x: x.getName() not in non_input_names, all_inputs)
 
     for e, a in zip(expected, actual):
@@ -183,8 +183,8 @@ def test_filter_unresolved_inputs(example_info):
 
 from napari_imagej._module_utils import _preprocess_remaining_inputs
     
-def test_preprocess_remaining_inputs(example_info):
-    module = preresolved_module(example_info)
+def test_preprocess_remaining_inputs(ij, example_info):
+    module = preresolved_module(ij, example_info)
     all_inputs = module.getInfo().inputs()
     # Example user-resolved inputs
     input = jc.ArrayImgs.bytes(10, 10)
