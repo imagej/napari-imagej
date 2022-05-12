@@ -1,9 +1,12 @@
-from typing import Generator, Optional
+from typing import Optional
 from napari import Viewer
 
 import pytest
+from inspect import Parameter, _empty
 from napari_imagej.widget import ImageJWidget
+from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
+from napari_imagej._ptypes import TypeMappings
 from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -36,17 +39,6 @@ class JavaClassesTest(JavaClasses):
 jc = JavaClassesTest()
 
 
-@pytest.fixture
-def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:
-    # Create widget
-    viewer: Viewer = make_napari_viewer()
-    ij_widget: ImageJWidget = ImageJWidget(viewer)
-
-    yield ij_widget
-
-    # Cleanup -> Close the widget, trigger ImageJ shutdown
-    ij_widget.close()
-
 def test_widget_layout(imagej_widget: ImageJWidget):
     """Ensures a vertical widget layout."""
     assert isinstance(imagej_widget.layout(), QVBoxLayout)
@@ -64,9 +56,6 @@ def test_widget_table_layout(imagej_widget: ImageJWidget):
     assert 1 == table.columnCount()
     assert QAbstractItemView.SelectRows == table.selectionBehavior()
     assert False == table.showGrid()
-
-from napari_imagej._ptypes import TypeMappings
-from napari_imagej._module_utils import python_type_of
 
 class DummyModuleInfo:
     def __init__(self, inputs=[], outputs=[]):
@@ -112,12 +101,11 @@ class DummyModuleItem:
         return self._default
 
 def test_ptype():
-    ptypes = TypeMappings()
+    typePairs = TypeMappings().ptypes.items()
 
-    for jtype, ptype in ptypes.ptypes.items():
-        assert python_type_of(DummyModuleItem(jtype=jtype)) == ptype
+    for jtype, ptype in typePairs:
+        assert _module_utils.python_type_of(DummyModuleItem(jtype=jtype)) == ptype
 
-from napari_imagej._module_utils import _return_type
 
 def test_return_type():
     outTypes = [
@@ -131,14 +119,12 @@ def test_return_type():
     testInfos = [DummyModuleInfo(outputs=items) for items in outItems]
 
     for info, expected in zip(testInfos, expecteds):
-        actual = _return_type(info)
+        actual = _module_utils._return_type(info)
         assert expected == actual
 
 @pytest.fixture
 def example_info(ij):
     return ij.module().getModuleById('command:net.imagej.ops.commands.filter.FrangiVesselness')
-
-from napari_imagej._module_utils import _preprocess_non_inputs
 
 def test_preprocess_non_inputs(ij, example_info):
     module = ij.module().createModule(example_info)
@@ -146,14 +132,12 @@ def test_preprocess_non_inputs(ij, example_info):
     # We expect the log and opService to be resolved with _preprocess_non_inputs
     non_input_names = [ij.py.to_java(s) for s in ['opService', 'log']]
     expected = filter(lambda x: x.getName() in non_input_names, all_inputs)
-    # Get the list of 
-    _preprocess_non_inputs(module)
+    # Get the list of acutally resolved inputs
+    _module_utils._preprocess_non_inputs(module)
     actual = filter(lambda x: module.isResolved(x.getName()), all_inputs)
 
     for e, a in zip(expected, actual):
         assert e == a
-
-from napari_imagej._module_utils import _filter_unresolved_inputs
 
 def preresolved_module(ij, module_info):
     module = ij.module().createModule(module_info)
@@ -172,7 +156,7 @@ def preresolved_module(ij, module_info):
 def test_filter_unresolved_inputs(ij, example_info):
     module = preresolved_module(ij, example_info)
     all_inputs = module.getInfo().inputs()
-    actual = _filter_unresolved_inputs(module, all_inputs)
+    actual = _module_utils._filter_unresolved_inputs(module, all_inputs)
 
     # We expect the log and opService to be resolved with _preprocess_non_inputs
     non_input_names = [ij.py.to_java(s) for s in ['opService', 'log']]
@@ -181,8 +165,6 @@ def test_filter_unresolved_inputs(ij, example_info):
     for e, a in zip(expected, actual):
         assert e == a
 
-from napari_imagej._module_utils import _preprocess_remaining_inputs
-    
 def test_preprocess_remaining_inputs(ij, example_info):
     module = preresolved_module(ij, example_info)
     all_inputs = module.getInfo().inputs()
@@ -194,13 +176,11 @@ def test_preprocess_remaining_inputs(ij, example_info):
 
     user_inputs = [input, doGauss, spacingString, scaleString]
 
-    unresolved_inputs = _filter_unresolved_inputs(module, all_inputs)
-    _preprocess_remaining_inputs(module, all_inputs, unresolved_inputs, user_inputs)
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, all_inputs)
+    _module_utils._preprocess_remaining_inputs(module, all_inputs, unresolved_inputs, user_inputs)
 
     for input in all_inputs:
         assert module.isInputResolved(input.getName())
-
-from napari_imagej._module_utils import _resolvable_or_required
 
 example_inputs = [
     # Resolvable, required
@@ -215,9 +195,7 @@ example_inputs = [
 
 @pytest.mark.parametrize('input, expected', example_inputs)
 def test_resolvable_or_required(input, expected):
-    assert expected == _resolvable_or_required(input)
-
-from napari_imagej._module_utils import _is_optional_arg
+    assert expected == _module_utils._resolvable_or_required(input)
 
 is_non_default_example_inputs = [
     # default, required
@@ -231,9 +209,7 @@ is_non_default_example_inputs = [
 ]
 @pytest.mark.parametrize('input, expected', is_non_default_example_inputs)
 def test_is_non_default(input, expected):
-    assert expected == _is_optional_arg(input)
-
-from napari_imagej._module_utils import _sink_optional_inputs
+    assert expected == _module_utils._is_optional_arg(input)
 
 def test_sink_optional_inputs():
     inputs = [
@@ -241,24 +217,22 @@ def test_sink_optional_inputs():
         DummyModuleItem(),
         DummyModuleItem(default='bar')
     ]
-    sorted = _sink_optional_inputs(inputs)
+    sorted = _module_utils._sink_optional_inputs(inputs)
     # Ensure that foo went below
     assert sorted[0].getDefaultValue() == None
     assert sorted[1].getDefaultValue() == 'foo'
     assert sorted[2].getDefaultValue() == 'bar'
 
-from napari_imagej._module_utils import _napari_module_param_additions
-from jpype import JArray, JObject
 
 def assert_new_window_checkbox_for_type(type, expected):
     info = jc.DefaultMutableModuleInfo()
     item = jc.DefaultMutableModuleItem(info, 'out', type)
     info.addOutput(item)
 
-    has_option = "display_results_in_new_window" in _napari_module_param_additions(info)
+    has_option = "display_results_in_new_window" in _module_utils._napari_module_param_additions(info)
     assert expected == has_option
 
-def test_napari_param_new_window_checkbox(imagej_widget):
+def test_napari_param_new_window_checkbox():
     ptypes = TypeMappings()
 
     types_absent = ptypes._napari_layer_types
@@ -271,12 +245,9 @@ def test_napari_param_new_window_checkbox(imagej_widget):
         assert_new_window_checkbox_for_type(t, True)
 
 
-from napari_imagej._module_utils import _type_hint_for_module_item
-
-
 def assert_item_annotation(jtype, ptype, isRequired):
     module_item = DummyModuleItem(jtype=jtype, isRequired=isRequired)
-    param_type = _type_hint_for_module_item(module_item)
+    param_type = _module_utils._type_hint_for_module_item(module_item)
     assert param_type == ptype
 
 
@@ -285,9 +256,6 @@ def test_param_annotation(imagej_widget):
     assert_item_annotation(jc.String, str, True)
     assert_item_annotation(jc.String, Optional[str], False)
 
-
-from napari_imagej._module_utils import _module_param
-from inspect import Parameter
 
 module_param_inputs = [
     # default, required
@@ -303,14 +271,11 @@ module_param_inputs = [
 ]
 @pytest.mark.parametrize('input, expected', module_param_inputs)
 def test_module_param(input, expected):
-    actual = _module_param(input)
+    actual = _module_utils._module_param(input)
     assert actual == expected
 
 
-from napari_imagej._module_utils import _modify_function_signature
-
-
-def test_modify_functional_signature(imagej_widget):
+def test_modify_functional_signature():
     """
     We first create a module info, and then assert that _modify_function_signature
     creates a signature that describes all parameters that we'd want for both 
@@ -340,16 +305,15 @@ def test_modify_functional_signature(imagej_widget):
 
     def func(*inputs):
         print('This is a function')
-    _modify_function_signature(func, inputs, info)   
+    _module_utils._modify_function_signature(func, inputs, info)   
     sig = func.__signature__
 
 
-    napari_param_map = _napari_module_param_additions(info)
+    napari_param_map = _module_utils._napari_module_param_additions(info)
 
-    import inspect
     expected_names = ['in2', 'in1']
     expected_types = [str, Optional[str]]
-    expected_defaults = [inspect._empty, 'foo']
+    expected_defaults = [_empty, 'foo']
 
     # assert the modified signature contains everything in expected_names AND everything in expected_names, in that order. 
     sig_params = sig.parameters
