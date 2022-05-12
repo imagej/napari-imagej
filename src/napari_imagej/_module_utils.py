@@ -264,15 +264,17 @@ def _postprocess_module(module: "jc.Module"):
     postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
     problematic_postprocessors = (
+        # HACK: This particular postprocessor is trying to create a Display
+        # for lots of different types. Some of those types (specifically
+        # ImgLabelings) make this guy throw Exceptions. We are going to ignore
+        # it until it behaves.
+        # (see https://github.com/imagej/imagej-common/issues/100 )
         jc.DisplayPostprocessor,
     )
-    # Run all discovered postprocessors
+    # Run all discovered postprocessors unless we have marked it as problematic
     for postprocessor in postprocessors:
-        if isinstance(postprocessor, problematic_postprocessors):
-            # HACK: This particular postprocessor is trying to create a Display for lots of different types. Some of those types (specifically ImgLabelings) make this guy throw Exceptions...
-            # We are going to ignore it until it behaves (see https://github.com/imagej/imagej-common/issues/100 )
-            continue
-        postprocessor.process(module)
+        if not isinstance(postprocessor, problematic_postprocessors):
+            postprocessor.process(module)
 
 
 # Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
