@@ -192,6 +192,9 @@ class JavaClasses(object):
     def Searcher(self): return "org.scijava.search.Searcher"
 
     @blocking_import
+    def SearchResult(self): return "org.scijava.search.SearchResult"
+
+    @blocking_import
     def Table(self): return "org.scijava.table.Table"
 
     @blocking_import
@@ -285,6 +288,9 @@ class JavaClasses(object):
 
     @blocking_import
     def Initializable(self): return "net.imagej.ops.Initializable"
+
+    @blocking_import
+    def OpInfo(self): return "net.imagej.ops.OpInfo"
 
     @blocking_import
     def OpSearcher(self): return "net.imagej.ops.search.OpSearcher"
