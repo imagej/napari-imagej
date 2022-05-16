@@ -36,11 +36,9 @@ def imagej_init():
     config.endpoints.append("io.scif:scifio:0.43.1")
 
     log_debug("Completed JVM Configuration")
-    # TODO: change 'headless=True' -> 'mode=imagej.Mode.HEADLESS'
-    # This change is waiting on a new pyimagej release
     # TODO: remove 'add_legacy=False' -> struggles with LegacyService
     # This change is waiting on a new pyimagej release
-    _ij = imagej.init(headless=True)
+    _ij = imagej.init(mode='headless')
 
     log_debug(f"Initialized at version {_ij.getVersion()}")
     return _ij
