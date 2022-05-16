@@ -204,8 +204,10 @@ def test_preprocess_non_inputs(ij, example_info):
     for e, a in zip(expected, actual):
         assert e == a
 
-def preresolved_module(ij, module_info):
-    module = ij.module().createModule(module_info)
+@pytest.fixture
+def preresolved_module(ij, example_info):
+    """ A module with its meta-inputs (e.g. LogService) resolved. """
+    module = ij.module().createModule(example_info)
 
     # Resolve Logger
     log = ij.context().getService('org.scijava.log.LogService')
@@ -218,10 +220,9 @@ def preresolved_module(ij, module_info):
 
     return module
 
-def test_filter_unresolved_inputs(ij, example_info):
-    module = preresolved_module(ij, example_info)
-    all_inputs = module.getInfo().inputs()
-    actual = _module_utils._filter_unresolved_inputs(module, all_inputs)
+def test_filter_unresolved_inputs(ij, preresolved_module):
+    all_inputs = preresolved_module.getInfo().inputs()
+    actual = _module_utils._filter_unresolved_inputs(preresolved_module, all_inputs)
 
     # We expect the log and opService to be resolved with _preprocess_non_inputs
     non_input_names = [ij.py.to_java(s) for s in ['opService', 'log']]
@@ -230,9 +231,8 @@ def test_filter_unresolved_inputs(ij, example_info):
     for e, a in zip(expected, actual):
         assert e == a
 
-def test_preprocess_remaining_inputs(ij, example_info):
-    module = preresolved_module(ij, example_info)
-    all_inputs = module.getInfo().inputs()
+def test_preprocess_remaining_inputs(preresolved_module):
+    all_inputs = preresolved_module.getInfo().inputs()
     # Example user-resolved inputs
     input = jc.ArrayImgs.bytes(10, 10)
     doGauss = True
@@ -241,11 +241,11 @@ def test_preprocess_remaining_inputs(ij, example_info):
 
     user_inputs = [input, doGauss, spacingString, scaleString]
 
-    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, all_inputs)
-    _module_utils._preprocess_remaining_inputs(module, all_inputs, unresolved_inputs, user_inputs)
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(preresolved_module, all_inputs)
+    _module_utils._preprocess_remaining_inputs(preresolved_module, all_inputs, unresolved_inputs, user_inputs)
 
     for input in all_inputs:
-        assert module.isInputResolved(input.getName())
+        assert preresolved_module.isInputResolved(input.getName())
 
 example_inputs = [
     # Resolvable, required
