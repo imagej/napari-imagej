@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from typing import List
 from napari_imagej.setup_imagej import jc
 
@@ -109,7 +110,7 @@ class TypeMappings:
 
         # NB we put booleans over numbers because otherwise some of the boolean types will satisfy a numbers type.
         # TODO: Consider adding priorities
-        self.ptypes = {
+        self.ptypes = OrderedDict({
             **self._booleans,
             **self._numbers,
             **self._strings,
@@ -122,7 +123,7 @@ class TypeMappings:
             **self._pd,
             **self._paths,
             **self._enums,
-            **self._dates}
+            **self._dates})
 
         self._napari_layer_types = {
             **self._images,
