@@ -1,21 +1,10 @@
-from email.headerregistry import ParameterizedMIMEHeader
 from typing import List, Optional
-from napari import Viewer
 
 import pytest
 from inspect import Parameter, _empty
-from napari_imagej.widget import ImageJWidget
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej._ptypes import TypeMappings
-from qtpy.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTableWidget,
-    QAbstractItemView,
-    QLineEdit,
-)
 
 class JavaClassesTest(JavaClasses):
     """
