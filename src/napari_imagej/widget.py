@@ -6,7 +6,8 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 
 Replace code below according to your needs.
 """
-from typing import Any, List
+from functools import lru_cache
+from typing import List
 from napari import Viewer
 from qtpy.QtWidgets import (
     QWidget,
@@ -20,8 +21,7 @@ from qtpy.QtWidgets import (
     QTableWidgetItem,
     QLabel,
 )
-from scyjava import when_jvm_starts
-from napari_imagej.setup_imagej import ij, jc, log_debug
+from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
 from napari_imagej._module_utils import functionify_module_execution
 from threading import Thread
 
@@ -30,72 +30,87 @@ class ImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
-        self.viewer = napari_viewer
 
-        ## -- Set up widget -- ##
-        
         self.setLayout(QVBoxLayout())
 
         # Search Bar
-        self._search_widget: QWidget = QWidget()
-        self._search_widget.setLayout(QHBoxLayout())
+        self.search: SearchbarWidget = SearchbarWidget()
+        self.layout().addWidget(self.search)
+
+        self.results: ResultsWidget = ResultsWidget()
+        self.layout().addWidget(self.results)
+
+        # Module highlighter
+        self.highlighter: FocusWidget = FocusWidget(napari_viewer, self.results.results)
+        self.layout().addWidget(self.highlighter)
+
+        ## -- Interwidget connections -- ##
+
+        # When the text bar changes, update the search results.
+        self.search.bar.textChanged.connect(self.results._search)
+
+        # If the user presses enter in the search bar,
+        # highlight the first module in the results
+        self.search.bar.returnPressed.connect(lambda: self.highlighter._highlight_module(0, 0))
+        # If the user clicks in any table, highlight
+        # the clicked cell
+        for i, tableWidget in enumerate(self.results.widgets):
+            tableWidget.cellClicked.connect(self.highlighter._highlight_from_results_table(i))
+
+class SearchbarWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setLayout(QHBoxLayout())
         self._searchbar: QLineEdit = self._generate_searchbar()
-        self._search_widget.layout().addWidget(self._searchbar)
+        self.layout().addWidget(self._searchbar)
 
-        self.layout().addWidget(self._search_widget)
-
-        # Searcher plugins
-        def init_searchers(): 
-            self.searchers = self._generate_searchers()
-            self.searchService = self._generate_search_service()
-            # Enable the searchbar now that the searchers are ready
-            self._searchbar.setText("")
-            self._searchbar.setEnabled(True)
         # Initialize the searchers, which will spin up an ImageJ gateway.
         # By running this in a new thread,
         # the GUI can be shown before the searchers are ready.
-        Thread(target=init_searchers).start()
+        def enable_searchbar(): 
+            ensure_jvm_started()
+            # Enable the searchbar now that the searchers are ready
+            self._searchbar.setText("")
+            self._searchbar.setEnabled(True)
+        Thread(target=enable_searchbar).start()
 
-        # Results box
-        self.resultTableNames = [
-            "Modules:",
-            "Ops:"
-        ]
-        self.results: List[List['jc.SearchResult']] = [[] for _ in self.resultTableNames]
-        self.tableWidgets: List[QTableWidget] = self._generate_results_tables(self.resultTableNames)
-        self.resultTables: QWidget = self._generate_results_widget(self.tableWidgets)
-        self.layout().addWidget(self.resultTables)
-
-        ## -- Populate module
-
-        # Module highlighter
-        self.focus_widget = QWidget()
-        self.focus_widget.setLayout(QVBoxLayout())
-        self.focused_module = None
-        self.focused_module_label = QLabel()
-        self.focus_widget.layout().addWidget(self.focused_module_label)
-        self.focused_module_label.setText("Display Module Here")
-        self.layout().addWidget(self.focus_widget)
-        self.focused_action_buttons = []  # type: ignore
-
+    @property
+    def bar(self) -> QLineEdit:
+        return self._searchbar
 
     def _generate_searchbar(self) -> QLineEdit:
         searchbar = QLineEdit()
         # Disable the searchbar until the searchers are ready
         searchbar.setText('Initializing ImageJ...Please Wait')
         searchbar.setEnabled(False)
-        searchbar.textChanged.connect(self._search)
-        searchbar.returnPressed.connect(lambda: self._highlight_module(0, 0))
         return searchbar
 
-    def _convert_searchResult_to_info(self, search_result):
-        info = search_result.info()
-        # There is an extra step for Ops - we actually need the CommandInfo
-        if isinstance(info, jc.OpInfo):
-            info = info.cInfo()
-        return info
+class ResultsWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setLayout(QVBoxLayout())
 
-    def _generate_searchers(self) -> List[Any]:
+        # Results box
+        self.resultTableNames = [
+            "Modules:",
+            "Ops:"
+        ]
+        self._results: List[List['jc.SearchResult']] = [[] for _ in self.resultTableNames]
+        self._tables: List[QTableWidget] = self._generate_results_tables(self.resultTableNames)
+        for table in self._tables:
+            self.layout().addWidget(table)
+
+    @property
+    def results(self) -> List[List['jc.SearchResult']]:
+        return self._results
+
+    @property
+    def widgets(self) -> List[QTableWidget]:
+        return self._tables
+
+    @property
+    @lru_cache(maxsize=None)
+    def searchers(self) -> List['jc.Searcher']:
         searcherClasses = [
             jc.ModuleSearcher,
             jc.OpSearcher,
@@ -106,41 +121,27 @@ class ImageJWidget(QWidget):
             ij().context().inject(searcher)
         return searchers
 
-    def _generate_search_service(self):
-        return ij().get("org.scijava.search.SearchService")
-    
-    def _highlight_from_results_table(self, searcher_index):
-        index = searcher_index
-        return lambda row, col: self._highlight_module(index, row, col)
+    def _table_from_name(self, name:str) -> QTableWidget:
+        # GUI properties
+        labels = [name]
+        max_results = 12
+        tableWidget = QTableWidget(max_results, len(labels))
+        # Modules take up a row, so highlight the entire thing
+        tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # Label the columns with labels
+        tableWidget.setHorizontalHeaderLabels(labels)
+        tableWidget.horizontalHeader().setSectionResizeMode(
+            0,
+            QHeaderView.Stretch
+        )
+        tableWidget.verticalHeader().hide()
+        tableWidget.setShowGrid(False)
+        tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-    def _generate_results_tables(self, resultTableNames) -> List[QTableWidget]:
-        resultTables = []
-        for i, name in enumerate(resultTableNames):
-            # GUI properties
-            labels = [name]
-            max_results = 12
-            tableWidget = QTableWidget(max_results, len(labels))
-            # Modules take up a row, so highlight the entire thing
-            tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-            # Label the columns with labels
-            tableWidget.setHorizontalHeaderLabels(labels)
-            tableWidget.horizontalHeader().setSectionResizeMode(
-                0,
-                QHeaderView.Stretch
-            )
-            tableWidget.verticalHeader().hide()
-            tableWidget.setShowGrid(False)
-            tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-            tableWidget.cellClicked.connect(self._highlight_from_results_table(i))
-            resultTables.append(tableWidget)
-        return resultTables
+        return tableWidget
 
-    def _generate_results_widget(self, resultTables) -> QTableWidget:
-        container: QWidget = QWidget()
-        container.setLayout(QVBoxLayout())
-        for table in resultTables:
-            container.layout().addWidget(table)
-        return container
+    def _generate_results_tables(self, result_table_names: List[str]) -> List[QTableWidget]:
+        return [self._table_from_name(name) for name in result_table_names]
 
     def _search(self, text):
         # TODO: Consider adding a button to toggle fuzziness
@@ -148,13 +149,33 @@ class ImageJWidget(QWidget):
             self.results[i] = self.searchers[i].search(text, True)
             for j in range(len(self.results[i])):
                 name = ij().py.from_java(self.results[i][j].name())
-                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(name))
-                self.tableWidgets[i].showRow(j)
-            for j in range(len(self.results[i]), self.tableWidgets[i].rowCount()):
-                self.tableWidgets[i].setItem(j, 0, QTableWidgetItem(""))
-                self.tableWidgets[i].hideRow(j)
+                self.widgets[i].setItem(j, 0, QTableWidgetItem(name))
+                self.widgets[i].showRow(j)
+            for j in range(len(self.results[i]), self.widgets[i].rowCount()):
+                self.widgets[i].setItem(j, 0, QTableWidgetItem(""))
+                self.widgets[i].hideRow(j)
 
-    def _highlight_module(self, table: int, row: int, col: int):
+class FocusWidget(QWidget):
+    def __init__(self, viewer: Viewer, results: List[List['jc.ModuleInfo']]):
+        super().__init__()
+        self.viewer = viewer
+        self.results = results
+
+        self.setLayout(QVBoxLayout())
+
+        self.focused_module = None
+        self.focused_module_label = QLabel()
+        self.layout().addWidget(self.focused_module_label)
+        self.focused_module_label.setText("Display Module Here")
+
+        self.focused_action_buttons = []  # type: ignore
+    
+    def _highlight_from_results_table(self, index):
+        # NB: col is needed for tableWidget.cellClicked.
+        # We don't use it in _highlight_module, though.
+        return lambda row, col: self._highlight_module(index, row)
+
+    def _highlight_module(self, table: int, row: int):
         # Ensure the clicked module is an actual selection
         if (row >= len(self.results[table])):
             return
@@ -164,7 +185,8 @@ class ImageJWidget(QWidget):
         self.focused_module_label.setText(name)
 
         # Create buttons for each action
-        self.focused_actions = self.searchService.actions(self.focused_module)
+        searchService = ij().get('org.scijava.search.SearchService')
+        self.focused_actions = searchService.actions(self.focused_module)
         activated_actions = len(self.focused_action_buttons)
         # Hide buttons if we have more than needed
         while activated_actions > len(self.focused_actions):
@@ -174,7 +196,7 @@ class ImageJWidget(QWidget):
         while len(self.focused_action_buttons) < len(self.focused_actions):
             button = QPushButton()
             self.focused_action_buttons.append(button)
-            self.focus_widget.layout().addWidget(button)
+            self.layout().addWidget(button)
         # Rename buttons to reflect focused module's actions
         for i in range(len(self.focused_actions)):
             action_name = ij().py.from_java(self.focused_actions[i].toString())
@@ -202,3 +224,10 @@ class ImageJWidget(QWidget):
         self.viewer.window.add_function_widget(
             func, magic_kwargs=param_options
         )
+
+    def _convert_searchResult_to_info(self, search_result):
+        info = search_result.info()
+        # There is an extra step for Ops - we actually need the CommandInfo
+        if isinstance(info, jc.OpInfo):
+            info = info.cInfo()
+        return info
