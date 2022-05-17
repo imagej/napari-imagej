@@ -3,7 +3,7 @@ from jpype import JClass
 import logging
 import imagej
 from scyjava import config, jimport
-from threading import Thread, current_thread
+from multiprocessing.pool import AsyncResult, ThreadPool
 
 # -- LOGGER CONFIG -- #
 
@@ -29,29 +29,27 @@ def imagej_init():
     # This change is waiting on a new pyimagej release
     # TODO: remove 'add_legacy=False' -> struggles with LegacyService
     # This change is waiting on a new pyimagej release
-    global _ij
     _ij = imagej.init(headless=True)
-    print(_ij)
 
     _logger.debug(f"Initialized at version {_ij.getVersion()}")
+    return _ij
 
 # There is a good debate to be had whether to multithread or multiprocess.
 # From what I (Gabe) have read, it seems that threading is preferrable for
 # network / IO bottlenecking, while multiprocessing is preferrable for CPU
-# bottlenecking 
-# (https://timber.io/blog/multiprocessing-vs-multithreading-in-python-what-you-need-to-know/).
-# We choose multithreading for two reasons:
-# 1) Downloading the JARs for first startup is slow
-# 2) Multiprocessing leads to discrepancies in scyjava.config, JPype imports, etc.
-# The reasons for switching to multiprocessing:
-# 1) ImageJ initialization might be faster if the JARs are available locally
-setup_thread: Thread = Thread(target=imagej_init)
-setup_thread.start()
+# bottlenecking.
+# While multiprocessing might theoretically be a better choice for JVM startup,
+# there are two reasons we instead choose multithreading:
+# 1) Multiprocessing is not supported without additional libraries on MacOS.
+# See https://docs.python.org/3/library/multiprocessing.html#introduction
+# 2) JPype items cannot (currently) be passed between processes due to an
+# issue with pickling. See
+# https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
+threadpool: ThreadPool = ThreadPool(processes=1)
+ij_instance: AsyncResult = threadpool.apply_async(func = imagej_init)
 
-def ensure_jvm_started():
-    if current_thread() is not setup_thread:
-        setup_thread.join()
-    return
+def ensure_jvm_started()->None:
+    ij_instance.wait()
 
 
 def ij():
@@ -59,9 +57,7 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    global _ij
-    ensure_jvm_started()
-    return _ij
+    return ij_instance.get()
 
 
 def logger():
@@ -73,5 +69,5 @@ def java_import(class_name: str) -> JClass:
     Imports class_name, while ensuring
     the parallel initialization of ImageJ has completed.
     """
-    ensure_jvm_started()
+    ij_instance.wait()
     return jimport(class_name)
