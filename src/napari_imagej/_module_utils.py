@@ -6,7 +6,7 @@ from magicgui import magicgui
 from napari import Viewer
 from napari_imagej._ptypes import TypeMappings
 from napari_imagej.setup_imagej import ij, jc, log_debug
-                
+
 
 @lru_cache(maxsize=None)
 def type_mappings():
@@ -26,39 +26,46 @@ def type_mappings():
     """
     return TypeMappings()
 
+
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
 
+
 def module_item_converter(
-    priority: int = Priority.NORMAL
-    ) -> Callable[["jc.ModuleInfo"], Callable]:
+    priority: int = Priority.NORMAL,
+) -> Callable[["jc.ModuleInfo"], Callable]:
     """
     A decorator used to register the annotated function among the
     available module item converters
     :param priority: How much this converter should be prioritized
     :return: The annotated function
     """
-    def converter(func: Callable): 
+
+    def converter(func: Callable):
         """Registers the annotated function with its priority"""
         _MODULE_ITEM_CONVERTERS.append((func, priority))
         return func
+
     return converter
 
 
 # TODO: Move this function to scyjava.convert and/or ij.py.
 def python_type_of(module_item: "jc.ModuleItem"):
     """Returns the Python type associated with the passed ModuleItem."""
-    for converter, _ in sorted(_MODULE_ITEM_CONVERTERS, reverse=True, key=lambda x: x[1]):
+    for converter, _ in sorted(
+        _MODULE_ITEM_CONVERTERS, reverse=True, key=lambda x: x[1]
+    ):
         converted = converter(module_item)
         if converted is not None:
             return converted
-    raise ValueError(f"Unsupported Java Type: {module_item.getType()}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!")
+    raise ValueError(
+        f"Unsupported Java Type: {module_item.getType()}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!"
+    )
 
 
 def _checkerUsingFunc(
-    item: "jc.ModuleItem",
-    func: Callable[[Type, Type], bool]
-    ) -> Optional[Type]:
+    item: "jc.ModuleItem", func: Callable[[Type, Type], bool]
+) -> Optional[Type]:
     """
     The logic of this checker is as follows:
 
@@ -79,7 +86,7 @@ def _checkerUsingFunc(
         We can satisfy item with ptype IF we satisfy both 1 and 2.
         ptype -> jtype -> java_type -> jtype -> ptype
 
-    :param item: the ModuleItem we'd like to convert 
+    :param item: the ModuleItem we'd like to convert
     :return: the python equivalent of ModuleItem's type, or None if that type
     cannot be converted.
     """
@@ -114,22 +121,27 @@ def isAssignableChecker(item: "jc.ModuleItem") -> Optional[Type]:
     """
     Determines whether we can simply cast from ptype to item's type java_type
     """
+
     def isAssignable(from_type, to_type) -> bool:
         # Use Types to get the raw type of each
         from_raw = jc.Types.raw(from_type)
         to_raw = jc.Types.raw(to_type)
         return from_raw.isAssignableFrom(to_raw)
+
     return _checkerUsingFunc(item, isAssignable)
 
 
-@module_item_converter(priority = Priority.LOW)
+@module_item_converter(priority=Priority.LOW)
 def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
     """
     Determines whether imagej can do a conversion from ptype to item's type java_type.
     """
+
     def isAssignable(from_type, to_type) -> bool:
         return ij().convert().supports(from_type, to_type)
+
     return _checkerUsingFunc(item, isAssignable)
+
 
 def _return_type(info: "jc.ModuleInfo"):
     """Returns the output type of info."""
@@ -145,18 +157,13 @@ def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
     log_debug("Preprocessing...")
-    preprocessors = ij().plugin() \
-        .createInstancesOfType(jc.PreprocessorPlugin)
+    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
     # we want to avoid these processors
     for preprocessor in preprocessors:
         preprocessor.process(module)
 
 
-def _resolve_user_input(
-    module: "jc.Module",
-    module_item: "jc.ModuleInfo",
-    input: Any
-):
+def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleInfo", input: Any):
     """
     Resolves module_item, a ModuleItem in module, with JAVA object input
     :param module: The module to be resolved
@@ -165,17 +172,13 @@ def _resolve_user_input(
     """
     name = module_item.getName()
     if module_item.isRequired() and input is None:
-        raise ValueError(
-            "No selection was made for input {}!".format(name)
-        )
+        raise ValueError("No selection was made for input {}!".format(name))
     item_class = module_item.getType()
     if not item_class.isInstance(input):
         if ij().convert().supports(input, item_class):
             input = ij().convert().convert(input, item_class)
         else:
-            raise ValueError(
-                f"{input} is not a {module_item.getType()}!"
-            )
+            raise ValueError(f"{input} is not a {module_item.getType()}!")
     module.setInput(name, input)
     module.resolveInput(name)
 
@@ -184,7 +187,7 @@ def _preprocess_remaining_inputs(
     module: "jc.Module",
     inputs: List["jc.ModuleItem"],
     unresolved_inputs: List["jc.ModuleItem"],
-    user_resolved_inputs: List[Any]
+    user_resolved_inputs: List[Any],
 ):
     """Resolves each input in unresolved_inputs"""
     resolved_java_args = ij().py.jargs(*user_resolved_inputs)
@@ -196,14 +199,18 @@ def _preprocess_remaining_inputs(
     for input in inputs:
         if input.isRequired() and not module.isInputResolved(input.getName()):
             raise ValueError(
-                f"input {input.getName()} of type {input.getType()} was not resolved! If it is impossible to resolve, let us know at forum.image.sc or by filing an issue at https://github.com/imagej/napari-imagej!".format(input.getName())
+                f"input {input.getName()} of type {input.getType()} was not resolved! If it is impossible to resolve, let us know at forum.image.sc or by filing an issue at https://github.com/imagej/napari-imagej!".format(
+                    input.getName()
+                )
             )
 
     return resolved_java_args
 
+
 def _resolvable_or_required(input: "jc.ModuleItem"):
     """Determines whether input should be resolved in napari"""
-    if input.isRequired(): return True
+    if input.isRequired():
+        return True
     try:
         type = python_type_of(input)
         return True
@@ -211,27 +218,19 @@ def _resolvable_or_required(input: "jc.ModuleItem"):
         return False
 
 
-def _filter_unresolved_inputs(module: "jc.Module", inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
+def _filter_unresolved_inputs(
+    module: "jc.Module", inputs: List["jc.ModuleItem"]
+) -> List["jc.ModuleItem"]:
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
-    unresolved = list(
-        filter(lambda i: not module.isResolved(i.getName()), inputs)
-    )
+    unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
     # Delegate optional output construction to the module
     # We will leave those unresolved
     unresolved = list(
-        filter(
-            lambda i: not (i.isOutput() and not i.isRequired()),
-            unresolved
-        )
+        filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved)
     )
     # Only leave in the optional parameters that we know how to resolve
-    unresolved = list(
-        filter(
-            _resolvable_or_required,
-            unresolved
-        )
-    )
+    unresolved = list(filter(_resolvable_or_required, unresolved))
 
     return unresolved
 
@@ -280,7 +279,10 @@ def _postprocess_module(module: "jc.Module"):
 
 # Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
 
-def _napari_module_param_additions(module_info: "jc.ModuleInfo") -> Dict[str, Tuple[type, Any]]:
+
+def _napari_module_param_additions(
+    module_info: "jc.ModuleInfo",
+) -> Dict[str, Tuple[type, Any]]:
     """Returns a set of parameters useful for napari functionality."""
     # additional parameters are in the form "name": (type, default value)
     additional_params: Dict[str, Tuple[type, Any]] = {}
@@ -288,6 +290,7 @@ def _napari_module_param_additions(module_info: "jc.ModuleInfo") -> Dict[str, Tu
     if not type_mappings().type_displayable_in_napari(output_item.getType()):
         additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
+
 
 def _is_optional_arg(input: "jc.ModuleItem") -> bool:
     """
@@ -299,8 +302,10 @@ def _is_optional_arg(input: "jc.ModuleItem") -> bool:
     """
     # TODO: I think this could be
     # return input.isRequired() and input.getDefaultValue() is None
-    if not input.isRequired(): return False
-    if input.getDefaultValue() is not None: return False
+    if not input.isRequired():
+        return False
+    if input.getDefaultValue() is not None:
+        return False
     return True
 
 
@@ -357,7 +362,7 @@ def _modify_function_signature(
     function: Callable,
     inputs: List["jc.ModuleItem"],
     module_info: "jc.ModuleInfo",
-    ) -> None:
+) -> None:
     """Rewrites function with type annotations for all module I/O items."""
 
     try:
@@ -370,7 +375,7 @@ def _modify_function_signature(
                 i[0],
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=i[1][0],
-                default=i[1][1]
+                default=i[1][1],
             )
             for i in _napari_module_param_additions(module_info).items()
         ]
@@ -392,11 +397,7 @@ def _module_output(module: "jc.Module") -> Any:
     return output_value
 
 
-def _napari_specific_parameter(
-    func: Callable,
-    args: Tuple[Any],
-    param: str
-) -> Any:
+def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> Any:
     try:
         index = list(signature(func).parameters.keys()).index(param)
     except ValueError:
@@ -404,13 +405,15 @@ def _napari_specific_parameter(
 
     return args[index]
 
+
 def _display_result(
     result: Any,
     info: "jc.ModuleInfo",
     viewer: Viewer,
     external: bool,
-    ) -> None:
+) -> None:
     """Displays result in a new widget"""
+
     def show_tabular_output():
         return ij().py.from_java(result)
 
@@ -418,9 +421,7 @@ def _display_result(
     show_tabular_output.__signature__ = sig.replace(
         return_annotation=_return_type(info)
     )
-    result_widget = magicgui(
-        show_tabular_output, result_widget=True, auto_call=True
-    )
+    result_widget = magicgui(show_tabular_output, result_widget=True, auto_call=True)
 
     if external:
         result_widget.show(run=True)
@@ -433,8 +434,8 @@ def _display_result(
 def _add_napari_metadata(
     execute_module: Callable,
     info: "jc.ModuleInfo",
-    unresolved_inputs: List["jc.ModuleItem"]
-    ) -> None:
+    unresolved_inputs: List["jc.ModuleItem"],
+) -> None:
     module_name = ij().py.from_java(info.getTitle())
     execute_module.__doc__ = f"Invoke ImageJ2's {module_name}"
     execute_module.__name__ = module_name
@@ -445,10 +446,10 @@ def _add_napari_metadata(
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {
-        str(i.getName()): python_type_of(i) for i in unresolved_inputs
-    }
-    return_annotation = python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
+    type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
+    return_annotation = (
+        python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
+    )
     type_hints["return"] = return_annotation
     execute_module.__annotation__ = type_hints  # type: ignore
 
@@ -456,11 +457,8 @@ def _add_napari_metadata(
 
 
 def _add_param_metadata(
-    metadata: dict,
-    key: str,
-    value: Any,
-    add_empty_list = True
-    ) -> None:
+    metadata: dict, key: str, value: Any, add_empty_list=True
+) -> None:
     """
     Adds a particular aspect of ModuleItem metadata to map
 
@@ -472,18 +470,22 @@ def _add_param_metadata(
     :param add_empty_list: An option for denoting whether empty collections should be added.
         We usually don't want it if it is e.g. the choices, but we usually want it otherwise.
     """
-    if value is None: return
+    if value is None:
+        return
     try:
         py_value = ij.py.from_java(value)
         if isinstance(py_value, Collection):
-            if (len(value) == 0 and not add_empty_list): return
+            if len(value) == 0 and not add_empty_list:
+                return
             value = [ij.py.from_java(v) for v in value]
         metadata[key] = value
     except Exception:
         pass
 
 
-def _add_scijava_metadata(unresolved_inputs: List["jc.ModuleItem"]) -> Dict[str, Dict[str, Any]]:
+def _add_scijava_metadata(
+    unresolved_inputs: List["jc.ModuleItem"],
+) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
         key = ij().py.from_java(input.getName())
@@ -493,7 +495,9 @@ def _add_scijava_metadata(unresolved_inputs: List["jc.ModuleItem"]) -> Dict[str,
         _add_param_metadata(param_map, "step", input.getStepSize())
         _add_param_metadata(param_map, "label", input.getLabel())
         _add_param_metadata(param_map, "tooltip", input.getDescription())
-        _add_param_metadata(param_map, "choices", input.getChoices(), add_empty_list=False)
+        _add_param_metadata(
+            param_map, "choices", input.getChoices(), add_empty_list=False
+        )
 
         if len(param_map) > 0:
             metadata[key] = param_map
@@ -501,12 +505,9 @@ def _add_scijava_metadata(unresolved_inputs: List["jc.ModuleItem"]) -> Dict[str,
     return metadata
 
 
-
 def functionify_module_execution(
-    viewer: Viewer,
-    module: "jc.Module",
-    info: "jc.ModuleInfo"
-    ) -> Tuple[Callable, dict]:
+    viewer: Viewer, module: "jc.Module", info: "jc.ModuleInfo"
+) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
     _preprocess_non_inputs(module)
@@ -539,14 +540,12 @@ def functionify_module_execution(
         # get output
         log_debug("Execution complete")
         j_result = _module_output(module)
-        result = ij().py.from_java(j_result) 
+        result = ij().py.from_java(j_result)
         log_debug(f"Result = {result}")
 
-        # display result 
+        # display result
         display_externally = _napari_specific_parameter(
-            module_execute,
-            user_resolved_inputs,
-            'display_results_in_new_window'
+            module_execute, user_resolved_inputs, "display_results_in_new_window"
         )
         if display_externally is not None:
             _display_result(result, info, viewer, display_externally)

@@ -8,6 +8,7 @@ def _labeling_to_layer(labeling: Labeling):
     layer = Labels(img, metadata={"pyLabelingData": data})
     return layer
 
+
 def _layer_to_labeling(layer: Labels):
     """Converts a Labels layer to a Labeling"""
     if "pyLabelingData" in layer.metadata:
@@ -17,6 +18,5 @@ def _layer_to_labeling(layer: Labels):
         labeling.label_sets = metadata["labelSets"]
         labeling.metadata = metadata["metadata"]
         return labeling
-    else :
+    else:
         return Labeling.fromValues(layer.data)
-    

@@ -7,6 +7,7 @@ from labeling.Labeling import Labeling
 from napari.layers import Labels, Shapes, Points
 from napari_imagej.setup_imagej import jc
 
+
 def assert_labels_equality(
     exp: Dict[str, Any], act: Dict[str, Any], ignored_keys: List[str]
 ):
@@ -19,33 +20,36 @@ def assert_labels_equality(
 @pytest.fixture(scope="module")
 def py_labeling() -> Labeling:
 
-    a = np.zeros((4,4), np.int32)
+    a = np.zeros((4, 4), np.int32)
     a[:2] = 1
     example1_images = []
     example1_images.append(a)
     b = a.copy()
-    b[:2] =2
+    b[:2] = 2
     example1_images.append(np.flip(b.transpose()))
     c = a.copy()
-    c[:2] =3
+    c[:2] = 3
     example1_images.append(np.flip(c))
     d = a.copy()
-    d[:2] =4
+    d[:2] = 4
     example1_images.append(d.transpose())
 
     merger = Labeling.fromValues(np.zeros((4, 4), np.int32))
-    merger.iterate_over_images(example1_images, source_ids=['a', 'b', 'c', 'd'])
+    merger.iterate_over_images(example1_images, source_ids=["a", "b", "c", "d"])
     return merger
+
 
 @pytest.fixture(scope="module")
 def labels_with_metadata(py_labeling: Labeling) -> Labels:
     img, data = py_labeling.get_result()
     return Labels(img, metadata={"pyLabelingData": data})
 
+
 @pytest.fixture(scope="module")
 def labels_without_metadata(py_labeling: Labeling) -> Labels:
     img, _ = py_labeling.get_result()
     return Labels(img)
+
 
 @pytest.fixture(scope="module")
 def imgLabeling(ij):
@@ -71,11 +75,8 @@ def test_labeling_circular_equality(py_labeling):
 
     assert np.array_equal(exp_img, act_img)
 
-    assert_labels_equality(
-        vars(exp_data),
-        vars(act_data),
-        ["numSources", "indexImg"]
-    )
+    assert_labels_equality(vars(exp_data), vars(act_data), ["numSources", "indexImg"])
+
 
 def test_labeling_to_labels(py_labeling):
     """Tests data equality after conversion from labeling to labels"""
@@ -87,6 +88,7 @@ def test_labeling_to_labels(py_labeling):
     assert np.array_equal(exp_img, act_img)
     assert exp_data == act_data
 
+
 def test_labels_to_labeling(py_labeling):
     """Tests data equality after conversion from labels to labeling"""
     labels: Labels = _labeling_to_layer(py_labeling)
@@ -96,9 +98,10 @@ def test_labels_to_labeling(py_labeling):
     act_img, _ = labeling.get_result()
     assert np.array_equal(exp_img, act_img)
 
+
 def test_labels_with_metadata_to_imgLabeling(ij, labels_with_metadata):
     converted: "jc.ImgLabeling" = ij.py.to_java(labels_with_metadata)
-    exp_img: np.ndarray= labels_with_metadata.data
+    exp_img: np.ndarray = labels_with_metadata.data
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
     assert np.array_equal(exp_img, act_img)
 
@@ -136,7 +139,7 @@ def _assert_image_mapping(exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int,
 
 def test_labels_without_metadata_to_imgLabeling(ij, labels_without_metadata):
     converted: "jc.ImgLabeling" = ij.py.to_java(labels_without_metadata)
-    exp_img: np.ndarray= labels_without_metadata.data
+    exp_img: np.ndarray = labels_without_metadata.data
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
     # We cannot assert image equality due to https://github.com/Labelings/Labeling/issues/16
     # So we do the next best thing
@@ -156,11 +159,10 @@ def test_labels_without_metadata_circular(ij, labels_without_metadata):
 def test_imgLabeling_to_labels(ij, imgLabeling):
     converted: Labels = ij.py.from_java(imgLabeling)
     exp_img: np.ndarray = ij.py.from_java(imgLabeling.getIndexImg())
-    act_img: np.ndarray= converted.data
+    act_img: np.ndarray = converted.data
     # We cannot assert image equality due to https://github.com/Labelings/Labeling/issues/16
     # So we do the next best thing
     _assert_image_mapping(exp_img, act_img)
-
 
 
 # -- SHAPES / ROIS -- #
@@ -181,25 +183,28 @@ def _point_assertion(mask, pt: list, expected: bool) -> None:
 
 # -- ELLIPSES -- #
 
+
 @pytest.fixture
 def ellipse_mask(ij):
     return jc.ClosedWritableEllipsoid([20, 20], [10, 10])
+
 
 @pytest.fixture
 def ellipse_layer():
     shp = Shapes()
     data = np.zeros((2, 2))
-    data[0, :] = [30, 30] # ceter
-    data[1, :] = [10, 10] # axes
+    data[0, :] = [30, 30]  # ceter
+    data[1, :] = [10, 10]  # axes
     shp.add_ellipses(data)
     return shp
+
 
 def test_ellipse_mask_to_layer(ij, ellipse_mask):
     py_mask = ij.py.from_java(ellipse_mask)
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
     assert len(types) == 1
-    assert types[0] == 'ellipse'
+    assert types[0] == "ellipse"
     data = py_mask.data
     assert len(data) == 1
     ellipse_data = data[0]
@@ -208,6 +213,7 @@ def test_ellipse_mask_to_layer(ij, ellipse_mask):
     assert np.array_equal(ellipse_data[1], np.array([30, 10]))
     assert np.array_equal(ellipse_data[2], np.array([30, 30]))
     assert np.array_equal(ellipse_data[3], np.array([10, 30]))
+
 
 def test_ellipse_layer_to_mask(ij, ellipse_layer):
     # Assert shapes conversion to ellipse
@@ -221,7 +227,7 @@ def test_ellipse_layer_to_mask(ij, ellipse_layer):
     center = j_mask.center().positionAsDoubleArray()
     center = ij.py.from_java(center)
     assert center == [30, 30]
-    # Assert semi-axis lengths   
+    # Assert semi-axis lengths
     assert j_mask.semiAxisLength(0) == 10
     assert j_mask.semiAxisLength(1) == 10
 
@@ -238,8 +244,8 @@ def rectangle_mask():
 def rectangle_layer_axis_aligned():
     shp = Shapes()
     data = np.zeros((2, 2))
-    data[0, :] = [10, 10] # min. corner
-    data[1, :] = [30, 30] # max. corner
+    data[0, :] = [10, 10]  # min. corner
+    data[1, :] = [30, 30]  # max. corner
     shp.add_rectangles(data)
     return shp
 
@@ -255,13 +261,13 @@ def rectangle_layer_rotated():
     shp.add_rectangles(data)
     return shp
 
-    
+
 def test_rectangle_mask_to_layer(ij, rectangle_mask):
     py_mask = ij.py.from_java(rectangle_mask)
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
     assert len(types) == 1
-    assert types[0] == 'rectangle'
+    assert types[0] == "rectangle"
     data = py_mask.data
     assert len(data) == 1
     box_data = data[0]
@@ -284,7 +290,7 @@ def test_rectangle_layer_to_mask_box(ij, rectangle_layer_axis_aligned):
     center = j_mask.center().positionAsDoubleArray()
     center = ij.py.from_java(center)
     assert center == [20, 20]
-    # Assert side lengths   
+    # Assert side lengths
     assert j_mask.sideLength(0) == 20
     assert j_mask.sideLength(1) == 20
 
@@ -332,7 +338,7 @@ def test_polygon_mask_to_layer(ij, polygon_mask):
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
     assert len(types) == 1
-    assert types[0] == 'polygon'
+    assert types[0] == "polygon"
     data = py_mask.data
     assert len(data) == 1
     polygon_data = data[0]
@@ -385,7 +391,7 @@ def test_line_mask_to_layer(ij, line_mask):
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
     assert len(types) == 1
-    assert types[0] == 'line'
+    assert types[0] == "line"
     data = py_mask.data
     assert len(data) == 1
     line_data = data[0]
@@ -448,7 +454,7 @@ def test_path_mask_to_layer(ij, path_mask):
     assert isinstance(py_mask, Shapes)
     types = py_mask.shape_type
     assert len(types) == 1
-    assert types[0] == 'path'
+    assert types[0] == "path"
     data = py_mask.data
     assert len(data) == 1
     path_data = data[0]
@@ -495,13 +501,13 @@ def multiple_layer():
     shp = Shapes()
     # Add an ellipse
     data = np.zeros((2, 2))
-    data[0, :] = [30, 30] # ceter
-    data[1, :] = [10, 10] # axes
+    data[0, :] = [30, 30]  # ceter
+    data[1, :] = [10, 10]  # axes
     shp.add_ellipses(data)
     # Add a rectangle
     data = np.zeros((2, 2))
-    data[0, :] = [10, 10] # min. corner
-    data[1, :] = [30, 30] # max. corner
+    data[0, :] = [10, 10]  # min. corner
+    data[1, :] = [30, 30]  # max. corner
     shp.add_rectangles(data)
     return shp
 
@@ -516,8 +522,8 @@ def test_multiple_masks_to_layer(ij, multiple_masks):
     # Assert two shapes in the layer
     types = shapes.shape_type
     assert len(types) == 2
-    assert types[0] == 'ellipse'
-    assert types[1] == 'rectangle'
+    assert types[0] == "ellipse"
+    assert types[1] == "rectangle"
     data = shapes.data
     assert len(data) == 2
     # Assert ellipse data is as expected
@@ -549,7 +555,7 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     center = rois[0].center().positionAsDoubleArray()
     center = ij.py.from_java(center)
     assert center == [30, 30]
-    # Assert semi-axis lengths   
+    # Assert semi-axis lengths
     assert rois[0].semiAxisLength(0) == 10
     assert rois[0].semiAxisLength(1) == 10
     # Assert Box of second child
@@ -560,7 +566,7 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     center = rois[1].center().positionAsDoubleArray()
     center = ij.py.from_java(center)
     assert center == [20, 20]
-    # Assert side lengths   
+    # Assert side lengths
     assert rois[1].sideLength(0) == 20
     assert rois[1].sideLength(1) == 20
 
@@ -614,4 +620,3 @@ def test_points_to_realpointcollection(ij, points):
     pts = [jc.RealPoint(p) for p in [p1, p2, p3]]
     for e, a in zip(pts, collection.points()):
         assert e == a
-
