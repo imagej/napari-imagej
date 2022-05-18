@@ -21,7 +21,10 @@ dependencies:
   # Test dependencies
   - numpy
   # Developer tools
+  - autopep8
+  - black
   - build
+  - flake8
   - pyqt5-sip
   - pytest
   - pytest-cov
