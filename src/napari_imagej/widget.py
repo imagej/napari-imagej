@@ -42,8 +42,7 @@ class ImageJWidget(QWidget):
         self.layout().addWidget(self.results)
 
         # Module highlighter
-        self.highlighter: FocusWidget = FocusWidget(
-            napari_viewer, self.results.results)
+        self.highlighter: FocusWidget = FocusWidget(napari_viewer, self.results.results)
         self.layout().addWidget(self.highlighter)
 
         # -- Interwidget connections -- #
@@ -236,8 +235,7 @@ class FocusWidget(QWidget):
         func, param_options = functionify_module_execution(
             self.viewer, module, moduleInfo
         )
-        self.viewer.window.add_function_widget(
-            func, magic_kwargs=param_options)
+        self.viewer.window.add_function_widget(func, magic_kwargs=param_options)
 
     def _convert_searchResult_to_info(self, search_result):
         info = search_result.info()

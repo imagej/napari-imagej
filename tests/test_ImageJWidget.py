@@ -19,6 +19,7 @@ def test_widget_searchbar_layout(imagej_widget: ImageJWidget):
     searchbar: QWidget = imagej_widget.search
     assert isinstance(searchbar.layout(), QHBoxLayout)
     search_widget: QLineEdit = searchbar.findChild(QLineEdit)
+    assert search_widget is not None
 
 
 def test_widget_table_layout(imagej_widget: ImageJWidget):
@@ -27,4 +28,4 @@ def test_widget_table_layout(imagej_widget: ImageJWidget):
     assert 12 == table.rowCount()
     assert 1 == table.columnCount()
     assert QAbstractItemView.SelectRows == table.selectionBehavior()
-    assert False == table.showGrid()
+    assert table.showGrid() is False

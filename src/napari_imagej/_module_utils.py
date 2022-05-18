@@ -59,7 +59,11 @@ def python_type_of(module_item: "jc.ModuleItem"):
         if converted is not None:
             return converted
     raise ValueError(
-        f"Unsupported Java Type: {module_item.getType()}. Let us know about the failure at https://forum.image.sc, or file an issue at https://github.com/imagej/napari-imagej!"
+        (
+            f"Unsupported Java Type: {module_item.getType()}. "
+            "Let us know about the failure at https://forum.image.sc, "
+            "or file an issue at https://github.com/imagej/napari-imagej!"
+        )
     )
 
 
@@ -163,10 +167,7 @@ def _preprocess_non_inputs(module):
         preprocessor.process(module)
 
 
-def _resolve_user_input(
-        module: "jc.Module",
-        module_item: "jc.ModuleInfo",
-        input: Any):
+def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleInfo", input: Any):
     """
     Resolves module_item, a ModuleItem in module, with JAVA object input
     :param module: The module to be resolved
@@ -202,8 +203,11 @@ def _preprocess_remaining_inputs(
     for input in inputs:
         if input.isRequired() and not module.isInputResolved(input.getName()):
             raise ValueError(
-                f"input {input.getName()} of type {input.getType()} was not resolved! If it is impossible to resolve, let us know at forum.image.sc or by filing an issue at https://github.com/imagej/napari-imagej!".format(
-                    input.getName()
+                (
+                    f"input {input.getName()} of type {input.getType()} "
+                    " was not resolved! If it is impossible to resolve, "
+                    " let us know at forum.image.sc or by filing an issue "
+                    " at https://github.com/imagej/napari-imagej!"
                 )
             )
 
@@ -212,10 +216,14 @@ def _preprocess_remaining_inputs(
 
 def _resolvable_or_required(input: "jc.ModuleItem"):
     """Determines whether input should be resolved in napari"""
+    # Return true if required
     if input.isRequired():
         return True
+    # Return true if resolvable
+    # The ModuleItem is resolvable iff python_type_of
+    # does not throw a ValueError.
     try:
-        type = python_type_of(input)
+        python_type_of(input)
         return True
     except ValueError:
         return False
@@ -226,11 +234,7 @@ def _filter_unresolved_inputs(
 ) -> List["jc.ModuleItem"]:
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
-    unresolved = list(
-        filter(
-            lambda i: not module.isResolved(
-                i.getName()),
-            inputs))
+    unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
     # Delegate optional output construction to the module
     # We will leave those unresolved
     unresolved = list(
@@ -316,13 +320,15 @@ def _is_optional_arg(input: "jc.ModuleItem") -> bool:
     return True
 
 
-def _sink_optional_inputs(
-        inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
+def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
     """
     Python functions cannot have required args after an optional arg.
     We need to move all optional inputs after the required ones.
     """
-    def sort_key(x): return -1 if _is_optional_arg(x) else 1
+
+    def sort_key(x):
+        return -1 if _is_optional_arg(x) else 1
+
     return sorted(inputs, key=sort_key)
 
 
@@ -361,11 +367,7 @@ def _module_param(input: "jc.ModuleItem") -> Parameter:
     # Passing anything EXCEPT that internal type will make that arugment default.
     # Thus we need to only specify default if we have one.
     if default is not None:
-        return Parameter(
-            name=name,
-            kind=kind,
-            default=default,
-            annotation=type_hint)
+        return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
     else:
         return Parameter(name=name, kind=kind, annotation=type_hint)
 
@@ -409,10 +411,7 @@ def _module_output(module: "jc.Module") -> Any:
     return output_value
 
 
-def _napari_specific_parameter(
-        func: Callable,
-        args: Tuple[Any],
-        param: str) -> Any:
+def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> Any:
     try:
         index = list(signature(func).parameters.keys()).index(param)
     except ValueError:
@@ -436,10 +435,7 @@ def _display_result(
     show_tabular_output.__signature__ = sig.replace(
         return_annotation=_return_type(info)
     )
-    result_widget = magicgui(
-        show_tabular_output,
-        result_widget=True,
-        auto_call=True)
+    result_widget = magicgui(show_tabular_output, result_widget=True, auto_call=True)
 
     if external:
         result_widget.show(run=True)
@@ -464,8 +460,7 @@ def _add_napari_metadata(
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {str(i.getName()): python_type_of(i)
-                  for i in unresolved_inputs}
+    type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
     return_annotation = (
         python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
     )
@@ -486,8 +481,9 @@ def _add_param_metadata(
     :param metadata: The dict of metadata for some parameter
     :param key: The name of a metadata type on that parameter
     :param value: The value of that metadata type
-    :param add_empty_list: An option for denoting whether empty collections should be added.
-        We usually don't want it if it is e.g. the choices, but we usually want it otherwise.
+    :param add_empty_list: An option for denoting whether empty collections should
+        be added. We usually don't want it if it is e.g. the choices, but we
+        usually want it otherwise.
     """
     if value is None:
         return
@@ -564,7 +560,8 @@ def functionify_module_execution(
 
         # display result
         display_externally = _napari_specific_parameter(
-            module_execute, user_resolved_inputs, "display_results_in_new_window")
+            module_execute, user_resolved_inputs, "display_results_in_new_window"
+        )
         if display_externally is not None:
             _display_result(result, info, viewer, display_externally)
 

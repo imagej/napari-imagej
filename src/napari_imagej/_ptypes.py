@@ -106,7 +106,8 @@ class TypeMappings:
             jc.Date: "datetime.datetime",
         }
 
-        # NB we put booleans over numbers because otherwise some of the boolean types will satisfy a numbers type.
+        # NB we put booleans over numbers because otherwise some of the
+        # boolean types will satisfy a numbers type.
         # TODO: Consider adding priorities
         self.ptypes = OrderedDict(
             {
@@ -135,17 +136,7 @@ class TypeMappings:
         }.keys()
 
     def displayable_in_napari(self, data):
-        return any(
-            filter(
-                lambda x: isinstance(
-                    data,
-                    x),
-                self._napari_layer_types))
+        return any(filter(lambda x: isinstance(data, x), self._napari_layer_types))
 
     def type_displayable_in_napari(self, type):
-        return any(
-            filter(
-                lambda x: issubclass(
-                    type,
-                    x),
-                self._napari_layer_types))
+        return any(filter(lambda x: issubclass(type, x), self._napari_layer_types))

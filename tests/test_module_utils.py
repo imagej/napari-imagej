@@ -103,8 +103,7 @@ class DummyModuleItem:
         return self._default
 
 
-direct_match_pairs = [(jtype, ptype)
-                      for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
     (jc.ArrayImg, "napari.types.ImageData")  # ArrayImg -> RAI -> ImageData
 ]
@@ -129,8 +128,7 @@ def test_python_type_of_input_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype)
-                      for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
     # ImageData -> RAI -> EuclideanSpace
     (jc.EuclideanSpace, "napari.types.ImageData")
@@ -156,8 +154,7 @@ def test_python_type_of_output_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype)
-                      for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 convertible_match_pairs = [(jc.DoubleArray, List[float])]
 type_pairs = direct_match_pairs + convertible_match_pairs
 
@@ -168,10 +165,7 @@ def test_python_type_of_IO(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-parameterizations = [
-    ([], None), ([
-        jc.Double], float), ([
-            jc.Double, jc.Double], dict)]
+parameterizations = [([], None), ([jc.Double], float), ([jc.Double, jc.Double], dict)]
 
 
 @pytest.mark.parametrize("outputs, expected_module_return", parameterizations)
@@ -225,8 +219,7 @@ def preresolved_module(ij, example_info):
 
 def test_filter_unresolved_inputs(ij, preresolved_module):
     all_inputs = preresolved_module.getInfo().inputs()
-    actual = _module_utils._filter_unresolved_inputs(
-        preresolved_module, all_inputs)
+    actual = _module_utils._filter_unresolved_inputs(preresolved_module, all_inputs)
 
     # We expect the log and opService to be resolved with
     # _preprocess_non_inputs
@@ -325,8 +318,7 @@ def test_napari_param_new_window_checkbox():
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(ptypes.ptypes.keys()) -
-                         set(ptypes._napari_layer_types))
+    types_present = list(set(ptypes.ptypes.keys()) - set(ptypes._napari_layer_types))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 
@@ -347,10 +339,7 @@ module_param_inputs = [
     # default, required
     (
         DummyModuleItem(name="foo"),
-        Parameter(
-            name="foo",
-            kind=Parameter.POSITIONAL_OR_KEYWORD,
-            annotation=str),
+        Parameter(name="foo", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
     ),
     # default, not required
     (
