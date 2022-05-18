@@ -3,7 +3,6 @@ from typing import Callable
 from jpype import JClass
 import logging
 import imagej
-from numpy import block
 from scyjava import config, jimport
 from multiprocessing.pool import AsyncResult, ThreadPool
 
