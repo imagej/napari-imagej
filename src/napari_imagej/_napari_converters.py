@@ -4,7 +4,13 @@ import numpy as np
 from napari_imagej.setup_imagej import ij, jc
 from napari.layers import Labels, Shapes, Points
 from napari_imagej import _ntypes
-from scyjava import Converter, Priority, when_jvm_starts, add_py_converter, add_java_converter
+from scyjava import (
+    Converter,
+    Priority,
+    when_jvm_starts,
+    add_py_converter,
+    add_java_converter,
+)
 from labeling.Labeling import Labeling
 
 
@@ -76,7 +82,7 @@ def _ellipse_mask_to_data(mask):
     data = np.zeros((2, mask.numDimensions()))
     # Write center into the first column
     center = mask.center().positionAsDoubleArray()
-    data[0, :] = center[:] # Slice needed for JArray
+    data[0, :] = center[:]  # Slice needed for JArray
     # Write radii into the second column
     for i in range(data.shape[1]):
         data[1, i] = mask.semiAxisLength(i)
@@ -92,11 +98,7 @@ def _ellipse_mask_to_layer(mask):
 # -- Boxes -- #
 
 
-def _is_axis_aligned(
-    min: np.ndarray,
-    max: np.ndarray,
-    points: np.ndarray
-    ) -> bool:
+def _is_axis_aligned(min: np.ndarray, max: np.ndarray, points: np.ndarray) -> bool:
     """
     Our rectangle consists of four points. We have:
     * The "minimum" point, the point closest to the origin
@@ -111,7 +113,13 @@ def _is_axis_aligned(
     :param points: The four corners of the rectangle
     :return: true iff the rectangle defined by points is axis-aligned.
     """
-    other = next(filter(lambda p2: not np.array_equal(min, p2) and not np.array_equal(max, p2), points), None)
+    other = next(
+        filter(
+            lambda p2: not np.array_equal(min, p2) and not np.array_equal(max, p2),
+            points,
+        ),
+        None,
+    )
     min_diff = other - min
     return any(d == 0 for d in min_diff)
 
@@ -136,8 +144,8 @@ def _rectangle_mask_to_data(mask):
     min = mask.minAsDoubleArray()
     max = mask.maxAsDoubleArray()
     data = np.zeros((2, len(min)))
-    data[0, :] = min[:] # Slice needed for JArray
-    data[1, :] = max[:] # Slice needed for JArray
+    data[0, :] = min[:]  # Slice needed for JArray
+    data[1, :] = max[:]  # Slice needed for JArray
     return data
 
 
@@ -240,7 +248,9 @@ def _roitree_to_layer(roitree):
         elif isinstance(roi, jc.Polyline):
             layer.add_paths(_path_mask_to_data(roi))
         else:
-            raise NotImplementedError(f'Cannot convert {roi}: conversion not implemented!')
+            raise NotImplementedError(
+                f"Cannot convert {roi}: conversion not implemented!"
+            )
     return layer
 
 
@@ -248,18 +258,20 @@ def _layer_to_roitree(layer: Shapes):
     """Converts a Shapes layer to a RealMask or a list of them."""
     masks = jc.ArrayList()
     for pts, shape_type in zip(layer.data, layer.shape_type):
-        if shape_type == 'ellipse':
+        if shape_type == "ellipse":
             shape = _ellipse_data_to_mask(pts)
-        elif shape_type == 'rectangle':
+        elif shape_type == "rectangle":
             shape = _rectangle_data_to_mask(pts)
-        elif shape_type == 'polygon':
+        elif shape_type == "polygon":
             shape = _polygon_data_to_mask(pts)
-        elif shape_type == 'line':
+        elif shape_type == "line":
             shape = _line_data_to_mask(pts)
-        elif shape_type == 'path':
+        elif shape_type == "path":
             shape = _path_data_to_mask(pts)
         else:
-            raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
+            raise NotImplementedError(
+                f"Shape type {shape_type} cannot yet be converted!"
+            )
         masks.add(shape)
     rois = jc.DefaultROITree()
     rois.addROIs(masks)
@@ -293,17 +305,17 @@ def _napari_to_java_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, Labels),
             converter=lambda obj: _layer_to_imglabeling(obj),
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Shapes),
             converter=lambda obj: _layer_to_roitree(obj),
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
-            priority=Priority.VERY_HIGH + 1
+            priority=Priority.VERY_HIGH + 1,
         ),
     ]
 
@@ -313,44 +325,45 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, jc.ImgLabeling),
             converter=lambda obj: _imglabeling_to_layer(obj),
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.SuperEllipsoid),
             converter=_ellipse_mask_to_layer,
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.Box),
             converter=_rectangle_mask_to_layer,
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.Polygon2D),
             converter=_polygon_mask_to_layer,
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.Line),
             converter=_line_mask_to_layer,
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.Polyline),
             converter=_path_mask_to_layer,
-            priority=Priority.VERY_HIGH
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.ROITree),
             converter=_roitree_to_layer,
-            priority=Priority.VERY_HIGH + 1
+            priority=Priority.VERY_HIGH + 1,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
-            priority=Priority.VERY_HIGH + 1
+            priority=Priority.VERY_HIGH + 1,
         ),
     ]
+
 
 def init_napari_converters():
     """
