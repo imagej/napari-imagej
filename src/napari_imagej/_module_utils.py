@@ -488,13 +488,14 @@ def _add_param_metadata(
     if value is None:
         return
     try:
-        py_value = ij.py.from_java(value)
+        py_value = ij().py.from_java(value)
         if isinstance(py_value, Collection):
             if len(value) == 0 and not add_empty_list:
                 return
-            value = [ij.py.from_java(v) for v in value]
+            value = [ij().py.from_java(v) for v in value]
         metadata[key] = value
-    except Exception:
+    except TypeError:
+        # If we cannot convert the value, we don't want to add anything to the dict.
         pass
 
 
