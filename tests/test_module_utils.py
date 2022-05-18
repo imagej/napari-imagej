@@ -103,7 +103,8 @@ class DummyModuleItem:
         return self._default
 
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype)
+                      for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
     (jc.ArrayImg, "napari.types.ImageData")  # ArrayImg -> RAI -> ImageData
 ]
@@ -128,9 +129,11 @@ def test_python_type_of_input_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype)
+                      for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
-    (jc.EuclideanSpace, "napari.types.ImageData")  # ImageData -> RAI -> EuclideanSpace
+    # ImageData -> RAI -> EuclideanSpace
+    (jc.EuclideanSpace, "napari.types.ImageData")
 ]
 convertible_match_pairs = [
     # We want to test that napari could tell that a DoubleArray ModuleItem
@@ -153,7 +156,8 @@ def test_python_type_of_output_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype)
+                      for jtype, ptype in TypeMappings().ptypes.items()]
 convertible_match_pairs = [(jc.DoubleArray, List[float])]
 type_pairs = direct_match_pairs + convertible_match_pairs
 
@@ -164,7 +168,10 @@ def test_python_type_of_IO(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-parameterizations = [([], None), ([jc.Double], float), ([jc.Double, jc.Double], dict)]
+parameterizations = [
+    ([], None), ([
+        jc.Double], float), ([
+            jc.Double, jc.Double], dict)]
 
 
 @pytest.mark.parametrize("outputs, expected_module_return", parameterizations)
@@ -187,7 +194,8 @@ def example_info(ij):
 def test_preprocess_non_inputs(ij, example_info):
     module = ij.module().createModule(example_info)
     all_inputs = module.getInfo().inputs()
-    # We expect the log and opService to be resolved with _preprocess_non_inputs
+    # We expect the log and opService to be resolved with
+    # _preprocess_non_inputs
     non_input_names = [ij.py.to_java(s) for s in ["opService", "log"]]
     expected = filter(lambda x: x.getName() in non_input_names, all_inputs)
     # Get the list of acutally resolved inputs
@@ -217,9 +225,11 @@ def preresolved_module(ij, example_info):
 
 def test_filter_unresolved_inputs(ij, preresolved_module):
     all_inputs = preresolved_module.getInfo().inputs()
-    actual = _module_utils._filter_unresolved_inputs(preresolved_module, all_inputs)
+    actual = _module_utils._filter_unresolved_inputs(
+        preresolved_module, all_inputs)
 
-    # We expect the log and opService to be resolved with _preprocess_non_inputs
+    # We expect the log and opService to be resolved with
+    # _preprocess_non_inputs
     non_input_names = [ij.py.to_java(s) for s in ["opService", "log"]]
     expected = filter(lambda x: x.getName() not in non_input_names, all_inputs)
 
@@ -290,7 +300,7 @@ def test_sink_optional_inputs():
     ]
     sorted = _module_utils._sink_optional_inputs(inputs)
     # Ensure that foo went below
-    assert sorted[0].getDefaultValue() == None
+    assert sorted[0].getDefaultValue() is None
     assert sorted[1].getDefaultValue() == "foo"
     assert sorted[2].getDefaultValue() == "bar"
 
@@ -315,7 +325,8 @@ def test_napari_param_new_window_checkbox():
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(ptypes.ptypes.keys()) - set(ptypes._napari_layer_types))
+    types_present = list(set(ptypes.ptypes.keys()) -
+                         set(ptypes._napari_layer_types))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 
@@ -336,7 +347,10 @@ module_param_inputs = [
     # default, required
     (
         DummyModuleItem(name="foo"),
-        Parameter(name="foo", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
+        Parameter(
+            name="foo",
+            kind=Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=str),
     ),
     # default, not required
     (
@@ -395,7 +409,8 @@ def test_modify_functional_signature():
     expected_types = [str, Optional[str]]
     expected_defaults = [_empty, "foo"]
 
-    # assert the modified signature contains everything in expected_names AND everything in expected_names, in that order.
+    # assert the modified signature contains everything in expected_names AND
+    # everything in expected_names, in that order.
     sig_params = sig.parameters
     for i, key in enumerate(sig_params):
         if i < len(expected_names):

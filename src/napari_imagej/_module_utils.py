@@ -163,7 +163,10 @@ def _preprocess_non_inputs(module):
         preprocessor.process(module)
 
 
-def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleInfo", input: Any):
+def _resolve_user_input(
+        module: "jc.Module",
+        module_item: "jc.ModuleInfo",
+        input: Any):
     """
     Resolves module_item, a ModuleItem in module, with JAVA object input
     :param module: The module to be resolved
@@ -223,7 +226,11 @@ def _filter_unresolved_inputs(
 ) -> List["jc.ModuleItem"]:
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
-    unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
+    unresolved = list(
+        filter(
+            lambda i: not module.isResolved(
+                i.getName()),
+            inputs))
     # Delegate optional output construction to the module
     # We will leave those unresolved
     unresolved = list(
@@ -309,12 +316,13 @@ def _is_optional_arg(input: "jc.ModuleItem") -> bool:
     return True
 
 
-def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
+def _sink_optional_inputs(
+        inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
     """
     Python functions cannot have required args after an optional arg.
     We need to move all optional inputs after the required ones.
     """
-    sort_key = lambda x: -1 if _is_optional_arg(x) else 1
+    def sort_key(x): return -1 if _is_optional_arg(x) else 1
     return sorted(inputs, key=sort_key)
 
 
@@ -353,7 +361,11 @@ def _module_param(input: "jc.ModuleItem") -> Parameter:
     # Passing anything EXCEPT that internal type will make that arugment default.
     # Thus we need to only specify default if we have one.
     if default is not None:
-        return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
+        return Parameter(
+            name=name,
+            kind=kind,
+            default=default,
+            annotation=type_hint)
     else:
         return Parameter(name=name, kind=kind, annotation=type_hint)
 
@@ -397,7 +409,10 @@ def _module_output(module: "jc.Module") -> Any:
     return output_value
 
 
-def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> Any:
+def _napari_specific_parameter(
+        func: Callable,
+        args: Tuple[Any],
+        param: str) -> Any:
     try:
         index = list(signature(func).parameters.keys()).index(param)
     except ValueError:
@@ -421,7 +436,10 @@ def _display_result(
     show_tabular_output.__signature__ = sig.replace(
         return_annotation=_return_type(info)
     )
-    result_widget = magicgui(show_tabular_output, result_widget=True, auto_call=True)
+    result_widget = magicgui(
+        show_tabular_output,
+        result_widget=True,
+        auto_call=True)
 
     if external:
         result_widget.show(run=True)
@@ -446,7 +464,8 @@ def _add_napari_metadata(
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
+    type_hints = {str(i.getName()): python_type_of(i)
+                  for i in unresolved_inputs}
     return_annotation = (
         python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
     )
@@ -545,8 +564,7 @@ def functionify_module_execution(
 
         # display result
         display_externally = _napari_specific_parameter(
-            module_execute, user_resolved_inputs, "display_results_in_new_window"
-        )
+            module_execute, user_resolved_inputs, "display_results_in_new_window")
         if display_externally is not None:
             _display_result(result, info, viewer, display_externally)
 

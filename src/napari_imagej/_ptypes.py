@@ -54,7 +54,8 @@ class TypeMappings:
             jc.IterableInterval: "napari.types.ImageData",
             # TODO: remove 'add_legacy=False' -> struggles with LegacyService
             # This change is waiting on a new pyimagej release
-            # java_import('ij.ImagePlus'):                                  'napari.types.ImageData'
+            # java_import('ij.ImagePlus'):
+            # 'napari.types.ImageData'
         }
 
         # Points
@@ -134,7 +135,17 @@ class TypeMappings:
         }.keys()
 
     def displayable_in_napari(self, data):
-        return any(filter(lambda x: isinstance(data, x), self._napari_layer_types))
+        return any(
+            filter(
+                lambda x: isinstance(
+                    data,
+                    x),
+                self._napari_layer_types))
 
     def type_displayable_in_napari(self, type):
-        return any(filter(lambda x: issubclass(type, x), self._napari_layer_types))
+        return any(
+            filter(
+                lambda x: issubclass(
+                    type,
+                    x),
+                self._napari_layer_types))
