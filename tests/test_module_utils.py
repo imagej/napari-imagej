@@ -360,6 +360,22 @@ def test_module_param(input, expected):
     assert actual == expected
 
 
+def test_add_param_metadata():
+    # Test successful addition
+    metadata = {}
+    key = "good"
+    value = jc.Double(4)
+    _module_utils._add_param_metadata(metadata, key, value)
+    assert metadata[key] == 4.0
+
+    # Test an inconvertible type
+    key = "bad"
+    value = jc.ArrayImgs
+    _module_utils._add_param_metadata(metadata, key, value)
+    # If we cannot convert, it will not be inserted
+    assert key not in metadata
+
+
 def test_modify_functional_signature():
     """
     We first create a module info, and then assert that _modify_function_signature
