@@ -29,7 +29,8 @@ def imagej_init():
 
     # -- IMAGEJ CONFIG -- #
 
-    # TEMP: Avoid issues caused by https://github.com/imagej/pyimagej/issues/160
+    # TEMP: Avoid issues caused by
+    # https://github.com/imagej/pyimagej/issues/160
     config.add_repositories(
         {"scijava.public": "https://maven.scijava.org/content/groups/public"}
     )
@@ -94,7 +95,7 @@ class JavaClasses(object):
 
         return inner
 
-    ## Java Primitives
+    # Java Primitives
 
     @blocking_import
     def Boolean(self):
@@ -132,7 +133,7 @@ class JavaClasses(object):
     def String(self):
         return "java.lang.String"
 
-    ## Java Array Primitives
+    # Java Array Primitives
 
     @blocking_import
     def Boolean_Arr(self):
@@ -166,7 +167,7 @@ class JavaClasses(object):
     def Short_Arr(self):
         return "[S"
 
-    ## Vanilla Java Classes
+    # Vanilla Java Classes
 
     @blocking_import
     def ArrayList(self):
@@ -192,7 +193,7 @@ class JavaClasses(object):
     def Path(self):
         return "java.nio.file.Path"
 
-    ## SciJava Types
+    # SciJava Types
 
     @blocking_import
     def DisplayPostprocessor(self):
@@ -238,7 +239,7 @@ class JavaClasses(object):
     def Types(self):
         return "org.scijava.util.Types"
 
-    ## ImgLib2 Types
+    # ImgLib2 Types
 
     @blocking_import
     def BooleanType(self):
@@ -276,7 +277,7 @@ class JavaClasses(object):
     def RealType(self):
         return "net.imglib2.type.numeric.RealType"
 
-    ## ImgLib2-roi Types
+    # ImgLib2-roi Types
 
     @blocking_import
     def Box(self):
@@ -334,7 +335,7 @@ class JavaClasses(object):
     def SuperEllipsoid(self):
         return "net.imglib2.roi.geom.real.SuperEllipsoid"
 
-    ## ImageJ Types
+    # ImageJ Types
 
     @blocking_import
     def DefaultROITree(self):
@@ -348,7 +349,7 @@ class JavaClasses(object):
     def ROITree(self):
         return "net.imagej.roi.ROITree"
 
-    ## ImageJ-Ops Types
+    # ImageJ-Ops Types
 
     @blocking_import
     def Initializable(self):
@@ -362,7 +363,7 @@ class JavaClasses(object):
     def OpSearcher(self):
         return "net.imagej.ops.search.OpSearcher"
 
-    ## Scifio-Labeling Types
+    # Scifio-Labeling Types
 
     @blocking_import
     def LabelingIOService(self):

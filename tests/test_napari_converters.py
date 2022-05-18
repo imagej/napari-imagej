@@ -35,7 +35,9 @@ def py_labeling() -> Labeling:
     example1_images.append(d.transpose())
 
     merger = Labeling.fromValues(np.zeros((4, 4), np.int32))
-    merger.iterate_over_images(example1_images, source_ids=["a", "b", "c", "d"])
+    merger.iterate_over_images(
+        example1_images, source_ids=[
+            "a", "b", "c", "d"])
     return merger
 
 
@@ -75,7 +77,9 @@ def test_labeling_circular_equality(py_labeling):
 
     assert np.array_equal(exp_img, act_img)
 
-    assert_labels_equality(vars(exp_data), vars(act_data), ["numSources", "indexImg"])
+    assert_labels_equality(
+        vars(exp_data), vars(act_data), [
+            "numSources", "indexImg"])
 
 
 def test_labeling_to_labels(py_labeling):
@@ -114,7 +118,8 @@ def test_labels_with_metadata_circular(ij, labels_with_metadata):
     assert np.array_equal(exp_img, act_img)
 
 
-def _assert_image_mapping(exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int, int]:
+def _assert_image_mapping(
+        exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int, int]:
     """
     Asserts a CONSISTENT mapping between values in exp_img and act_img.
 

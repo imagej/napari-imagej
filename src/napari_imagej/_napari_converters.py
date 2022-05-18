@@ -98,7 +98,10 @@ def _ellipse_mask_to_layer(mask):
 # -- Boxes -- #
 
 
-def _is_axis_aligned(min: np.ndarray, max: np.ndarray, points: np.ndarray) -> bool:
+def _is_axis_aligned(
+        min: np.ndarray,
+        max: np.ndarray,
+        points: np.ndarray) -> bool:
     """
     Our rectangle consists of four points. We have:
     * The "minimum" point, the point closest to the origin
@@ -115,7 +118,11 @@ def _is_axis_aligned(min: np.ndarray, max: np.ndarray, points: np.ndarray) -> bo
     """
     other = next(
         filter(
-            lambda p2: not np.array_equal(min, p2) and not np.array_equal(max, p2),
+            lambda p2: not np.array_equal(
+                min,
+                p2) and not np.array_equal(
+                max,
+                p2),
             points,
         ),
         None,
