@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
 from inspect import Parameter, _empty
@@ -101,6 +101,42 @@ class DummyModuleItem:
 
     def getDefaultValue(self):
         return self._default
+
+    def getMaximumValue(self):
+        return self._maximumValue
+
+    def setMaximumValue(self, val):
+        self._maximumValue = val
+
+    def getMinimumValue(self):
+        return self._minimumValue
+
+    def setMinimumValue(self, val):
+        self._minimumValue = val
+
+    def getStepSize(self):
+        return self._stepSize
+
+    def setStepSize(self, val):
+        self._stepSize = val
+
+    def getLabel(self):
+        return self._label
+
+    def setLabel(self, val):
+        self._label = val
+
+    def getDescription(self):
+        return self._description
+
+    def setDescription(self, val):
+        self._description = val
+
+    def getChoices(self):
+        return self._choices
+
+    def setChoices(self, val):
+        self._choices = val
 
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
@@ -358,6 +394,84 @@ module_param_inputs = [
 def test_module_param(input, expected):
     actual = _module_utils._module_param(input)
     assert actual == expected
+
+
+def test_add_param_metadata():
+    # Test successful addition
+    metadata = {}
+    key = "good"
+    value = jc.Double(4)
+    _module_utils._add_param_metadata(metadata, key, value)
+    assert metadata[key] == 4.0
+
+    # Test an inconvertible type
+    key = "bad"
+    value = jc.ArrayImgs
+    _module_utils._add_param_metadata(metadata, key, value)
+    # If we cannot convert, it will not be inserted
+    assert key not in metadata
+
+
+@pytest.fixture
+def metadata_module_item(ij) -> DummyModuleItem:
+    item: DummyModuleItem = DummyModuleItem(name="foo")
+    maxVal = ij.py.to_java(20.0)
+    item.setMaximumValue(maxVal)
+    minVal = ij.py.to_java(10.0)
+    item.setMinimumValue(minVal)
+    stepSize = ij.py.to_java(2.0)
+    item.setStepSize(stepSize)
+    label = ij.py.to_java("bar")
+    print(type(label))
+    item.setLabel(label)
+    description = ij.py.to_java("The foo.")
+    item.setDescription(description)
+    choices = ij.py.to_java(["a", "b", "c"])
+    item.setChoices(choices)
+
+    return item
+
+
+def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
+    metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
+        [metadata_module_item]
+    )
+
+    # Assert only 'foo' key in metadata
+    assert len(metadata.keys()) == 1
+    assert "foo" in metadata.keys()
+
+    # Assert each metadata
+    param_map: Dict[str, Any] = metadata["foo"]
+    assert param_map["max"] == 20.0
+    assert param_map["min"] == 10.0
+    assert param_map["step"] == 2.0
+    assert param_map["label"] == "bar"
+    assert param_map["tooltip"] == "The foo."
+    assert param_map["choices"] == ["a", "b", "c"]
+
+
+def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModuleItem):
+    # Make choices an empty list
+    empty_list = ij.py.to_java([])
+    metadata_module_item.setChoices(empty_list)
+
+    metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
+        [metadata_module_item]
+    )
+
+    # Assert only 'foo' key in metadata
+    assert len(metadata.keys()) == 1
+    assert "foo" in metadata.keys()
+
+    # Assert each metadata
+    param_map: Dict[str, Any] = metadata["foo"]
+    assert param_map["max"] == 20.0
+    assert param_map["min"] == 10.0
+    assert param_map["step"] == 2.0
+    assert param_map["label"] == "bar"
+    assert param_map["tooltip"] == "The foo."
+    assert "choices" not in param_map
 
 
 def test_modify_functional_signature():
