@@ -1,6 +1,5 @@
 from typing import Generator
 import pytest
-import imagej
 
 from napari_imagej.widget import ImageJWidget
 from napari import Viewer

@@ -15,7 +15,7 @@ def test_widget_layout(imagej_widget: ImageJWidget):
 
 def test_widget_searchbar_layout(imagej_widget: ImageJWidget):
     """Tests basic features of the searchbar widget."""
-    searchbar:QWidget = imagej_widget._search_widget
+    searchbar:QWidget = imagej_widget.search
     assert isinstance(searchbar.layout(), QHBoxLayout)
     search_widget: QLineEdit = searchbar.findChild(QLineEdit)
 

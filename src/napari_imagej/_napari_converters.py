@@ -1,7 +1,7 @@
 from typing import List
 from jpype import JArray, JDouble
 import numpy as np
-from napari_imagej.setup_imagej import ij, java_import
+from napari_imagej.setup_imagej import ij, jc
 from napari.layers import Labels, Shapes, Points
 from napari_imagej import _ntypes
 from scyjava import Converter, Priority, when_jvm_starts, add_py_converter, add_java_converter
@@ -48,7 +48,7 @@ def realPoint_from(coords: np.ndarray):
     """
     # JPype doesn't know whether to call the float or double.
     # We make the choice for them using the function arr
-    return RealPoint(arr(coords))
+    return jc.RealPoint(arr(coords))
 
 
 def _polyshape_to_layer_data(mask):
@@ -68,7 +68,7 @@ def _polyshape_to_layer_data(mask):
 def _ellipse_data_to_mask(pts):
     center = np.mean(pts, axis=0)
     radii = np.abs(pts[0, :] - center)
-    return ClosedWritableEllipsoid(center, radii)
+    return jc.ClosedWritableEllipsoid(center, radii)
 
 
 def _ellipse_mask_to_data(mask):
@@ -126,7 +126,7 @@ def _rectangle_data_to_mask(points):
     max = points[np.argmax(min_distances)]
     # Return box if axis aligned
     if _is_axis_aligned(min, max, points):
-        return ClosedWritableBox(arr(min), arr(max))
+        return jc.ClosedWritableBox(arr(min), arr(max))
     # Return polygon if not
     else:
         return _polygon_data_to_mask(points)
@@ -152,8 +152,8 @@ def _rectangle_mask_to_layer(mask):
 
 def _polygon_data_to_mask(points):
     pts = [realPoint_from(x) for x in points]
-    ptList = ArrayList(pts)
-    return ClosedWritablePolygon2D(ptList)
+    ptList = jc.ArrayList(pts)
+    return jc.ClosedWritablePolygon2D(ptList)
 
 
 def _polygon_mask_to_data(mask):
@@ -176,7 +176,7 @@ def _polygon_mask_to_layer(mask):
 def _line_data_to_mask(points):
     start = realPoint_from(points[0])
     end = realPoint_from(points[1])
-    return DefaultWritableLine(start, end)
+    return jc.DefaultWritableLine(start, end)
 
 
 def _line_mask_to_data(mask):
@@ -204,8 +204,8 @@ def _line_mask_to_layer(mask):
 
 def _path_data_to_mask(points):
     pts = [realPoint_from(x) for x in points]
-    ptList = ArrayList(pts)
-    return DefaultWritablePolyline(ptList)
+    ptList = jc.ArrayList(pts)
+    return jc.DefaultWritablePolyline(ptList)
 
 
 def _path_mask_to_data(mask):
@@ -229,15 +229,15 @@ def _roitree_to_layer(roitree):
     layer = Shapes()
     rois = [child.data() for child in roitree.children()]
     for roi in rois:
-        if isinstance(roi, SuperEllipsoid.class_):
+        if isinstance(roi, jc.SuperEllipsoid):
             layer.add_ellipses(_ellipse_mask_to_data(roi))
-        elif isinstance(roi, Box.class_):
+        elif isinstance(roi, jc.Box):
             layer.add_rectangles(_rectangle_mask_to_data(roi))
-        elif isinstance(roi, Polygon2D.class_):
+        elif isinstance(roi, jc.Polygon2D):
             layer.add_polygons(_polygon_mask_to_data(roi))
-        elif isinstance(roi, Line.class_):
+        elif isinstance(roi, jc.Line):
             layer.add_lines(_line_mask_to_data(roi))
-        elif isinstance(roi, Polyline.class_):
+        elif isinstance(roi, jc.Polyline):
             layer.add_paths(_path_mask_to_data(roi))
         else:
             raise NotImplementedError(f'Cannot convert {roi}: conversion not implemented!')
@@ -246,7 +246,7 @@ def _roitree_to_layer(roitree):
 
 def _layer_to_roitree(layer: Shapes):
     """Converts a Shapes layer to a RealMask or a list of them."""
-    masks = ArrayList()
+    masks = jc.ArrayList()
     for pts, shape_type in zip(layer.data, layer.shape_type):
         if shape_type == 'ellipse':
             shape = _ellipse_data_to_mask(pts)
@@ -261,7 +261,7 @@ def _layer_to_roitree(layer: Shapes):
         else:
             raise NotImplementedError(f"Shape type {shape_type} cannot yet be converted!")
         masks.add(shape)
-    rois = DefaultROITree()
+    rois = jc.DefaultROITree()
     rois.addROIs(masks)
     return rois
 
@@ -271,8 +271,8 @@ def _layer_to_roitree(layer: Shapes):
 
 def _points_to_realpointcollection(points):
     pts = [realPoint_from(x) for x in points.data]
-    ptList = ArrayList(pts)
-    return DefaultWritableRealPointCollection(ptList)
+    ptList = jc.ArrayList(pts)
+    return jc.DefaultWritableRealPointCollection(ptList)
 
 
 def _realpointcollection_to_points(collection):
@@ -311,98 +311,46 @@ def _napari_to_java_converters() -> List[Converter]:
 def _java_to_napari_converters() -> List[Converter]:
     return [
         Converter(
-            predicate=lambda obj: isinstance(obj, ImgLabeling.class_),
+            predicate=lambda obj: isinstance(obj, jc.ImgLabeling),
             converter=lambda obj: _imglabeling_to_layer(obj),
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, SuperEllipsoid.class_),
+            predicate=lambda obj: isinstance(obj, jc.SuperEllipsoid),
             converter=_ellipse_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Box.class_),
+            predicate=lambda obj: isinstance(obj, jc.Box),
             converter=_rectangle_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Polygon2D.class_),
+            predicate=lambda obj: isinstance(obj, jc.Polygon2D),
             converter=_polygon_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Line.class_),
+            predicate=lambda obj: isinstance(obj, jc.Line),
             converter=_line_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, Polyline.class_),
+            predicate=lambda obj: isinstance(obj, jc.Polyline),
             converter=_path_mask_to_layer,
             priority=Priority.VERY_HIGH
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, ROITree.class_),
+            predicate=lambda obj: isinstance(obj, jc.ROITree),
             converter=_roitree_to_layer,
             priority=Priority.VERY_HIGH + 1
         ),
         Converter(
-            predicate=lambda obj: isinstance(obj, RealPointCollection.class_),
+            predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
             priority=Priority.VERY_HIGH + 1
         ),
     ]
-
-# -- Java classes -- #
-class Java_Class(object):
-
-    def __init__(self, name: str):
-        self._name = name
-
-    @property
-    def class_(self):
-        return java_import(self._name)
-    
-    def __call__(self, *args):
-        return self.class_(*args)
-
-
-Double: Java_Class = Java_Class('java.lang.Double')
-
-ArrayList: Java_Class = Java_Class('java.util.ArrayList')
-
-LabelingIOService: Java_Class = Java_Class('io.scif.labeling.LabelingIOService')
-
-DefaultROITree: Java_Class = Java_Class('net.imagej.roi.DefaultROITree')
-
-SuperEllipsoid: Java_Class = Java_Class('net.imglib2.roi.geom.real.SuperEllipsoid')
-
-Box: Java_Class = Java_Class('net.imglib2.roi.geom.real.Box')
-
-Polygon2D: Java_Class = Java_Class('net.imglib2.roi.geom.real.Polygon2D')
-
-Line: Java_Class = Java_Class('net.imglib2.roi.geom.real.Line')
-
-Polyline: Java_Class = Java_Class('net.imglib2.roi.geom.real.Polyline')
-
-ROITree: Java_Class = Java_Class('net.imagej.roi.ROITree')
-
-ClosedWritableEllipsoid: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritableEllipsoid')
-
-ClosedWritablePolygon2D: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritablePolygon2D')
-
-ClosedWritableBox: Java_Class = Java_Class('net.imglib2.roi.geom.real.ClosedWritableBox')
-
-DefaultWritableLine: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritableLine')
-
-DefaultWritablePolyline: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritablePolyline')
-
-ImgLabeling: Java_Class = Java_Class('net.imglib2.roi.labeling.ImgLabeling')
-
-RealPoint: Java_Class = Java_Class('net.imglib2.RealPoint')
-
-RealPointCollection: Java_Class = Java_Class('net.imglib2.roi.geom.real.RealPointCollection')
-
-DefaultWritableRealPointCollection: Java_Class = Java_Class('net.imglib2.roi.geom.real.DefaultWritableRealPointCollection')
 
 def init_napari_converters():
     """
@@ -416,6 +364,3 @@ def init_napari_converters():
     # Add Java -> napari converters
     for converter in _java_to_napari_converters():
         add_py_converter(converter)
-
-# Install napari <-> java converters
-when_jvm_starts(lambda: init_napari_converters())
