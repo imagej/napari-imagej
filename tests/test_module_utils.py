@@ -398,6 +398,7 @@ def test_module_param(input, expected):
 
 def test_add_param_metadata():
     # Test successful addition
+    # This comment is really really really really really really really really really really long
     metadata = {}
     key = "good"
     value = jc.Double(4)
