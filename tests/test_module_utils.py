@@ -138,6 +138,12 @@ class DummyModuleItem:
     def setChoices(self, val):
         self._choices = val
 
+    def getWidgetStyle(self):
+        return self._style
+
+    def setWidgetStyle(self, val):
+        self._style = val
+
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
@@ -414,7 +420,7 @@ def test_add_param_metadata():
 
 @pytest.fixture
 def metadata_module_item(ij) -> DummyModuleItem:
-    item: DummyModuleItem = DummyModuleItem(name="foo")
+    item: DummyModuleItem = DummyModuleItem(name="foo", jtype=jc.Double)
     maxVal = ij.py.to_java(20.0)
     item.setMaximumValue(maxVal)
     minVal = ij.py.to_java(10.0)
@@ -428,6 +434,8 @@ def metadata_module_item(ij) -> DummyModuleItem:
     item.setDescription(description)
     choices = ij.py.to_java(["a", "b", "c"])
     item.setChoices(choices)
+    style = ij.py.to_java("spinner")
+    item.setWidgetStyle(style)
 
     return item
 
@@ -449,6 +457,7 @@ def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert param_map["choices"] == ["a", "b", "c"]
+    assert param_map["widget_type"] == "FloatSpinBox"
 
 
 def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModuleItem):

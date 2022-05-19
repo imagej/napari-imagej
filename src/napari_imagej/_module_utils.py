@@ -4,7 +4,7 @@ from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
-from napari_imagej._ptypes import TypeMappings
+from napari_imagej._ptypes import TypeMappings, widget_for_style_and_type
 from napari_imagej.setup_imagej import ij, jc, log_debug
 
 
@@ -485,12 +485,12 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
     try:
         py_value = ij().py.from_java(value)
         if isinstance(py_value, JavaMap):
-            value = dict(value)
+            py_value = dict(py_value)
         elif isinstance(py_value, JavaSet):
-            value = set(value)
+            py_value = set(py_value)
         elif isinstance(py_value, JavaIterable):
-            value = list(value)
-        metadata[key] = value
+            py_value = list(py_value)
+        metadata[key] = py_value
     except TypeError:
         # If we cannot convert the value, we don't want to add anything to the dict.
         pass
@@ -514,6 +514,12 @@ def _add_scijava_metadata(
         # so we only add it if it is not empty.
         if len(input.getChoices()) > 0:
             _add_param_metadata(param_map, "choices", input.getChoices())
+        # Convert supported SciJava styles to widget types.
+        # TODO: can we avoid recomputing the type hint
+        type_hint = python_type_of(input)
+        widget_type = widget_for_style_and_type(input.getWidgetStyle(), type_hint)
+        if widget_type is not None:
+            _add_param_metadata(param_map, "widget_type", widget_type)
 
         if len(param_map) > 0:
             metadata[key] = param_map
