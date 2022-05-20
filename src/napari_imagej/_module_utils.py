@@ -167,7 +167,7 @@ def _preprocess_non_inputs(module):
         preprocessor.process(module)
 
 
-def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleInfo", input: Any):
+def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleItem", input: Any):
     """
     Resolves module_item, a ModuleItem in module, with JAVA object input
     :param module: The module to be resolved
