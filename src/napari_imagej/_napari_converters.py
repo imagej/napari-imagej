@@ -287,7 +287,12 @@ def _points_to_realpointcollection(points):
 
 
 def _realpointcollection_to_points(collection):
+    # data - collection.size() points, collection.numDimensions() values per point
     data = np.zeros((collection.size(), collection.numDimensions()))
+    # Create a temporary array to pass to each point
+    # N.B. we cannot just write pt.localize(data[i, :]) as JPype does not know
+    # whether to use the localize(double[]) method or the localize(float[]) method.
+    # We thus have to make the decision ourselves using tmp_arr, a double[].
     tmp_arr_dims = int(collection.numDimensions())
     tmp_arr = JArray(JDouble)(tmp_arr_dims)
     for i, pt in enumerate(collection.points()):
@@ -314,7 +319,7 @@ def _napari_to_java_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
     ]
 
@@ -354,12 +359,12 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, jc.ROITree),
             converter=_roitree_to_layer,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
     ]
 

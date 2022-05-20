@@ -42,7 +42,7 @@ class ImageJWidget(QWidget):
         self.layout().addWidget(self.results)
 
         # Module highlighter
-        self.highlighter: FocusWidget = FocusWidget(napari_viewer, self.results.results)
+        self.highlighter: FocusWidget = FocusWidget(napari_viewer)
         self.layout().addWidget(self.highlighter)
 
         # -- Interwidget connections -- #
@@ -53,13 +53,13 @@ class ImageJWidget(QWidget):
         # If the user presses enter in the search bar,
         # highlight the first module in the results
         self.search.bar.returnPressed.connect(
-            lambda: self.highlighter._highlight_module(0, 0)
+            lambda: self.highlighter._highlight_module(self.results.results, 0, 0)
         )
         # If the user clicks in any table, highlight
         # the clicked cell
         for i, tableWidget in enumerate(self.results.widgets):
             tableWidget.cellClicked.connect(
-                self.highlighter._highlight_from_results_table(i)
+                self.highlighter._highlight_from_results_table(self.results.results, i)
             )
 
 
@@ -168,10 +168,9 @@ class ResultsWidget(QWidget):
 
 
 class FocusWidget(QWidget):
-    def __init__(self, viewer: Viewer, results: List[List["jc.ModuleInfo"]]):
+    def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
-        self.results = results
 
         self.setLayout(QVBoxLayout())
 
@@ -182,17 +181,21 @@ class FocusWidget(QWidget):
 
         self.focused_action_buttons = []  # type: ignore
 
-    def _highlight_from_results_table(self, index):
+    def _highlight_from_results_table(
+        self, tables: List[List["jc.ModuleInfo"]], index: int
+    ):
         # NB: col is needed for tableWidget.cellClicked.
         # We don't use it in _highlight_module, though.
-        return lambda row, col: self._highlight_module(index, row)
+        return lambda row, col: self._highlight_module_from_tables(tables, index, row)
 
-    def _highlight_module(self, table: int, row: int):
+    def _highlight_module_from_tables(
+        self, tables: List[List["jc.ModuleInfo"]], index: int, row: int
+    ):
         # Ensure the clicked module is an actual selection
-        if row >= len(self.results[table]):
+        if row >= len(tables[index]):
             return
         # Print highlighted module
-        self.focused_module = self.results[table][row]
+        self.focused_module = tables[index][row]
         name = ij().py.from_java(self.focused_module.name())  # type: ignore
         self.focused_module_label.setText(name)
 
