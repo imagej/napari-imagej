@@ -1,10 +1,18 @@
 from typing import Any, Dict, List, Optional
+from magicgui.widgets import (
+    Select,
+    RadioButtons,
+    Slider,
+    FloatSlider,
+    SpinBox,
+    FloatSpinBox,
+)
 
 import pytest
 from inspect import Parameter, _empty
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej._ptypes import TypeMappings
+from napari_imagej._ptypes import TypeMappings, _supported_styles
 
 
 class JavaClassesTest(JavaClasses):
@@ -137,6 +145,12 @@ class DummyModuleItem:
 
     def setChoices(self, val):
         self._choices = val
+
+    def getWidgetStyle(self):
+        return self._style
+
+    def setWidgetStyle(self, val):
+        self._style = val
 
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
@@ -414,7 +428,7 @@ def test_add_param_metadata():
 
 @pytest.fixture
 def metadata_module_item(ij) -> DummyModuleItem:
-    item: DummyModuleItem = DummyModuleItem(name="foo")
+    item: DummyModuleItem = DummyModuleItem(name="foo", jtype=jc.Double)
     maxVal = ij.py.to_java(20.0)
     item.setMaximumValue(maxVal)
     minVal = ij.py.to_java(10.0)
@@ -428,13 +442,15 @@ def metadata_module_item(ij) -> DummyModuleItem:
     item.setDescription(description)
     choices = ij.py.to_java(["a", "b", "c"])
     item.setChoices(choices)
+    style = ij.py.to_java("spinner")
+    item.setWidgetStyle(style)
 
     return item
 
 
 def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
-        [metadata_module_item]
+        [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
@@ -449,6 +465,7 @@ def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert param_map["choices"] == ["a", "b", "c"]
+    assert param_map["widget_type"] == "FloatSpinBox"
 
 
 def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModuleItem):
@@ -457,7 +474,7 @@ def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModul
     metadata_module_item.setChoices(empty_list)
 
     metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
-        [metadata_module_item]
+        [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
@@ -472,6 +489,58 @@ def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModul
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert "choices" not in param_map
+
+
+parameterizations = [
+    ("listBox", str, "Select", Select),
+    ("radioButtonHorizontal", str, "RadioButtons", RadioButtons),
+    ("radioButtonVertical", str, "RadioButtons", RadioButtons),
+    ("slider", int, "Slider", Slider),
+    ("slider", float, "FloatSlider", FloatSlider),
+    ("spinner", int, "SpinBox", SpinBox),
+    ("spinner", float, "FloatSpinBox", FloatSpinBox),
+]
+
+
+@pytest.mark.parametrize(
+    argnames=["style", "type_hint", "widget_type", "widget_class"],
+    argvalues=parameterizations,
+)
+def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
+    """
+    Tests that a style and type are mapped to the corresponding widget_class
+    :param style: the SciJava style
+    :param type_hint: the PYTHON type of a parameter
+    :param widget_type: the name of a magicgui widget
+    :param widget_class: the class corresponding to name
+    """
+    actual = _module_utils._widget_for_style_and_type(style, type_hint)
+    assert widget_type == actual
+
+    def func(foo):
+        print(foo, "bar")
+
+    func.__annotation__ = {"foo": type_hint}
+    import magicgui
+
+    widget = magicgui.magicgui(
+        function=func, call_button=False, foo={"widget_type": actual}
+    )
+    assert len(widget._list) == 1
+    assert isinstance(widget._list[0], widget_class)
+
+
+def test_all_styles_in_parameterizations():
+    """
+    Tests that all style mappings declared in _supported_styles
+    are tested in test_wiget_for_style_and_type
+    """
+    _parameterizations = [p[:-1] for p in parameterizations]
+    all_styles = []
+    for style in _supported_styles:
+        for type_hint, widget_type in _supported_styles[style].items():
+            all_styles.append((style, type_hint, widget_type))
+    assert all_styles == _parameterizations
 
 
 def test_modify_functional_signature():
