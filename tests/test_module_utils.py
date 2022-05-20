@@ -4,7 +4,7 @@ import pytest
 from inspect import Parameter, _empty
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej._ptypes import TypeMappings
+from napari_imagej._ptypes import TypeMappings, _supported_styles
 
 
 class JavaClassesTest(JavaClasses):
@@ -442,7 +442,7 @@ def metadata_module_item(ij) -> DummyModuleItem:
 
 def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
-        [metadata_module_item]
+        [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
@@ -466,7 +466,7 @@ def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModul
     metadata_module_item.setChoices(empty_list)
 
     metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
-        [metadata_module_item]
+        [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
@@ -481,6 +481,14 @@ def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModul
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert "choices" not in param_map
+
+
+def test_widget_for_style_and_type():
+
+    for style, map in _supported_styles.items():
+        for type_hint, expected in map.items():
+            actual = _module_utils._widget_for_style_and_type(style, type_hint)
+            assert expected == actual
 
 
 def test_modify_functional_signature():

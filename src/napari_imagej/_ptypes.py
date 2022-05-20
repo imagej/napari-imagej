@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional
+from typing import Dict, List
 from napari_imagej.setup_imagej import jc
 
 
@@ -148,25 +148,13 @@ class TypeMappings:
 # The definitive mapping of scyjava widget styles to magicgui widget types
 # This map allows us to determine the "best" widget for a given ModuleItem.
 # For particular styles, there are sometimes multiple corresponding widgets.
-# We then have to differentiate by type
+# We then have to differentiate by the PYTHON type of the parameter.
 _supported_styles: Dict[str, Dict[type, str]] = {
+    # ChoiceWidget styles
+    "listBox": {str: "Select"},
+    "radioButtonHorizontal": {str: "RadioButtons"},
+    "radioButtonVertical": {str: "RadioButtons"},
     # NumberWidget styles
     "slider": {int: "Slider", float: "FloatSlider"},
     "spinner": {int: "SpinBox", float: "FloatSpinBox"},
 }
-
-
-def widget_for_style_and_type(style: str, type_hint: type) -> Optional[str]:
-    """
-    Convenience function for interacting with _supported_styles
-    :param style: The SciJava style
-    :param type: The PYTHON type for the parameter
-    :return: The best widget type, if it is known
-    """
-    if style not in _supported_styles:
-        return None
-    style_options = _supported_styles[style]
-    for k, v in style_options.items():
-        if issubclass(type_hint, k):
-            return v
-    return None

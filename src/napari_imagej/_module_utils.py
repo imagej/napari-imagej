@@ -1,10 +1,10 @@
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
-from napari_imagej._ptypes import TypeMappings, widget_for_style_and_type
+from napari_imagej._ptypes import TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
 
 
@@ -496,8 +496,27 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
         pass
 
 
+def _widget_for_style_and_type(
+    style: str, type_hint: Union[type, str]
+) -> Optional[str]:
+    """
+    Convenience function for interacting with _supported_styles
+    :param style: The SciJava style
+    :param type_hint: The PYTHON type for the parameter
+    :return: The best widget type, if it is known
+    """
+    if style not in _supported_styles:
+        return None
+    style_options = _supported_styles[style]
+    for k, v in style_options.items():
+        if issubclass(type_hint, k):
+            return v
+    return None
+
+
 def _add_scijava_metadata(
     unresolved_inputs: List["jc.ModuleItem"],
+    type_hints: Dict[str, Union[str, type]],
 ) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
@@ -515,9 +534,9 @@ def _add_scijava_metadata(
         if len(input.getChoices()) > 0:
             _add_param_metadata(param_map, "choices", input.getChoices())
         # Convert supported SciJava styles to widget types.
-        # TODO: can we avoid recomputing the type hint
-        type_hint = python_type_of(input)
-        widget_type = widget_for_style_and_type(input.getWidgetStyle(), type_hint)
+        widget_type = _widget_for_style_and_type(
+            input.getWidgetStyle(), type_hints[input.getName()]
+        )
         if widget_type is not None:
             _add_param_metadata(param_map, "widget_type", widget_type)
 
@@ -576,6 +595,8 @@ def functionify_module_execution(
 
     # Add metadata for widget creation
     _add_napari_metadata(module_execute, info, unresolved_inputs)
-    magic_kwargs = _add_scijava_metadata(unresolved_inputs)
+    magic_kwargs = _add_scijava_metadata(
+        unresolved_inputs, module_execute.__annotation__
+    )
 
     return (module_execute, magic_kwargs)
