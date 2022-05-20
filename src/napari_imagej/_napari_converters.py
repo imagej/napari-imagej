@@ -314,7 +314,7 @@ def _napari_to_java_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
     ]
 
@@ -354,12 +354,12 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, jc.ROITree),
             converter=_roitree_to_layer,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
         Converter(
             predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
-            priority=Priority.VERY_HIGH + 1,
+            priority=Priority.VERY_HIGH,
         ),
     ]
 
