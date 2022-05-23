@@ -468,9 +468,18 @@ def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     assert param_map["widget_type"] == "FloatSpinBox"
 
 
-def test_add_scijava_metadata_empty_choices(ij, metadata_module_item: DummyModuleItem):
-    # Make choices an empty list
-    empty_list = ij.py.to_java([])
+choiceList = [
+    [],
+    None,
+]
+
+
+@pytest.mark.parametrize("choices", choiceList)
+def test_add_scijava_metadata_empty_choices(
+    ij, choices, metadata_module_item: DummyModuleItem
+):
+    # set the choices
+    empty_list = ij.py.to_java(choices)
     metadata_module_item.setChoices(empty_list)
 
     metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
