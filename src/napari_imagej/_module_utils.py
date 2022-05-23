@@ -531,8 +531,9 @@ def _add_scijava_metadata(
         # With no choices, the returned list will be empty.
         # Unfortunately, magicgui doesn't know how to handle an empty list,
         # so we only add it if it is not empty.
-        if len(input.getChoices()) > 0:
-            _add_param_metadata(param_map, "choices", input.getChoices())
+        choices = input.getChoices()
+        if choices is not None and len(choices) > 0:
+            _add_param_metadata(param_map, "choices", choices)
         # Convert supported SciJava styles to widget types.
         widget_type = _widget_for_style_and_type(
             input.getWidgetStyle(), type_hints[input.getName()]
