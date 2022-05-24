@@ -299,7 +299,12 @@ def _napari_module_param_additions(
     """Returns a set of parameters useful for napari functionality."""
     # additional parameters are in the form "name": (type, default value)
     additional_params: Dict[str, Tuple[type, Any]] = {}
-    # Allow non-layer outputs to be displayed in a new window
+    # If the module outputs cannot be coerced into a layer type, they will have
+    # to be displayed in a new widget made by napari-imagej. For convenience, we
+    # give users the option to spawn that widget within the main napari window,
+    # or in a new window. We thus check for any output types that cannot be
+    # coerced into a layer. If there are any, we add the option to the
+    # parameter map.
     for output_item in module_info.outputs():
         if not type_mappings().type_displayable_in_napari(output_item.getType()):
             additional_params["display_results_in_new_window"] = (bool, False)
