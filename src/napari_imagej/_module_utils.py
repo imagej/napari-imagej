@@ -4,6 +4,8 @@ from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
 from magicgui import magicgui
 from napari import Viewer
+from napari.layers import Layer
+from napari.types import LayerDataTuple
 from napari_imagej._ptypes import TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
 
@@ -297,9 +299,10 @@ def _napari_module_param_additions(
     """Returns a set of parameters useful for napari functionality."""
     # additional parameters are in the form "name": (type, default value)
     additional_params: Dict[str, Tuple[type, Any]] = {}
-    output_item = module_info.outputs().iterator().next()
-    if not type_mappings().type_displayable_in_napari(output_item.getType()):
-        additional_params["display_results_in_new_window"] = (bool, False)
+    # Allow non-layer outputs to be displayed in a new window
+    for output_item in module_info.outputs():
+        if not type_mappings().type_displayable_in_napari(output_item.getType()):
+            additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
 
 
@@ -395,20 +398,48 @@ def _modify_function_signature(
         ]
         all_params = module_params + other_params
         function.__signature__ = sig.replace(
-            parameters=all_params, return_annotation=_return_type(module_info)
+            parameters=all_params, return_annotation=List[LayerDataTuple]
         )
     except Exception as e:
         print(e)
 
 
-def _module_output(module: "jc.Module") -> Any:
+def _layerDataTuple_from_layer(layer: Layer):
+    data = layer.data
+    metadata: Dict[str, Any] = {}
+    layer_type = type(layer).__name__
+    metadata["name"] = layer.name
+    metadata["metadata"] = layer.metadata
+    if hasattr(layer, "shape_type"):
+        metadata["shape_type"] = getattr(layer, "shape_type")
+
+    return (data, metadata, layer_type)
+
+
+def _module_outputs(module: "jc.Module") -> Tuple[List[LayerDataTuple], List[Any]]:
     """Gets the output of the module, or None if the module has no output."""
+    layerDataTuples = []
+    otherOutputs = []
+
     outputs = module.getOutputs()
-    output_entry = outputs.entrySet().stream().findFirst()
-    if not output_entry.isPresent():
-        return None
-    output_value = output_entry.get().getValue()
-    return output_value
+    for output_entry in outputs.entrySet():
+        output_name = ij().py.from_java(output_entry.getKey())
+        output = ij().py.from_java(output_entry.getValue())
+        # Add LayerDataTuples directly
+        if isinstance(output, tuple) and len(output) >= 3:
+            layerDataTuples.append(output)
+        # Add arraylike outputs as images
+        elif ij().py._is_arraylike(output):
+            layerDataTuple = (output, {"name": output_name}, "image")
+            layerDataTuples.append(layerDataTuple)
+        elif isinstance(output, Layer):
+            layerDataTuples.append(_layerDataTuple_from_layer(output))
+
+        # Otherwise, it can't be displayed in napari.
+        else:
+            otherOutputs.append(output)
+
+    return (layerDataTuples, otherOutputs)
 
 
 def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> Any:
@@ -461,13 +492,10 @@ def _add_napari_metadata(
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
-    return_annotation = (
-        python_type_of(info.outputs()[0]) if len(info.outputs()) == 1 else dict
-    )
-    type_hints["return"] = return_annotation
-    execute_module.__annotation__ = type_hints  # type: ignore
+    type_hints["return"] = List[LayerDataTuple]
 
     execute_module._info = info  # type: ignore
+    execute_module.__annotation__ = type_hints  # type: ignore
 
 
 def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
@@ -581,18 +609,19 @@ def functionify_module_execution(
 
         # get output
         log_debug("Execution complete")
-        j_result = _module_output(module)
-        result = ij().py.from_java(j_result)
-        log_debug(f"Result = {result}")
+        layer_tuples: List[LayerDataTuple]
+        other_outputs: List[Any]
+        layer_tuples, other_outputs = _module_outputs(module)
 
-        # display result
+        # display non-layer outputs
         display_externally = _napari_specific_parameter(
             module_execute, user_resolved_inputs, "display_results_in_new_window"
         )
-        if display_externally is not None:
-            _display_result(result, info, viewer, display_externally)
+        if display_externally is not None and len(other_outputs) > 0:
+            # TODO: Handle multiple outputs
+            _display_result(other_outputs[0], info, viewer, display_externally)
 
-        return result
+        return layer_tuples
 
     # Add metadata for widget creation
     _add_napari_metadata(module_execute, info, unresolved_inputs)
