@@ -437,6 +437,9 @@ def _module_outputs(module: "jc.Module") -> Tuple[List[LayerDataTuple], List[Any
             layerDataTuples.append(layerDataTuple)
         elif isinstance(output, Layer):
             layerDataTuples.append(_layerDataTuple_from_layer(output))
+        # Ignore None outputs
+        elif output is None:
+            continue
 
         # Otherwise, it can't be displayed in napari.
         else:
