@@ -9,7 +9,6 @@ from magicgui.widgets import (
 )
 
 import pytest
-from napari.types import LayerDataTuple
 from inspect import Parameter, _empty
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
@@ -607,5 +606,5 @@ def test_modify_functional_signature():
 
     assert len(sig_params) == len(expected_names) + len(napari_param_map)
 
-    # assert return annotation
-    assert sig.return_annotation == List[LayerDataTuple]
+    # assert return annotation is _empty, as func doesn't have a return type hint
+    assert sig.return_annotation == _empty

@@ -402,9 +402,7 @@ def _modify_function_signature(
             for i in _napari_module_param_additions(module_info).items()
         ]
         all_params = module_params + other_params
-        function.__signature__ = sig.replace(
-            parameters=all_params, return_annotation=List[LayerDataTuple]
-        )
+        function.__signature__ = sig.replace(parameters=all_params)
     except Exception as e:
         print(e)
 
@@ -594,7 +592,7 @@ def functionify_module_execution(
     # Package the rest of the execution into a widget
     def module_execute(
         *user_resolved_inputs,
-    ):
+    ) -> List[LayerDataTuple]:
 
         # Resolve remaining inputs
         resolved_java_args = _preprocess_remaining_inputs(
