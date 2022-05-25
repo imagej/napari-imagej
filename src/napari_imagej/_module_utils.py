@@ -149,7 +149,6 @@ def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
     return _checkerUsingFunc(item, isAssignable)
 
 
-@lru_cache(maxsize=None)
 def _widget_return_type(module_info: "jc.Module") -> type:
     for output_item in module_info.outputs():
         if type_mappings().type_displayable_in_napari(output_item.getType()):
