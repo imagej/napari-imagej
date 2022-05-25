@@ -226,19 +226,6 @@ def test_python_type_of_IO(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-parameterizations = [([], None), ([jc.Double], float), ([jc.Double, jc.Double], dict)]
-
-
-@pytest.mark.parametrize("outputs, expected_module_return", parameterizations)
-def test_return_type(outputs, expected_module_return):
-    # Construct dummy ModuleInfos from outTypes
-    outItems = [DummyModuleItem(jtype=o) for o in outputs]
-    testInfo = DummyModuleInfo(outputs=outItems)
-
-    actual = _module_utils._return_type(testInfo)
-    assert expected_module_return == actual
-
-
 @pytest.fixture
 def example_info(ij):
     return ij.module().getModuleById(

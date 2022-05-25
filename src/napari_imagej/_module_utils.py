@@ -149,16 +149,6 @@ def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
     return _checkerUsingFunc(item, isAssignable)
 
 
-def _return_type(info: "jc.ModuleInfo"):
-    """Returns the output type of info."""
-    outs = info.outputs()
-    if len(outs) == 0:
-        return None
-    if len(outs) == 1:
-        return python_type_of(outs[0])
-    return dict
-
-
 @lru_cache(maxsize=None)
 def _widget_return_type(module_info: "jc.Module") -> type:
     for output_item in module_info.outputs():
