@@ -664,7 +664,6 @@ def functionify_module_execution(
             module_execute, user_resolved_inputs, "display_results_in_new_window"
         )
         if display_externally is not None and len(widget_outputs) > 0:
-            # TODO: Handle multiple outputs
             _display_result(widget_outputs, info, viewer, display_externally)
 
         # Hand off layer outputs to napari via return
