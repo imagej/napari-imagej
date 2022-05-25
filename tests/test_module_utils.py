@@ -11,6 +11,7 @@ from magicgui.widgets import (
 import pytest
 import numpy
 from napari.layers import Layer, Shapes, Points, Image, Labels
+from napari.types import LayerDataTuple
 from inspect import Parameter, _empty
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
@@ -612,8 +613,8 @@ def test_modify_functional_signature():
 
     assert len(sig_params) == len(expected_names) + len(napari_param_map)
 
-    # assert return annotation is _empty, as func doesn't have a return type hint
-    assert sig.return_annotation == _empty
+    # assert return annotation is None
+    assert sig.return_annotation is None
 
 
 layer_parameterizations = [
@@ -764,8 +765,28 @@ widget_parameterizations = [
 )
 def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
     layer_outputs, widget_outputs = run_module_from_script(ij, tmp_path, script)
-    assert num_layer == len(layer_outputs)
-    for layer_tuple in layer_outputs:
-        assert isinstance(layer_tuple, tuple)
-        assert len(layer_tuple) == 3
+    if num_layer == 0:
+        assert layer_outputs is None
+    else:
+        assert num_layer == len(layer_outputs)
+        for layer_tuple in layer_outputs:
+            assert isinstance(layer_tuple, tuple)
+            assert len(layer_tuple) == 3
     assert num_widget == len(widget_outputs)
+
+
+out_type_params = [
+    (script_zero_layer_one_widget, None),
+    (script_one_layer_one_widget, List[LayerDataTuple]),
+    (script_two_layer_one_widget, List[LayerDataTuple]),
+]
+
+
+@pytest.mark.parametrize(argnames="script, type", argvalues=out_type_params)
+def test_module_output_type(ij, tmp_path, script, type):
+    # Write the script to a file
+    p = tmp_path / "script.py"
+    p.write_text(script)
+
+    info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
+    assert _module_utils._widget_return_type(info) == type

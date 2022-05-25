@@ -159,6 +159,14 @@ def _return_type(info: "jc.ModuleInfo"):
     return dict
 
 
+@lru_cache(maxsize=None)
+def _widget_return_type(module_info: "jc.Module") -> type:
+    for output_item in module_info.outputs():
+        if type_mappings().type_displayable_in_napari(output_item.getType()):
+            return List[LayerDataTuple]
+    return None
+
+
 def _preprocess_non_inputs(module):
     """Uses all preprocessors up to the InputHarvesters."""
     # preprocess using plugin preprocessors
@@ -402,7 +410,10 @@ def _modify_function_signature(
             for i in _napari_module_param_additions(module_info).items()
         ]
         all_params = module_params + other_params
-        function.__signature__ = sig.replace(parameters=all_params)
+        return_type = _widget_return_type(module_info)
+        function.__signature__ = sig.replace(
+            parameters=all_params, return_annotation=return_type
+        )
     except Exception as e:
         print(e)
 
@@ -419,7 +430,9 @@ def _layerDataTuple_from_layer(layer: Layer):
     return (data, metadata, layer_type)
 
 
-def _module_outputs(module: "jc.Module") -> Tuple[List[LayerDataTuple], List[Any]]:
+def _module_outputs(
+    module: "jc.Module",
+) -> Tuple[Optional[List[LayerDataTuple]], List[Any]]:
     """Gets the output of the module, or None if the module has no output."""
     # Outputs delivered to users through the return of the magicgui widget.
     # Elements are napari.types.LayerDataTuple
@@ -449,6 +462,9 @@ def _module_outputs(module: "jc.Module") -> Tuple[List[LayerDataTuple], List[Any
         else:
             widget_outputs.append(output)
 
+    # napari cannot handle empty List[LayerDataTuple], so we return None if empty
+    if not len(layer_outputs):
+        layer_outputs = None
     return (layer_outputs, widget_outputs)
 
 
@@ -502,7 +518,8 @@ def _add_napari_metadata(
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
-    type_hints["return"] = List[LayerDataTuple]
+
+    type_hints["return"] = _widget_return_type(info)
 
     execute_module._info = info  # type: ignore
     execute_module.__annotation__ = type_hints  # type: ignore
@@ -597,9 +614,18 @@ def functionify_module_execution(
     unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
     # Package the rest of the execution into a widget
+    # TODO: Ideally, we'd have a return type hint List[LayerDataTuple] here,
+    # and we wouldn't need _widget_return_type. This won't work when we return
+    # no layers, however: see https://github.com/napari/napari/issues/4571.
     def module_execute(
         *user_resolved_inputs,
-    ) -> List[LayerDataTuple]:
+    ):
+        """
+        A function designed to execute module.
+        :param user_resolved_inputs: Inputs passed from magicgui
+        :return: A List[LayerDataTuple] of the layer data outputs of the module,
+            or None if this module does not return any layer data.
+        """
 
         # Resolve remaining inputs
         resolved_java_args = _preprocess_remaining_inputs(
