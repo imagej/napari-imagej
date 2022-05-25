@@ -2,12 +2,12 @@ from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
-from magicgui import magicgui
 from napari import Viewer
 from napari.layers import Layer
 from napari.types import LayerDataTuple
 from napari_imagej._ptypes import TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
+from magicgui.widgets import Widget, Container, Label, LineEdit
 
 
 @lru_cache(maxsize=None)
@@ -432,7 +432,7 @@ def _layerDataTuple_from_layer(layer: Layer):
 
 def _module_outputs(
     module: "jc.Module",
-) -> Tuple[Optional[List[LayerDataTuple]], List[Any]]:
+) -> Tuple[Optional[List[LayerDataTuple]], List[Tuple[str, Any]]]:
     """Gets the output of the module, or None if the module has no output."""
     # Outputs delivered to users through the return of the magicgui widget.
     # Elements are napari.types.LayerDataTuple
@@ -460,7 +460,7 @@ def _module_outputs(
 
         # Otherwise, it can't be displayed in napari.
         else:
-            widget_outputs.append(output)
+            widget_outputs.append((output_name, output))
 
     # napari cannot handle empty List[LayerDataTuple], so we return None if empty
     if not len(layer_outputs):
@@ -477,29 +477,38 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
     return args[index]
 
 
+def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
+
+    widgets = []
+    for result in results:
+        name = result[0]
+        value = str(result[1])
+        result_name: Label = Label(value=name)
+
+        result_value: LineEdit = LineEdit(value=value)
+        result_value.enabled = False
+
+        widget = Container(layout="horizontal", widgets=(result_name, result_value))
+        widgets.append(widget)
+
+    return Container(widgets=widgets)
+
+
 def _display_result(
-    result: Any,
+    results: List[Tuple[str, Any]],
     info: "jc.ModuleInfo",
     viewer: Viewer,
     external: bool,
 ) -> None:
     """Displays result in a new widget"""
 
-    def show_tabular_output():
-        return ij().py.from_java(result)
-
-    sig: Signature = signature(show_tabular_output)
-    show_tabular_output.__signature__ = sig.replace(
-        return_annotation=_return_type(info)
-    )
-    result_widget = magicgui(show_tabular_output, result_widget=True, auto_call=True)
+    widget: Widget = _non_layer_widget(results)
 
     if external:
-        result_widget.show(run=True)
+        widget.show(run=True)
     else:
         name = "Result: " + ij().py.from_java(info.getTitle())
-        viewer.window.add_dock_widget(result_widget, name=name)
-    result_widget.update()
+        viewer.window.add_dock_widget(widget, name=name)
 
 
 def _add_napari_metadata(
@@ -655,7 +664,7 @@ def functionify_module_execution(
         )
         if display_externally is not None and len(widget_outputs) > 0:
             # TODO: Handle multiple outputs
-            _display_result(widget_outputs[0], info, viewer, display_externally)
+            _display_result(widget_outputs, info, viewer, display_externally)
 
         # Hand off layer outputs to napari via return
         return layer_outputs

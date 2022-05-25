@@ -1,5 +1,9 @@
 from typing import Any, Dict, List, Optional
 from magicgui.widgets import (
+    Widget,
+    Container,
+    Label,
+    LineEdit,
     Select,
     RadioButtons,
     Slider,
@@ -790,3 +794,19 @@ def test_module_output_type(ij, tmp_path, script, type):
 
     info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
     assert _module_utils._widget_return_type(info) == type
+
+
+def test_non_layer_widget():
+    results = [("a", 1), ("b", 2)]
+    widget: Widget = _module_utils._non_layer_widget(results)
+    # Assert the return is a container
+    assert isinstance(widget, Container)
+    # Assert the nth subwidget reports the nth name and (stringified) value
+    for result, subwidget in zip(results, widget):
+        assert isinstance(subwidget, Container)
+        # Assert the label is 'a'
+        assert isinstance(subwidget[0], Label)
+        assert subwidget[0].value == result[0]
+        # Assert the value is '1' (stringified 1)
+        assert isinstance(subwidget[1], LineEdit)
+        assert subwidget[1].value == str(result[1])
