@@ -19,14 +19,19 @@ jobs:
     runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
-        platform: [ubuntu-latest, windows-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.7', '3.10']
 
         # Breaks due to https://github.com/jpype-project/jpype/issues/1009
         # Should be included once the fix is released
         exclude:
           - platform: windows-latest
             python-version: "3.10"
+        include:
+          - platform: windows-latest
+            python-version: "3.9"
+    env:
+      AWT_FORCE_HEADFUL: true
 
     steps:
       - uses: actions/checkout@v2
