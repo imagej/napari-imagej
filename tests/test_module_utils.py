@@ -1,5 +1,9 @@
 from typing import Any, Dict, List, Optional
 from magicgui.widgets import (
+    Widget,
+    Container,
+    Label,
+    LineEdit,
     Select,
     RadioButtons,
     Slider,
@@ -9,6 +13,9 @@ from magicgui.widgets import (
 )
 
 import pytest
+import numpy
+from napari.layers import Layer, Shapes, Points, Image, Labels
+from napari.types import LayerDataTuple
 from inspect import Parameter, _empty
 from napari_imagej import _module_utils
 from napari_imagej.setup_imagej import JavaClasses
@@ -47,6 +54,10 @@ class JavaClassesTest(JavaClasses):
     @JavaClasses.blocking_import
     def ItemIO(self):
         return "org.scijava.ItemIO"
+
+    @JavaClasses.blocking_import
+    def ScriptInfo(self):
+        return "org.scijava.script.ScriptInfo"
 
     @JavaClasses.blocking_import
     def System(self):
@@ -213,19 +224,6 @@ type_pairs = direct_match_pairs + convertible_match_pairs
 def test_python_type_of_IO(jtype, ptype):
     module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=True)
     assert _module_utils.python_type_of(module_item) == ptype
-
-
-parameterizations = [([], None), ([jc.Double], float), ([jc.Double, jc.Double], dict)]
-
-
-@pytest.mark.parametrize("outputs, expected_module_return", parameterizations)
-def test_return_type(outputs, expected_module_return):
-    # Construct dummy ModuleInfos from outTypes
-    outItems = [DummyModuleItem(jtype=o) for o in outputs]
-    testInfo = DummyModuleInfo(outputs=outItems)
-
-    actual = _module_utils._return_type(testInfo)
-    assert expected_module_return == actual
 
 
 @pytest.fixture
@@ -606,5 +604,196 @@ def test_modify_functional_signature():
 
     assert len(sig_params) == len(expected_names) + len(napari_param_map)
 
-    # assert return annotation
-    assert sig.return_annotation == str
+    # assert return annotation is None
+    assert sig.return_annotation is None
+
+
+layer_parameterizations = [
+    (Image(data=numpy.random.rand(4, 4), name="foo"), ["name"]),
+    (Points(data=numpy.random.rand(4, 2), name="bar"), ["name"]),
+    (
+        Labels(
+            data=numpy.random.randint(3, size=(4, 4)),
+            name="bar",
+            metadata={"pyLabelingData": "foo"},
+        ),
+        ["name", "metadata"],
+    ),
+    (
+        Shapes(
+            data=numpy.random.rand(3, 4, 4),
+            name="bar",
+            shape_type=["rectangle", "ellipse", "path"],
+        ),
+        ["name", "shape_type"],
+    ),
+]
+
+
+@pytest.mark.parametrize(argnames="layer, params", argvalues=layer_parameterizations)
+def test_layerDataTuple_from_layer(layer: Layer, params: List[str]):
+    layerDataTuple = _module_utils._layerDataTuple_from_layer(layer)
+    assert isinstance(layerDataTuple, tuple)
+    assert len(layerDataTuple) == 3
+    assert numpy.allclose(layer.data, layerDataTuple[0])
+    assert type(layer).__name__ == layerDataTuple[2]
+    for param in params:
+        assert getattr(layer, param) == layerDataTuple[1][param]
+
+
+def run_module_from_script(ij, tmp_path, script):
+    # Write the script to a file
+    p = tmp_path / "script.py"
+    p.write_text(script)
+
+    info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
+    module = info.createModule()
+    ij.context().inject(module)
+    _module_utils._preprocess_non_inputs(module)
+    _module_utils._preprocess_remaining_inputs(module, [], [], [])
+    _module_utils._run_module(module)
+    _module_utils._postprocess_module(module)
+    return _module_utils._module_outputs(module)
+
+
+script_zero_layer_zero_widget: str = """
+c = 1
+"""
+
+script_one_layer_zero_widget: str = """
+#@OUTPUT Img d
+
+from net.imglib2.img.array import ArrayImgs
+
+d = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+script_two_layer_zero_widget: str = """
+#@OUTPUT Img d
+#@OUTPUT Img e
+
+from net.imglib2.img.array import ArrayImgs
+
+d = ArrayImgs.unsignedBytes(10, 10)
+e = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+script_zero_layer_one_widget: str = """
+#@OUTPUT Long a
+a = 4
+"""
+
+script_one_layer_one_widget: str = """
+#@OUTPUT Long a
+#@OUTPUT Img d
+
+from net.imglib2.img.array import ArrayImgs
+
+a = 4
+d = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+script_two_layer_one_widget: str = """
+#@OUTPUT Long a
+#@OUTPUT Img d
+#@OUTPUT Img e
+
+from net.imglib2.img.array import ArrayImgs
+
+a = 1
+d = ArrayImgs.unsignedBytes(10, 10)
+e = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+script_zero_layer_two_widget: str = """
+#@OUTPUT Long a
+#@OUTPUT Long b
+a = 4
+b = 1
+"""
+
+script_one_layer_two_widget: str = """
+#@OUTPUT Long a
+#@OUTPUT Long b
+#@OUTPUT Img d
+
+from net.imglib2.img.array import ArrayImgs
+
+a = 4
+b = 4
+d = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+script_two_layer_two_widget: str = """
+#@OUTPUT Long a
+#@OUTPUT Long b
+#@OUTPUT Img d
+#@OUTPUT Img e
+
+from net.imglib2.img.array import ArrayImgs
+
+a = 1
+b = 1
+d = ArrayImgs.unsignedBytes(10, 10)
+e = ArrayImgs.unsignedBytes(10, 10)
+"""
+
+widget_parameterizations = [
+    (script_zero_layer_zero_widget, 0, 0),
+    (script_one_layer_zero_widget, 1, 0),
+    (script_two_layer_zero_widget, 2, 0),
+    (script_zero_layer_one_widget, 0, 1),
+    (script_one_layer_one_widget, 1, 1),
+    (script_two_layer_one_widget, 2, 1),
+    (script_zero_layer_two_widget, 0, 2),
+    (script_one_layer_two_widget, 1, 2),
+    (script_two_layer_two_widget, 2, 2),
+]
+
+
+@pytest.mark.parametrize(
+    argnames="script, num_layer, num_widget", argvalues=widget_parameterizations
+)
+def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
+    layer_outputs, widget_outputs = run_module_from_script(ij, tmp_path, script)
+    if num_layer == 0:
+        assert layer_outputs is None
+    else:
+        assert num_layer == len(layer_outputs)
+        for layer_tuple in layer_outputs:
+            assert isinstance(layer_tuple, tuple)
+            assert len(layer_tuple) == 3
+    assert num_widget == len(widget_outputs)
+
+
+out_type_params = [
+    (script_zero_layer_one_widget, None),
+    (script_one_layer_one_widget, List[LayerDataTuple]),
+    (script_two_layer_one_widget, List[LayerDataTuple]),
+]
+
+
+@pytest.mark.parametrize(argnames="script, type", argvalues=out_type_params)
+def test_module_output_type(ij, tmp_path, script, type):
+    # Write the script to a file
+    p = tmp_path / "script.py"
+    p.write_text(script)
+
+    info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
+    assert _module_utils._widget_return_type(info) == type
+
+
+def test_non_layer_widget():
+    results = [("a", 1), ("b", 2)]
+    widget: Widget = _module_utils._non_layer_widget(results)
+    # Assert the return is a container
+    assert isinstance(widget, Container)
+    # Assert the nth subwidget reports the nth name and (stringified) value
+    for result, subwidget in zip(results, widget):
+        assert isinstance(subwidget, Container)
+        # Assert the label is 'a'
+        assert isinstance(subwidget[0], Label)
+        assert subwidget[0].value == result[0]
+        # Assert the value is '1' (stringified 1)
+        assert isinstance(subwidget[1], LineEdit)
+        assert subwidget[1].value == str(result[1])
