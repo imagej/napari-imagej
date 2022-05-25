@@ -150,6 +150,12 @@ def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
 
 
 def _widget_return_type(module_info: "jc.Module") -> type:
+    """
+    Determines the return type of execute_module within functionify_module_execution.
+    If there are ANY "layer" outputs described in module_info, the output will be
+    a List of LayerDataTuple. If there are no "layer" outputs, the return will be
+    None.
+    """
     for output_item in module_info.outputs():
         if type_mappings().type_displayable_in_napari(output_item.getType()):
             return List[LayerDataTuple]
