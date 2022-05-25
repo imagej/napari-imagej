@@ -647,6 +647,11 @@ def functionify_module_execution(
         layer_outputs: List[LayerDataTuple]
         widget_outputs: List[Any]
         layer_outputs, widget_outputs = _module_outputs(module)
+        if layer_outputs is not None:
+            for output in layer_outputs:
+                log_debug(f"Result: ({output[2]}) {output[1]['name']}")
+        for output in widget_outputs:
+            log_debug(f"Result: ({type(output[1])}) {output[0]}")
 
         # display non-layer outputs in a widget
         display_externally = _napari_specific_parameter(
