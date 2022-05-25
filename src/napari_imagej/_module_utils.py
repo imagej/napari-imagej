@@ -441,7 +441,7 @@ def _module_outputs(
         output_name = ij().py.from_java(output_entry.getKey())
         output = ij().py.from_java(output_entry.getValue())
         # Add LayerDataTuples directly
-        if isinstance(output, tuple) and len(output) >= 3:
+        if isinstance(output, tuple) and len(output) <= 3:
             layer_outputs.append(output)
         # Add arraylike outputs as images
         elif ij().py._is_arraylike(output):
