@@ -652,6 +652,7 @@ def functionify_module_execution(
         layer_outputs: List[LayerDataTuple]
         widget_outputs: List[Any]
         layer_outputs, widget_outputs = _module_outputs(module)
+        # log outputs
         if layer_outputs is not None:
             for output in layer_outputs:
                 log_debug(f"Result: ({output[2]}) {output[1]['name']}")
