@@ -7,4 +7,5 @@ contributions:
       title: Run ImageJ2 commands
   widgets:
     - command: napari-imagej.func
-      display_name: ImageJ2
+      # TODO: Remove (DEVELOPER PREVIEW) once we are farther along
+      display_name: ImageJ2 (DEVELOPER PREVIEW)
