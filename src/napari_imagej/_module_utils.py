@@ -157,6 +157,9 @@ def _widget_return_type(module_info: "jc.Module") -> type:
     None.
     """
     for output_item in module_info.outputs():
+        # We only return PURE outputs (i.e. not mutable outputs)
+        if output_item.isInput():
+            continue
         if type_mappings().type_displayable_in_napari(output_item.getType()):
             return List[LayerDataTuple]
     return None
@@ -217,6 +220,29 @@ def _preprocess_remaining_inputs(
             )
 
     return resolved_java_args
+
+
+def _mutable_layers(
+    unresolved_inputs: List["jc.ModuleItem"], user_resolved_inputs: List[Any]
+) -> List[Layer]:
+    """
+    Finds all layers passed to a module that will be mutated
+    :param unresolved_inputs: The ModuleItems declaring I/O intent
+    :param user_resolved_inputs: The PYTHON inputs passed by magicgui
+    :return: The Layer arguments that will be modified
+    """
+    mutable_layers: List[Layer] = []
+    for item, input in zip(unresolved_inputs, user_resolved_inputs):
+        # We don't care about input unless it is a layer
+        if not isinstance(input, Layer):
+            continue
+        # We don't care about input unless it is an output
+        if not item.isOutput():
+            continue
+
+        mutable_layers.append(input)
+
+    return mutable_layers
 
 
 def _resolvable_or_required(input: "jc.ModuleItem"):
@@ -425,10 +451,10 @@ def _layerDataTuple_from_layer(layer: Layer):
     return (data, metadata, layer_type)
 
 
-def _module_outputs(
+def _pure_module_outputs(
     module: "jc.Module",
 ) -> Tuple[Optional[List[LayerDataTuple]], List[Tuple[str, Any]]]:
-    """Gets the output of the module, or None if the module has no output."""
+    """Gets the pure outputs of the module, or None if the module has no pure output."""
     # Outputs delivered to users through the return of the magicgui widget.
     # Elements are napari.types.LayerDataTuple
     layer_outputs = []
@@ -438,7 +464,10 @@ def _module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
+        # Ignore outputs that are also inputs
         output_name = ij().py.from_java(output_entry.getKey())
+        if output_name in module.getInputs():
+            continue
         output = ij().py.from_java(output_entry.getValue())
         # Add LayerDataTuples directly
         if isinstance(output, tuple) and len(output) <= 3:
@@ -636,6 +665,11 @@ def functionify_module_execution(
             module, info.inputs(), unresolved_inputs, user_resolved_inputs
         )
 
+        mutated_layers = _mutable_layers(
+            unresolved_inputs,
+            user_resolved_inputs,
+        )
+
         # run module
         log_debug(
             f"Running {module_execute.__qualname__} \
@@ -651,7 +685,7 @@ def functionify_module_execution(
         # get all outputs
         layer_outputs: List[LayerDataTuple]
         widget_outputs: List[Any]
-        layer_outputs, widget_outputs = _module_outputs(module)
+        layer_outputs, widget_outputs = _pure_module_outputs(module)
         # log outputs
         if layer_outputs is not None:
             for output in layer_outputs:
@@ -665,6 +699,10 @@ def functionify_module_execution(
         )
         if display_externally is not None and len(widget_outputs) > 0:
             _display_result(widget_outputs, info, viewer, display_externally)
+
+        # Refresh the modified layers
+        for layer in mutated_layers:
+            layer.refresh()
 
         # Hand off layer outputs to napari via return
         return layer_outputs

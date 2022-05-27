@@ -653,7 +653,7 @@ def run_module_from_script(ij, tmp_path, script):
     _module_utils._preprocess_remaining_inputs(module, [], [], [])
     _module_utils._run_module(module)
     _module_utils._postprocess_module(module)
-    return _module_utils._module_outputs(module)
+    return _module_utils._pure_module_outputs(module)
 
 
 script_zero_layer_zero_widget: str = """

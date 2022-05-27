@@ -14,6 +14,7 @@ from labeling.Labeling import Labeling
 
 # -- Image / Img -- #
 
+
 def _image_to_img(image: Image) -> "jc.Img":
     data = image.data
     return ij().py.to_java(data)
