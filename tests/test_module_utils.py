@@ -166,7 +166,7 @@ class DummyModuleItem:
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
-    (jc.ArrayImg, "napari.types.ImageData")  # ArrayImg -> RAI -> ImageData
+    (jc.ArrayImg, "napari.layers.Image")  # ArrayImg -> RAI -> ImageData
 ]
 convertible_match_pairs = [
     # We want to test that napari could tell that a DoubleArray ModuleItem
@@ -653,7 +653,7 @@ def run_module_from_script(ij, tmp_path, script):
     _module_utils._preprocess_remaining_inputs(module, [], [], [])
     _module_utils._run_module(module)
     _module_utils._postprocess_module(module)
-    return _module_utils._module_outputs(module)
+    return _module_utils._pure_module_outputs(module)
 
 
 script_zero_layer_zero_widget: str = """
@@ -797,3 +797,24 @@ def test_non_layer_widget():
         # Assert the value is '1' (stringified 1)
         assert isinstance(subwidget[1], LineEdit)
         assert subwidget[1].value == str(result[1])
+
+
+def test_mutable_layers():
+    # 4 inputs, only the last is a mutable layer
+    unresolved_inputs = [
+        DummyModuleItem(name="a", isOutput=False),
+        DummyModuleItem(name="b", isOutput=True),
+        DummyModuleItem(name="c", isOutput=False),
+        DummyModuleItem(name="d", isOutput=True),
+    ]
+    user_resolved_inputs = [
+        1,
+        2,
+        Image(data=numpy.ones((4, 4))),
+        Image(data=numpy.ones((4, 4))),
+    ]
+    mutable_layers = _module_utils._mutable_layers(
+        unresolved_inputs, user_resolved_inputs
+    )
+    assert 1 == len(mutable_layers)
+    assert user_resolved_inputs[3] in mutable_layers
