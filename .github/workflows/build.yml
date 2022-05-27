@@ -30,11 +30,6 @@ jobs:
         include:
           - platform: windows-latest
             python-version: "3.9"
-    env:
-      # We run headless on CI. This yields issues on Mac, where running Java
-      # headless will alter the screen size on Python, leading to errors. Adding
-      # this environment variable prevents Java from modifying the screen size.
-      AWT_FORCE_HEADFUL: true
 
     steps:
       - uses: actions/checkout@v2
@@ -65,6 +60,14 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
+      
+      # We run headless on CI. This yields issues on Mac, where running Java
+      # headless will alter the screen size on Python, leading to errors. Adding
+      # this environment variable prevents Java from modifying the screen size.
+      - name: Set MacOS environment variables
+        if: runner.os == 'MacOS'
+        run: |
+          echo "AWT_FORCE_HEADFUL=true" >> $GITHUB_ENV
 
       - name: Install napari-imagej
         run: |
