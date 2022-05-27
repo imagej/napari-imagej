@@ -31,6 +31,9 @@ jobs:
           - platform: windows-latest
             python-version: "3.9"
     env:
+      # We run headless on CI. This yields issues on Mac, where running Java
+      # headless will alter the screen size on Python, leading to errors. Adding
+      # this environment variable prevents Java from modifying the screen size.
       AWT_FORCE_HEADFUL: true
 
     steps:
