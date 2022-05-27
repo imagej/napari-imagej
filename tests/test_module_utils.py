@@ -166,7 +166,7 @@ class DummyModuleItem:
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
 assignable_match_pairs = [
-    (jc.ArrayImg, "napari.types.ImageData")  # ArrayImg -> RAI -> ImageData
+    (jc.ArrayImg, "napari.layers.Image")  # ArrayImg -> RAI -> ImageData
 ]
 convertible_match_pairs = [
     # We want to test that napari could tell that a DoubleArray ModuleItem

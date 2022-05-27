@@ -2,7 +2,7 @@ from typing import List
 from jpype import JArray, JDouble
 import numpy as np
 from napari_imagej.setup_imagej import ij, jc
-from napari.layers import Labels, Shapes, Points
+from napari.layers import Labels, Shapes, Points, Image
 from napari_imagej import _ntypes
 from scyjava import (
     Converter,
@@ -11,6 +11,12 @@ from scyjava import (
     add_java_converter,
 )
 from labeling.Labeling import Labeling
+
+# -- Image / Img -- #
+
+def _image_to_img(image: Image) -> "jc.Img":
+    data = image.data
+    return ij().py.to_java(data)
 
 
 # -- Labels / ImgLabelings -- #
@@ -306,6 +312,11 @@ def _realpointcollection_to_points(collection):
 
 def _napari_to_java_converters() -> List[Converter]:
     return [
+        Converter(
+            predicate=lambda obj: isinstance(obj, Image),
+            converter=lambda obj: _image_to_img(obj),
+            priority=Priority.VERY_HIGH,
+        ),
         Converter(
             predicate=lambda obj: isinstance(obj, Labels),
             converter=lambda obj: _layer_to_imglabeling(obj),
