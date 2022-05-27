@@ -90,18 +90,8 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
         imagej_widget.focuser.tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
-    assert py_actions[2].name == "Help"
-    assert (
-        imagej_widget.focuser.tooltips[py_actions[2][0]]
-        == "Opens the functionality's ImageJ.net wiki page"
-    )
-    assert py_actions[3].name == "Source"
-    assert (
-        imagej_widget.focuser.tooltips[py_actions[3][0]]
-        == "Opens the source code on GitHub"
-    )
-    assert py_actions[4].name == "Batch"
-    assert py_actions[4].name not in imagej_widget.focuser.tooltips
+    assert py_actions[2].name == "Batch"
+    assert py_actions[2].name not in imagej_widget.focuser.tooltips
 
 
 def test_keymaps(make_napari_viewer, qtbot):

@@ -44,7 +44,9 @@ def imagej_init():
     # Parse imagej settings
     ij_dir = setting("imagej_installation")
 
-    _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
+    _ij = imagej.init(
+        ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode(), add_legacy=False
+    )
     log_debug(f"Initialized at version {_ij.getVersion()}")
 
     # Final configuration
