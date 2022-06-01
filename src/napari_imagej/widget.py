@@ -216,9 +216,12 @@ class FocusWidget(QWidget):
         for i in range(len(self.focused_actions)):
             action_name = ij().py.from_java(self.focused_actions[i].toString())
             self.focused_action_buttons[i].show()
-            self.focused_action_buttons[i].setText(action_name)
             self.focused_action_buttons[i].disconnect()
             if action_name == "Run":
+                # "Run" is a little confusing, we won't be running the module
+                # when we click run but will instead pop up an input harvester.
+                # Let's be more clear about what we are doing.
+                action_name = "Initialize"
                 self.focused_action_buttons[i].clicked.connect(
                     lambda: self._execute_module(
                         self._convert_searchResult_to_info(self.focused_module)
@@ -228,6 +231,7 @@ class FocusWidget(QWidget):
                 self.focused_action_buttons[i].clicked.connect(
                     self.focused_actions[i].run
                 )
+            self.focused_action_buttons[i].setText(action_name)
             self.focused_action_buttons[i].show()
 
     def _execute_module(self, moduleInfo):
