@@ -33,7 +33,7 @@ def imagej_init():
     config.add_repositories(
         {"scijava.public": "https://maven.scijava.org/content/groups/public"}
     )
-    config.add_option(f"-Dimagej.dir={os.getcwd()}")  # TEMP
+    config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
     config.endpoints.append("io.scif:scifio:0.43.1")
 
     log_debug("Completed JVM Configuration")
@@ -197,6 +197,10 @@ class JavaClasses(object):
     @blocking_import
     def DisplayPostprocessor(self):
         return "org.scijava.module.process.PostprocessorPlugin"
+
+    @blocking_import
+    def InputHarvester(self):
+        return "org.scijava.widget.InputHarvester"
 
     @blocking_import
     def Module(self):

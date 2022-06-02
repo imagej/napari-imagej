@@ -233,15 +233,15 @@ def example_info(ij):
     )
 
 
-def test_preprocess_non_inputs(ij, example_info):
+def test_preprocess_to_harvester(ij, example_info):
     module = ij.module().createModule(example_info)
     all_inputs = module.getInfo().inputs()
     # We expect the log and opService to be resolved with
-    # _preprocess_non_inputs
+    # _preprocess_to_harvester; the harvested input should not be resolved.
     non_input_names = [ij.py.to_java(s) for s in ["opService", "log"]]
     expected = filter(lambda x: x.getName() in non_input_names, all_inputs)
     # Get the list of acutally resolved inputs
-    _module_utils._preprocess_non_inputs(module)
+    _module_utils._preprocess_to_harvester(module)
     actual = filter(lambda x: module.isResolved(x.getName()), all_inputs)
 
     for e, a in zip(expected, actual):
@@ -291,8 +291,16 @@ def test_preprocess_remaining_inputs(preresolved_module):
     unresolved_inputs = _module_utils._filter_unresolved_inputs(
         preresolved_module, all_inputs
     )
+
+    # In this scenario, we don't care about the remaining harvesters
+    remaining_preprocessors = []
+
     _module_utils._preprocess_remaining_inputs(
-        preresolved_module, all_inputs, unresolved_inputs, user_inputs
+        preresolved_module,
+        all_inputs,
+        unresolved_inputs,
+        user_inputs,
+        remaining_preprocessors,
     )
 
     for input in all_inputs:
@@ -649,8 +657,10 @@ def run_module_from_script(ij, tmp_path, script):
     info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
     module = info.createModule()
     ij.context().inject(module)
-    _module_utils._preprocess_non_inputs(module)
-    _module_utils._preprocess_remaining_inputs(module, [], [], [])
+    remaining_preprocessors = _module_utils._preprocess_to_harvester(module)
+    _module_utils._preprocess_remaining_inputs(
+        module, [], [], [], remaining_preprocessors
+    )
     _module_utils._run_module(module)
     _module_utils._postprocess_module(module)
     return _module_utils._pure_module_outputs(module)
