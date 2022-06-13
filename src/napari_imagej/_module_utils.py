@@ -166,13 +166,22 @@ def _widget_return_type(module_info: "jc.Module") -> type:
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
-    """Uses all preprocessors up to the InputHarvesters."""
-    # preprocess using plugin preprocessors
-    log_debug("Preprocessing...")
-    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
+    """
+    Uses all preprocessors up to the InputHarvesters.
+    We stop at the InputHarvesters as they would attempt to resolve inputs that
+    we want to resolve in napari.
 
+    We return the list of preprocessors that HAVE NOT YET RUN, so the calling code
+    can run them later.
+
+    :param module: The module to preprocess
+    :return: The list of preprocessors that have not yet run.
+    """
+    log_debug("Preprocessing...")
+
+    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
     for i, preprocessor in enumerate(preprocessors):
-        # if preprocessor is an InputHarvester, we need to stop.
+        # if preprocessor is an InputHarvester, stop and return the remaining list
         if isinstance(preprocessor, jc.InputHarvester):
             return list(preprocessors)[i:]
         # preprocess
