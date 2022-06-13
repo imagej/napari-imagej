@@ -83,3 +83,6 @@ venv/
 # written by setuptools_scm
 **/_version.py
 
+# Scripts
+/scripts/*
+!/scripts/examples

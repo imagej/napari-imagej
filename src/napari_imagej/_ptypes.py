@@ -1,5 +1,7 @@
 from collections import OrderedDict
 from typing import Dict, List
+
+from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 from napari_imagej.setup_imagej import jc
 
 
@@ -15,6 +17,7 @@ class TypeMappings:
 
         # Strings
         self._strings = {
+            JChar: str,
             jc.Character_Arr: str,
             jc.Character: str,
             jc.String: str,
@@ -22,6 +25,7 @@ class TypeMappings:
 
         # Booleans
         self._booleans = {
+            JBoolean: bool,
             jc.Boolean_Arr: List[bool],
             jc.Boolean: bool,
             jc.BooleanType: bool,
@@ -29,16 +33,22 @@ class TypeMappings:
 
         # Numbers
         self._numbers = {
+            JByte: int,
             jc.Byte: int,
             jc.Byte_Arr: List[int],
+            JShort: int,
             jc.Short: int,
             jc.Short_Arr: List[int],
+            JInt: int,
             jc.Integer: int,
             jc.Integer_Arr: List[int],
+            JLong: int,
             jc.Long: int,
             jc.Long_Arr: List[int],
+            JFloat: float,
             jc.Float: float,
             jc.Float_Arr: List[float],
+            JDouble: float,
             jc.Double: float,
             jc.Double_Arr: List[float],
             jc.BigInteger: int,

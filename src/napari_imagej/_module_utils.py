@@ -165,13 +165,26 @@ def _widget_return_type(module_info: "jc.Module") -> type:
     return None
 
 
-def _preprocess_non_inputs(module):
-    """Uses all preprocessors up to the InputHarvesters."""
-    # preprocess using plugin preprocessors
+def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
+    """
+    Uses all preprocessors up to the InputHarvesters.
+    We stop at the InputHarvesters as they would attempt to resolve inputs that
+    we want to resolve in napari.
+
+    We return the list of preprocessors that HAVE NOT YET RUN, so the calling code
+    can run them later.
+
+    :param module: The module to preprocess
+    :return: The list of preprocessors that have not yet run.
+    """
     log_debug("Preprocessing...")
+
     preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
-    # we want to avoid these processors
-    for preprocessor in preprocessors:
+    for i, preprocessor in enumerate(preprocessors):
+        # if preprocessor is an InputHarvester, stop and return the remaining list
+        if isinstance(preprocessor, jc.InputHarvester):
+            return list(preprocessors)[i:]
+        # preprocess
         preprocessor.process(module)
 
 
@@ -200,12 +213,16 @@ def _preprocess_remaining_inputs(
     inputs: List["jc.ModuleItem"],
     unresolved_inputs: List["jc.ModuleItem"],
     user_resolved_inputs: List[Any],
+    remaining_preprocessors: List["jc.PreprocessorPlugin"],
 ):
     """Resolves each input in unresolved_inputs"""
     resolved_java_args = ij().py.jargs(*user_resolved_inputs)
     # resolve remaining inputs
     for module_item, input in zip(unresolved_inputs, resolved_java_args):
         _resolve_user_input(module, module_item, input)
+
+    for processor in remaining_preprocessors:
+        processor.process(module)
 
     # sanity check: ensure all inputs resolved
     for input in inputs:
@@ -640,7 +657,8 @@ def functionify_module_execution(
 ) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     # Run preprocessors until we hit input harvesting
-    _preprocess_non_inputs(module)
+    input_harvesters: List["jc.PreprocessorPlugin"]
+    input_harvesters = _preprocess_to_harvester(module)
 
     # Determine which inputs must be resolved by the user
     unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -662,7 +680,11 @@ def functionify_module_execution(
 
         # Resolve remaining inputs
         resolved_java_args = _preprocess_remaining_inputs(
-            module, info.inputs(), unresolved_inputs, user_resolved_inputs
+            module,
+            info.inputs(),
+            unresolved_inputs,
+            user_resolved_inputs,
+            input_harvesters,
         )
 
         mutated_layers = _mutable_layers(
