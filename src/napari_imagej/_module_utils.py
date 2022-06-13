@@ -1,13 +1,15 @@
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-from scyjava import Priority, JavaIterable, JavaMap, JavaSet
 from inspect import Parameter, Signature, signature
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+
+from magicgui.widgets import Container, Label, LineEdit, Widget
 from napari import Viewer
 from napari.layers import Layer
 from napari.types import LayerDataTuple
+from scyjava import JavaIterable, JavaMap, JavaSet, Priority
+
 from napari_imagej._ptypes import TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
-from magicgui.widgets import Widget, Container, Label, LineEdit
 
 
 @lru_cache(maxsize=None)

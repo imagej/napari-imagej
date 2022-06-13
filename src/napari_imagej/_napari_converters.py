@@ -1,16 +1,13 @@
 from typing import List
-from jpype import JArray, JDouble
+
 import numpy as np
-from napari_imagej.setup_imagej import ij, jc
-from napari.layers import Labels, Shapes, Points, Image
-from napari_imagej import _ntypes
-from scyjava import (
-    Converter,
-    Priority,
-    add_py_converter,
-    add_java_converter,
-)
+from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
+from napari.layers import Image, Labels, Points, Shapes
+from scyjava import Converter, Priority, add_java_converter, add_py_converter
+
+from napari_imagej import _ntypes
+from napari_imagej.setup_imagej import ij, jc
 
 # -- Image / Img -- #
 

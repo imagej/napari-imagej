@@ -1,5 +1,5 @@
-from napari.layers import Labels
 from labeling.Labeling import Labeling
+from napari.layers import Labels
 
 
 def _labeling_to_layer(labeling: Labeling):

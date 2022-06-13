@@ -1,10 +1,11 @@
-import os
-from typing import Callable
-from jpype import JClass
 import logging
-import imagej
-from scyjava import config, jimport
+import os
 from multiprocessing.pool import AsyncResult, ThreadPool
+from typing import Callable
+
+import imagej
+from jpype import JClass
+from scyjava import config, jimport
 
 # -- LOGGER CONFIG -- #
 

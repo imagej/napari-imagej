@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Dict, List
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
+
 from napari_imagej.setup_imagej import jc
 
 

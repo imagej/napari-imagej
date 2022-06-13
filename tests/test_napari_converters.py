@@ -1,10 +1,12 @@
 from typing import Any, Dict, List
-from jpype import JArray, JDouble
-import pytest
+
 import numpy as np
-from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
+import pytest
+from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
-from napari.layers import Labels, Shapes, Points
+from napari.layers import Labels, Points, Shapes
+
+from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from napari_imagej.setup_imagej import jc
 
 

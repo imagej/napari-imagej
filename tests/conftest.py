@@ -1,8 +1,9 @@
 from typing import Generator
+
 import pytest
+from napari import Viewer
 
 from napari_imagej.widget import ImageJWidget
-from napari import Viewer
 
 
 @pytest.fixture(scope="module")

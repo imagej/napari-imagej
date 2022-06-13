@@ -1,25 +1,26 @@
+from inspect import Parameter, _empty
 from typing import Any, Dict, List, Optional
+
+import numpy
+import pytest
 from magicgui.widgets import (
-    Widget,
     Container,
+    FloatSlider,
+    FloatSpinBox,
     Label,
     LineEdit,
-    Select,
     RadioButtons,
+    Select,
     Slider,
-    FloatSlider,
     SpinBox,
-    FloatSpinBox,
+    Widget,
 )
-
-import pytest
-import numpy
-from napari.layers import Layer, Shapes, Points, Image, Labels
+from napari.layers import Image, Labels, Layer, Points, Shapes
 from napari.types import LayerDataTuple
-from inspect import Parameter, _empty
+
 from napari_imagej import _module_utils
-from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej._ptypes import TypeMappings, _supported_styles
+from napari_imagej.setup_imagej import JavaClasses
 
 
 class JavaClassesTest(JavaClasses):
