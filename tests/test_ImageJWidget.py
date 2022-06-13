@@ -1,17 +1,18 @@
+from qtpy.QtWidgets import (
+    QAbstractItemView,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QTableWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
     ResultsWidget,
     SearchbarWidget,
-)
-from qtpy.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTableWidget,
-    QAbstractItemView,
-    QLineEdit,
-    QLabel,
 )
 
 

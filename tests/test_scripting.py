@@ -1,4 +1,5 @@
 from magicgui import magicgui
+
 from napari_imagej._module_utils import functionify_module_execution
 from napari_imagej.setup_imagej import JavaClasses
 

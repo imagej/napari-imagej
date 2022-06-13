@@ -7,23 +7,25 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 Replace code below according to your needs.
 """
 from functools import lru_cache
+from threading import Thread
 from typing import List
+
 from napari import Viewer
 from qtpy.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QVBoxLayout,
-    QPushButton,
-    QLineEdit,
-    QTableWidget,
     QAbstractItemView,
+    QHBoxLayout,
     QHeaderView,
-    QTableWidgetItem,
     QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
+
 from napari_imagej._module_utils import functionify_module_execution
-from threading import Thread
+from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
 
 
 class ImageJWidget(QWidget):
