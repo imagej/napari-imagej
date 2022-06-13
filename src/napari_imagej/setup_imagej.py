@@ -195,6 +195,14 @@ class JavaClasses(object):
     # SciJava Types
 
     @blocking_import
+    def ColorRGB(self):
+        return "org.scijava.util.ColorRGB"
+
+    @blocking_import
+    def ColorRGBA(self):
+        return "org.scijava.util.ColorRGBA"
+
+    @blocking_import
     def DisplayPostprocessor(self):
         return "org.scijava.module.process.PostprocessorPlugin"
 

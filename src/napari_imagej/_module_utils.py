@@ -122,6 +122,13 @@ def _checkerUsingFunc(
     return None
 
 
+@module_item_converter(priority=Priority.HIGH)
+def is_color_checker(item: "jc.ModuleItem") -> Optional[Type]:
+    if isinstance(item.getType(), jc.ColorRGB):
+        return List[int]
+    return None
+
+
 @module_item_converter()
 def isAssignableChecker(item: "jc.ModuleItem") -> Optional[Type]:
     """

@@ -308,6 +308,63 @@ def _realpointcollection_to_points(collection):
     return Points(data=data)
 
 
+# -- Colors -- #
+
+
+def _color_to_array(color: "jc.ColorRGB") -> np.ndarray:
+    """
+    Converts a SciJava ColorRGB to an arraylike that napari can understand.
+
+    :param color: The object to be converted
+    :return: The converted color
+    """
+    array = [color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha()]
+    return np.array(array)
+
+
+def _is_python_color(arraylike: Any) -> bool:
+    """
+    Determines whether arraylike is a color (by napari's definition).
+    Colors are array-likes of elemetns in [0, 1] that are of size (1, 4).
+
+    :param arraylike: May or may not be a color.
+    :return: True iff arraylike satisfies the definition of a color.
+    """
+    # The color should be an array-like of elements in [0, 1] of size (1, 4)
+    if not hasattr(arraylike, "shape"):
+        return False
+    if not hasattr(arraylike, "dtype"):
+        return False
+    if not hasattr(arraylike, "__getitem__"):
+        return False
+
+    if not getattr(arraylike, "shape") == (1, 4):
+        return False
+
+    for i in range(4):
+        value = arraylike[0, i]
+        if value < 0 or value > 1:
+            return False
+
+    return True
+
+
+def _array_to_color(arraylike: Any) -> "jc.ColorRGBA":
+    """
+    Converts a napari color arraylike to a SciJava ColorRGBA.
+
+    :param arraylike: The object to be converted
+    :return: The converted color
+    """
+    if not _is_python_color(arraylike):
+        raise TypeError(f"{arraylike} is not a color!")
+    r = arraylike[0, 0]
+    g = arraylike[0, 1]
+    b = arraylike[0, 2]
+    a = arraylike[0, 3]
+    return jc.ColorRGBA(r, g, b, a)
+
+
 # -- Converters -- #
 
 
@@ -332,6 +389,12 @@ def _napari_to_java_converters() -> List[Converter]:
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
             priority=Priority.VERY_HIGH,
+        ),
+        # This converter should win over other arraylike converters
+        Converter(
+            predicate=_is_python_color,
+            converter=_array_to_color,
+            priority=Priority.EXTREMELY_HIGH,
         ),
     ]
 
@@ -376,6 +439,11 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
+            priority=Priority.VERY_HIGH,
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, jc.ColorRGB),
+            converter=_color_to_array,
             priority=Priority.VERY_HIGH,
         ),
     ]
