@@ -25,6 +25,7 @@ dependencies:
   - black
   - build
   - flake8
+  - isort
   - pyqt5-sip
   - pytest
   - pytest-cov
