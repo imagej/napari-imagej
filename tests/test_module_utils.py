@@ -530,7 +530,10 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
     :param widget_type: the name of a magicgui widget
     :param widget_class: the class corresponding to name
     """
-    actual = _module_utils._widget_for_style_and_type(style, type_hint)
+    # We only need item for the getWidgetStyle() function
+    item: DummyModuleItem = DummyModuleItem()
+    item.setWidgetStyle(style)
+    actual = _module_utils._widget_for_item_and_type(item, type_hint)
     assert widget_type == actual
 
     def func(foo):
