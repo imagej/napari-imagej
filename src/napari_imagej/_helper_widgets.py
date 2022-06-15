@@ -1,11 +1,13 @@
-from enum import Enum
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Any, List, Sequence
-from magicgui import magicgui
-from magicgui.types import FileDialogMode, PathLike, ChoicesType
-from magicgui.widgets import Container, ComboBox, PushButton
-from napari.utils._magicgui import get_layers, find_viewer_ancestor
+
+from magicgui.types import ChoicesType, FileDialogMode, PathLike
+from magicgui.widgets import ComboBox, Container, PushButton, request_values
+from napari import current_viewer
+from napari.utils._magicgui import get_layers
+
 
 class MutableOutputWidget(Container):
     """
@@ -20,6 +22,7 @@ class MutableOutputWidget(Container):
     :param nullable: iff true allows no selection as an option
     :param kwargs: other args
     """
+
     def __init__(
         self,
         choices: ChoicesType = get_layers,
@@ -29,8 +32,8 @@ class MutableOutputWidget(Container):
         value = kwargs.pop("value", None)
         if value is None:
             value = ""
-        
-        self.line_edit = ComboBox(choices=choices,**kwargs)
+
+        self.line_edit = ComboBox(choices=choices, **kwargs)
         self.choose_btn = PushButton(text="New Image")
         self._nullable = nullable
         kwargs["widgets"] = [self.line_edit, self.choose_btn]
@@ -41,11 +44,9 @@ class MutableOutputWidget(Container):
         self.choose_btn.changed.disconnect()
         self.choose_btn.changed.connect(self._spawn_new_image_widget)
 
-
     @property
     def _btn_text(self) -> str:
         return "New Image"
-
 
     def _spawn_new_image_widget(self) -> None:
         """
@@ -60,50 +61,51 @@ class MutableOutputWidget(Container):
 
         # Define an enum for array type selection
         class BackingData(Enum):
-            NumPy = 'NumPy'
-            Zarr = 'Zarr'
+            NumPy = "NumPy"
+            Zarr = "Zarr"
 
         # Define the magicgui widget for parameter harvesting
-        @magicgui(
-            call_button="Create",
-            name={'tooltip': "If blank, a name will be generated"},
-            dimensions={'tooltip': "The size of the new image"},
-            array_type={'tooltip': "The backing data array implementation"},
-            fill_value={'tooltip': "Starting value for all pixels"},
+        params = request_values(
+            title="New Image",
+            name=dict(
+                annotation=str,
+                value="",
+                options=dict(tooltip="If blank, a name will be generated"),
+            ),
+            dimensions=dict(
+                annotation=List[int],
+                value=[512, 512],
+                options=dict(tooltip="The starting size of the new image"),
+            ),
+            array_type=dict(
+                annotation=BackingData,
+                value=BackingData.NumPy,
+                options=dict(tooltip="The backing data array implementation"),
+            ),
+            fill_value=dict(
+                annotation=float,
+                value=0.0,
+                options=dict(tooltip="Starting value for all pixels"),
+            ),
         )
-        def _new_image_widget(
-            name: str = "",
-            dimensions: List[int] = [512, 512],
-            array_type: BackingData = BackingData.NumPy,
-            fill_value: float = 0.0,
-        ) -> None:
-
-            if array_type is BackingData.NumPy:
+        if params is not None:
+            if params["array_type"] is BackingData.NumPy:
                 import numpy as np
 
-                data = np.full(tuple(dimensions), fill_value)
+                data = np.full(tuple(params["dimensions"]), params["fill_value"])
 
-            elif array_type is BackingData.Zarr:
+            elif params["array_type"] is BackingData.Zarr:
                 # Zarr is not shipped by default, but we can try to support it
                 import zarr
 
-                data = zarr.full(dimensions, fill_value)
+                data = zarr.full(params["dimensions"], params["fill_value"])
 
             # give the data array to the viewer.
             # Replace blank names with None so the Image class generates a name
-            find_viewer_ancestor(self.native).add_image(
-                name=name if len(name) else None,
+            current_viewer().add_image(
+                name=params["name"] if len(params["name"]) else None,
                 data=data,
             )
-
-        # Once called (i.e. "Create"  is clicked), the widget will be destroyed
-        # This means one click of "New image layer" will produce exactly one image,
-        # Which is consistent with the other new layer buttons.
-        _new_image_widget.called.connect(_new_image_widget.close)
-        # _new_image_widget.native.setParent(viewer.window._qt_window)
-
-        # Show the widget (as a modal dialog, outside of the napari window)
-        _new_image_widget.show()
 
     @property
     def value(self) -> tuple[Path, ...] | Path | None:
