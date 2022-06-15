@@ -35,6 +35,7 @@ class MutableOutputWidget(Container):
 
         self.layer_select = ComboBox(choices=choices, **kwargs)
         self.choose_btn = PushButton(text="New")
+        self.choose_btn.max_width = 53
         self._nullable = nullable
         kwargs["widgets"] = [self.choose_btn, self.layer_select]
         kwargs["labels"] = False
