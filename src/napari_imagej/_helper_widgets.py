@@ -37,6 +37,7 @@ class MutableOutputWidget(Container):
         self.new_btn = PushButton(text="New")
         self.new_btn.max_width = 53
         self._nullable = nullable
+        self.kwargs = kwargs
         kwargs["widgets"] = [self.new_btn, self.layer_select]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
@@ -48,6 +49,17 @@ class MutableOutputWidget(Container):
     @property
     def _btn_text(self) -> str:
         return "New Image"
+
+    def _default_new_shape(self):
+        # Attempt to guess a good size based off of the first image input
+        for widget in self.parent._magic_widget.parent._magic_widget:
+            if widget is self: continue
+            if isinstance(widget, ComboBox):
+                selection_name = widget.current_choice
+                if selection_name != "":
+                    selection = current_viewer().layers[selection_name]
+                    return selection.data.shape
+        return [512, 512]
 
     def create_new_image(self) -> None:
         """
@@ -65,6 +77,7 @@ class MutableOutputWidget(Container):
             NumPy = "NumPy"
             Zarr = "Zarr"
 
+
         # Define the magicgui widget for parameter harvesting
         params = request_values(
             title="New Image",
@@ -73,10 +86,10 @@ class MutableOutputWidget(Container):
                 value="",
                 options=dict(tooltip="If blank, a name will be generated"),
             ),
-            dimensions=dict(
+            shape=dict(
                 annotation=List[int],
-                value=[512, 512],
-                options=dict(tooltip="The starting size of the new image"),
+                value=self._default_new_shape(),
+                options=dict(tooltip="By default, the shape of the first Layer input"),
             ),
             array_type=dict(
                 annotation=BackingData,
@@ -93,13 +106,13 @@ class MutableOutputWidget(Container):
             if params["array_type"] is BackingData.NumPy:
                 import numpy as np
 
-                data = np.full(tuple(params["dimensions"]), params["fill_value"])
+                data = np.full(tuple(params["shape"]), params["fill_value"])
 
             elif params["array_type"] is BackingData.Zarr:
                 # Zarr is not shipped by default, but we can try to support it
                 import zarr
 
-                data = zarr.full(params["dimensions"], params["fill_value"])
+                data = zarr.full(params["shape"], params["fill_value"])
 
             # give the data array to the viewer.
             # Replace blank names with None so the Image class generates a name
