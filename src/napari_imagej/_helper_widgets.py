@@ -1,11 +1,11 @@
-import os
 from enum import Enum
 from pathlib import Path
 from typing import Any, List, Sequence
 
-from magicgui.types import ChoicesType, FileDialogMode, PathLike
+from magicgui.types import ChoicesType, PathLike
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
+from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 
 
@@ -55,7 +55,7 @@ class MutableOutputWidget(Container):
         for widget in self.parent._magic_widget.parent._magic_widget:
             if widget is self:
                 continue
-            if isinstance(widget, ComboBox):
+            if isinstance(widget, ComboBox) and issubclass(widget.annotation, Layer):
                 selection_name = widget.current_choice
                 if selection_name != "":
                     selection = current_viewer().layers[selection_name]
