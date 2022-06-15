@@ -34,22 +34,22 @@ class MutableOutputWidget(Container):
             value = ""
 
         self.layer_select = ComboBox(choices=choices, **kwargs)
-        self.choose_btn = PushButton(text="New")
-        self.choose_btn.max_width = 53
+        self.new_btn = PushButton(text="New")
+        self.new_btn.max_width = 53
         self._nullable = nullable
-        kwargs["widgets"] = [self.choose_btn, self.layer_select]
+        kwargs["widgets"] = [self.new_btn, self.layer_select]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
         super().__init__(**kwargs)
         self.margins = (0, 0, 0, 0)
-        self.choose_btn.changed.disconnect()
-        self.choose_btn.changed.connect(self._spawn_new_image_widget)
+        self.new_btn.changed.disconnect()
+        self.new_btn.changed.connect(self.create_new_image)
 
     @property
     def _btn_text(self) -> str:
         return "New Image"
 
-    def _spawn_new_image_widget(self) -> None:
+    def create_new_image(self) -> None:
         """
         Creates a dialog to add an image to viewer.
 
