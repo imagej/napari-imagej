@@ -33,10 +33,10 @@ class MutableOutputWidget(Container):
         if value is None:
             value = ""
 
-        self.line_edit = ComboBox(choices=choices, **kwargs)
-        self.choose_btn = PushButton(text="New Image")
+        self.layer_select = ComboBox(choices=choices, **kwargs)
+        self.choose_btn = PushButton(text="New")
         self._nullable = nullable
-        kwargs["widgets"] = [self.line_edit, self.choose_btn]
+        kwargs["widgets"] = [self.choose_btn, self.layer_select]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
         super().__init__(**kwargs)
@@ -110,7 +110,7 @@ class MutableOutputWidget(Container):
     @property
     def value(self) -> tuple[Path, ...] | Path | None:
         """Return current value of the widget.  This may be interpreted by backends."""
-        text = self.line_edit.value
+        text = self.layer_select.value
         if self._nullable and not text:
             return None
         if self.mode is FileDialogMode.EXISTING_FILES:
@@ -130,26 +130,22 @@ class MutableOutputWidget(Container):
             raise TypeError(
                 f"value must be a string, or list/tuple of strings, got {type(value)}"
             )
-        self.line_edit.value = value
-
-    def __repr__(self) -> str:
-        """Return string representation."""
-        return f"FileEdit(mode={self.mode.value!r}, value={self.value!r})"
+        self.layer_select.value = value
 
     # -- CategoricalWidget functions -- #
 
     @property
     def value(self):
         """Return current value of the widget."""
-        return self.line_edit.value
+        return self.layer_select.value
 
     @value.setter
     def value(self, value):
-        self.line_edit.value = value
+        self.layer_select.value = value
 
     @property
     def options(self) -> dict:
-        return self.line_edit.options
+        return self.layer_select.options
 
     def reset_choices(self, *_: Any):
         """Reset choices to the default state.
@@ -158,34 +154,34 @@ class MutableOutputWidget(Container):
         choices as when the widget was instantiated, if the callable relies on external
         state.
         """
-        self.line_edit.reset_choices()
+        self.layer_select.reset_choices()
 
     @property
     def current_choice(self) -> str:
         """Return the text of the currently selected choice."""
-        return self.line_edit.current_choice
+        return self.layer_select.current_choice
 
     def __len__(self) -> int:
         """Return the number of choices."""
-        return self.line_edit.__len__()
+        return self.layer_select.__len__()
 
     def get_choice(self, choice_name: str):
         """Get data for the provided ``choice_name``."""
-        return self.line_edit.get_choice(choice_name)
+        return self.layer_select.get_choice(choice_name)
 
     def set_choice(self, choice_name: str, data: Any = None):
         """Set data for the provided ``choice_name``."""
-        return self.line_edit.set_choice(choice_name, data)
+        return self.layer_select.set_choice(choice_name, data)
 
     def del_choice(self, choice_name: str):
         """Delete the provided ``choice_name`` and associated data."""
-        return self.line_edit.del_choice(choice_name)
+        return self.layer_select.del_choice(choice_name)
 
     @property
     def choices(self):
         """Available value choices for this widget."""
-        return self.line_edit.choices
+        return self.layer_select.choices
 
     @choices.setter
     def choices(self, choices: ChoicesType):
-        self.line_edit.choices = choices
+        self.layer_select.choices = choices
