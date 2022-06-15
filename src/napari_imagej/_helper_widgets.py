@@ -53,7 +53,8 @@ class MutableOutputWidget(Container):
     def _default_new_shape(self):
         # Attempt to guess a good size based off of the first image input
         for widget in self.parent._magic_widget.parent._magic_widget:
-            if widget is self: continue
+            if widget is self:
+                continue
             if isinstance(widget, ComboBox):
                 selection_name = widget.current_choice
                 if selection_name != "":
@@ -76,7 +77,6 @@ class MutableOutputWidget(Container):
         class BackingData(Enum):
             NumPy = "NumPy"
             Zarr = "Zarr"
-
 
         # Define the magicgui widget for parameter harvesting
         params = request_values(
@@ -124,26 +124,10 @@ class MutableOutputWidget(Container):
     @property
     def value(self) -> tuple[Path, ...] | Path | None:
         """Return current value of the widget.  This may be interpreted by backends."""
-        text = self.layer_select.value
-        if self._nullable and not text:
-            return None
-        if self.mode is FileDialogMode.EXISTING_FILES:
-            return tuple(Path(p) for p in text.split(", ") if p.strip())
-        return Path(text)
+        return self.layer_select.value
 
     @value.setter
     def value(self, value: Sequence[PathLike] | PathLike | None):
-        """Set current file path."""
-        if value is None and self._nullable:
-            value = ""
-        elif isinstance(value, (list, tuple)):
-            value = ", ".join(os.fspath(Path(p).expanduser().absolute()) for p in value)
-        elif isinstance(value, (str, Path)):
-            value = os.fspath(Path(value).expanduser().absolute())
-        else:
-            raise TypeError(
-                f"value must be a string, or list/tuple of strings, got {type(value)}"
-            )
         self.layer_select.value = value
 
     # -- CategoricalWidget functions -- #
