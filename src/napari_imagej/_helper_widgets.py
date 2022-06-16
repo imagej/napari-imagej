@@ -36,7 +36,6 @@ class MutableOutputWidget(Container):
         self.new_btn = PushButton(text="New")
         self.new_btn.max_width = 53
         self._nullable = nullable
-        self.kwargs = kwargs
         kwargs["widgets"] = [self.new_btn, self.layer_select]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
