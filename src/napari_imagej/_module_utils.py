@@ -603,15 +603,20 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
         pass
 
 
-def _widget_for_style_and_type(
-    style: str, type_hint: Union[type, str]
+def _widget_for_item_and_type(
+    item: "jc.ModuleItem",
+    type_hint: Union[type, str],
 ) -> Optional[str]:
     """
     Convenience function for interacting with _supported_styles
-    :param style: The SciJava style
+    :param item: The ModuleItem with a style
     :param type_hint: The PYTHON type for the parameter
     :return: The best widget type, if it is known
     """
+    if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
+        return "napari_imagej._helper_widgets.MutableOutputWidget"
+
+    style: str = item.getWidgetStyle()
     if style not in _supported_styles:
         return None
     style_options = _supported_styles[style]
@@ -642,9 +647,7 @@ def _add_scijava_metadata(
         if choices is not None and len(choices) > 0:
             _add_param_metadata(param_map, "choices", choices)
         # Convert supported SciJava styles to widget types.
-        widget_type = _widget_for_style_and_type(
-            input.getWidgetStyle(), type_hints[input.getName()]
-        )
+        widget_type = _widget_for_item_and_type(input, type_hints[input.getName()])
         if widget_type is not None:
             _add_param_metadata(param_map, "widget_type", widget_type)
 

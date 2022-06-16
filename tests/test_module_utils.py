@@ -530,7 +530,10 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
     :param widget_type: the name of a magicgui widget
     :param widget_class: the class corresponding to name
     """
-    actual = _module_utils._widget_for_style_and_type(style, type_hint)
+    # We only need item for the getWidgetStyle() function
+    item: DummyModuleItem = DummyModuleItem()
+    item.setWidgetStyle(style)
+    actual = _module_utils._widget_for_item_and_type(item, type_hint)
     assert widget_type == actual
 
     def func(foo):
@@ -544,6 +547,30 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
     )
     assert len(widget._list) == 1
     assert isinstance(widget._list[0], widget_class)
+
+
+def test_helper_widgets_for_item_and_type():
+    from napari_imagej._helper_widgets import MutableOutputWidget
+
+    # MutableOutputWidget
+    item: DummyModuleItem = DummyModuleItem(
+        jtype=jc.ArrayImg, isInput=True, isOutput=True
+    )
+    type_hint = "napari.layers.Image"
+    actual = _module_utils._widget_for_item_and_type(item, type_hint)
+    assert "napari_imagej._helper_widgets.MutableOutputWidget" == actual
+
+    def func(foo):
+        print(foo, "bar")
+
+    func.__annotation__ = {"foo": type_hint}
+    import magicgui
+
+    widget = magicgui.magicgui(
+        function=func, call_button=False, foo={"widget_type": actual}
+    )
+    assert len(widget._list) == 1
+    assert isinstance(widget._list[0], MutableOutputWidget)
 
 
 def test_all_styles_in_parameterizations():
