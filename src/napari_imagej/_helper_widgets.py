@@ -1,8 +1,7 @@
 from enum import Enum
-from pathlib import Path
-from typing import Any, List, Sequence
+from typing import Any, List
 
-from magicgui.types import ChoicesType, PathLike
+from magicgui.types import ChoicesType
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
 from napari.layers import Layer
@@ -122,12 +121,12 @@ class MutableOutputWidget(Container):
             )
 
     @property
-    def value(self) -> tuple[Path, ...] | Path | None:
+    def value(self) -> Any:
         """Return current value of the widget.  This may be interpreted by backends."""
         return self.layer_select.value
 
     @value.setter
-    def value(self, value: Sequence[PathLike] | PathLike | None):
+    def value(self, value: Any):
         self.layer_select.value = value
 
     # -- CategoricalWidget functions -- #
