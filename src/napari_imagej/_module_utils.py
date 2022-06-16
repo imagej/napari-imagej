@@ -613,9 +613,8 @@ def _widget_for_item_and_type(
     :param type_hint: The PYTHON type for the parameter
     :return: The best widget type, if it is known
     """
-    if type_hint == "napari.layers.Image":
-        if item.isInput() and item.isOutput():
-            return "napari_imagej._helper_widgets.MutableOutputWidget"
+    if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
+        return "napari_imagej._helper_widgets.MutableOutputWidget"
 
     style: str = item.getWidgetStyle()
     if style not in _supported_styles:
