@@ -1,26 +1,15 @@
 import napari
-from magicgui.widgets import ComboBox, Container, PushButton
+import numpy as np
+import pytest
+from magicgui.widgets import ComboBox, PushButton
 from napari import current_viewer
+from napari.layers import Image
 
 from napari_imagej._helper_widgets import MutableOutputWidget
 
 
-def test_mutable_output_widget_chosen():
-
-    widget = MutableOutputWidget()
-    assert isinstance(widget, Container)
-    children = [w for w in widget]
-    assert len(children) == 2
-    assert isinstance(children[0], ComboBox)
-    assert isinstance(children[1], PushButton)
-    assert children[1].max_width == 53
-    assert widget.current_choice == ""
-    assert widget.layout == "horizontal"
-    assert widget.margins == (0, 0, 0, 0)
-
-
-def test_mutable_output_default_shape(make_napari_viewer):
-    """Tests that MutableOutputWidget's default size changes based on"""
+@pytest.fixture
+def mutable_output_widget(make_napari_viewer):
     make_napari_viewer()
 
     def func(output: "napari.layers.Image", input: "napari.layers.Image"):
@@ -39,6 +28,41 @@ def test_mutable_output_default_shape(make_napari_viewer):
     input_widget = widget._list[1]
     assert isinstance(output_widget, MutableOutputWidget)
     assert isinstance(input_widget, ComboBox)
+    return widget
+
+
+@pytest.fixture
+def output_widget(mutable_output_widget):
+    widget = mutable_output_widget._list[0]
+    assert isinstance(widget, MutableOutputWidget)
+    return widget
+
+
+@pytest.fixture
+def input_widget(mutable_output_widget):
+    widget = mutable_output_widget._list[1]
+    assert isinstance(widget, ComboBox)
+    return widget
+
+
+def test_mutable_output_widget_layout(output_widget):
+    children = [w for w in output_widget]
+    assert len(children) == 2
+    assert isinstance(children[0], ComboBox)
+    assert isinstance(children[1], PushButton)
+    assert children[1].max_width == 53
+    assert output_widget.current_choice == ""
+    assert output_widget.layout == "horizontal"
+    assert output_widget.margins == (0, 0, 0, 0)
+
+
+def test_mutable_output_default_shape(
+    input_widget: ComboBox, output_widget: MutableOutputWidget
+):
+    """
+    Tests that MutableOutputWidget's default size changes based on the
+    choice of input widget
+    """
 
     # Assert when no selection, output shape is default
     assert input_widget.current_choice == ""
@@ -51,3 +75,23 @@ def test_mutable_output_default_shape(make_napari_viewer):
     current_viewer().add_image(data=np.ones(shape), name="img")
     assert input_widget.current_choice == "img"
     assert output_widget._default_new_shape() == shape
+
+
+def test_mutable_output_add_new_image(output_widget: MutableOutputWidget):
+    """Tests that MutableOutputWidget can add a new image from params"""
+
+    params = {
+        "name": "foo",
+        "array_type": MutableOutputWidget.BackingData.NumPy,
+        "shape": (100, 100, 3),
+        "fill_value": 3.0,
+    }
+
+    output_widget._add_new_image(params)
+
+    assert "foo" in current_viewer().layers
+    foo: Image = current_viewer().layers["foo"]
+    assert "foo" == foo.name
+    assert isinstance(foo.data, np.ndarray)
+    assert (100, 100, 3) == foo.data.shape
+    assert (3) == np.unique(foo.data)
