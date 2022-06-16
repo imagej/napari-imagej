@@ -1,4 +1,4 @@
-from enum import Enum
+import importlib
 from typing import Any, List
 
 from magicgui.types import ChoicesType
@@ -60,11 +60,6 @@ class MutableOutputWidget(Container):
                     return selection.data.shape
         return [512, 512]
 
-    # Define an enum for array type selection
-    class BackingData(Enum):
-        NumPy = "NumPy"
-        Zarr = "Zarr"
-
     def create_new_image(self) -> None:
         """
         Creates a dialog to add an image to viewer.
@@ -75,6 +70,14 @@ class MutableOutputWidget(Container):
         viewer : napari.components.ViewerModel
             Napari viewer containing the rendered scene, layers, and controls.
         """
+
+        # Array types that are always included
+        backing_choices = ["NumPy"]
+        # Array types that may be present
+        if importlib.util.find_spec("zarr"):
+            backing_choices.append("Zarr")
+        if importlib.util.find_spec("xarray"):
+            backing_choices.append("xarray")
 
         # Define the magicgui widget for parameter harvesting
         params = request_values(
@@ -90,9 +93,12 @@ class MutableOutputWidget(Container):
                 options=dict(tooltip="By default, the shape of the first Layer input"),
             ),
             array_type=dict(
-                annotation=self.BackingData,
-                value=self.BackingData.NumPy,
-                options=dict(tooltip="The backing data array implementation"),
+                annotation=str,
+                value="NumPy",
+                options=dict(
+                    tooltip="The backing data array implementation",
+                    choices=backing_choices,
+                ),
             ),
             fill_value=dict(
                 annotation=float,
@@ -106,16 +112,25 @@ class MutableOutputWidget(Container):
         if params is None:
             return
 
-        if params["array_type"] is self.BackingData.NumPy:
+        if params["array_type"] == "NumPy":
             import numpy as np
 
             data = np.full(tuple(params["shape"]), params["fill_value"])
 
-        elif params["array_type"] is self.BackingData.Zarr:
-            # Zarr is not shipped by default, but we can try to support it
+        elif params["array_type"] == "Zarr":
+            # This choice is only available if we can import
             import zarr
 
             data = zarr.full(params["shape"], params["fill_value"])
+
+        elif params["array_type"] == "xarray":
+            # This choice is only available if we can import
+            import numpy as np
+            import xarray
+
+            data = xarray.DataArray(
+                data=np.full(tuple(params["shape"]), params["fill_value"])
+            )
 
         # give the data array to the viewer.
         # Replace blank names with None so the Image class generates a name

@@ -1,3 +1,5 @@
+import importlib
+
 import napari
 import numpy as np
 import pytest
@@ -77,12 +79,28 @@ def test_mutable_output_default_shape(
     assert output_widget._default_new_shape() == shape
 
 
-def test_mutable_output_add_new_image(output_widget: MutableOutputWidget):
+# these types are always included
+backing_types = [
+    ("NumPy", np.ndarray),
+]
+# these types are sometimes included
+if importlib.util.find_spec("zarr"):
+    from zarr.core import Array
+
+    backing_types.append(("Zarr", Array))
+if importlib.util.find_spec("xarray"):
+    from xarray import DataArray
+
+    backing_types.append(("xarray", DataArray))
+
+
+@pytest.mark.parametrize(argnames=["choice", "type"], argvalues=backing_types)
+def test_mutable_output_add_new_image(output_widget: MutableOutputWidget, choice, type):
     """Tests that MutableOutputWidget can add a new image from params"""
 
     params = {
         "name": "foo",
-        "array_type": MutableOutputWidget.BackingData.NumPy,
+        "array_type": choice,
         "shape": (100, 100, 3),
         "fill_value": 3.0,
     }
@@ -92,6 +110,6 @@ def test_mutable_output_add_new_image(output_widget: MutableOutputWidget):
     assert "foo" in current_viewer().layers
     foo: Image = current_viewer().layers["foo"]
     assert "foo" == foo.name
-    assert isinstance(foo.data, np.ndarray)
+    assert isinstance(foo.data, type)
     assert (100, 100, 3) == foo.data.shape
     assert (3) == np.unique(foo.data)
