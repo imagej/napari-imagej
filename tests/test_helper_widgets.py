@@ -95,7 +95,9 @@ if importlib.util.find_spec("xarray"):
 
 
 @pytest.mark.parametrize(argnames=["choice", "type"], argvalues=backing_types)
-def test_mutable_output_add_new_image(output_widget: MutableOutputWidget, choice, type):
+def test_mutable_output_add_new_image(
+    input_widget: ComboBox, output_widget: MutableOutputWidget, choice, type
+):
     """Tests that MutableOutputWidget can add a new image from params"""
 
     params = {
@@ -113,3 +115,7 @@ def test_mutable_output_add_new_image(output_widget: MutableOutputWidget, choice
     assert isinstance(foo.data, type)
     assert (100, 100, 3) == foo.data.shape
     assert (3) == np.unique(foo.data)
+
+    assert foo in input_widget.choices
+    assert foo in output_widget.choices
+    assert foo is output_widget.value

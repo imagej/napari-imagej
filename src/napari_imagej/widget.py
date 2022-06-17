@@ -1,14 +1,12 @@
 """
-This module is an example of a barebones function plugin for napari
+This module contains ImageJWidget, a QWidget enabling
+graphical access to ImageJ functionality.
 
-It implements the ``napari_experimental_provide_function`` hook specification.
-see: https://napari.org/docs/dev/plugins/hook_specifications.html
-
-Replace code below according to your needs.
+This Widget is made accessible to napari through napari.yml
 """
 from functools import lru_cache
 from threading import Thread
-from typing import List
+from typing import Callable, Dict, List, Tuple
 
 from napari import Viewer
 from qtpy.QtWidgets import (
@@ -24,7 +22,11 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from napari_imagej._module_utils import functionify_module_execution
+from napari_imagej._flow_layout import FlowLayout
+from napari_imagej._module_utils import (
+    execute_function_modally,
+    functionify_module_execution,
+)
 from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
 
 
@@ -179,6 +181,9 @@ class FocusWidget(QWidget):
         self.focused_module = None
         self.focused_module_label = QLabel()
         self.layout().addWidget(self.focused_module_label)
+        self.button_pane = QWidget()
+        self.button_pane.setLayout(FlowLayout())
+        self.layout().addWidget(self.button_pane)
         self.focused_module_label.setText("Display Module Here")
 
         self.focused_action_buttons = []  # type: ignore
@@ -189,6 +194,55 @@ class FocusWidget(QWidget):
         # NB: col is needed for tableWidget.cellClicked.
         # We don't use it in _highlight_module, though.
         return lambda row, col: self._highlight_module_from_tables(tables, index, row)
+
+    def _action_results(self) -> Dict[str, List[Tuple[str, Callable]]]:
+        """
+        Gets the list of predefined button parameters that should appear
+        for a given action name.
+        :return: A dict of button parameter, keyed by the run actions they wrap.
+            Button parameters are defined in tuples, where the first element is
+            the name, and the section element is the on-click action.
+        """
+        return {
+            "Run": [
+                (
+                    "Run",
+                    lambda: self._execute_module(
+                        ij().py.from_java(self.focused_module.name()),
+                        self._convert_searchResult_to_info(self.focused_module),
+                        modal=True,
+                    ),
+                ),
+                (
+                    "Widget",
+                    lambda: self._execute_module(
+                        ij().py.from_java(self.focused_module.name()),
+                        self._convert_searchResult_to_info(self.focused_module),
+                        modal=False,
+                    ),
+                ),
+            ],
+        }
+
+    tooltips: Dict[str, str] = {
+        "Widget": "Runs functionality from a napari widget. "
+        "Useful for parameter sweeping",
+        "Run": "Runs functionality from a modal widget. Best for single executions",
+        "Source": "Opens the source code on GitHub",
+        "Help": "Opens the functionality's ImageJ.net wiki page",
+    }
+
+    def _button_params_from_actions(self) -> List[Tuple[str, Callable]]:
+        button_params: List[Tuple[str, Callable]] = []
+        action_results = self._action_results()
+        for i, action in enumerate(self.focused_actions):
+            action_name = ij().py.from_java(action.toString())
+            if action_name in action_results:
+                button_params.extend(action_results[action_name])
+            else:
+                params = (action_name, self.focused_actions[i].run)
+                button_params.append(params)
+        return button_params
 
     def _highlight_module_from_tables(
         self, tables: List[List["jc.ModuleInfo"]], index: int, row: int
@@ -204,39 +258,36 @@ class FocusWidget(QWidget):
         # Create buttons for each action
         searchService = ij().get("org.scijava.search.SearchService")
         self.focused_actions = searchService.actions(self.focused_module)
+        button_data = self._button_params_from_actions()
+        buttons_needed = len(button_data)
         activated_actions = len(self.focused_action_buttons)
         # Hide buttons if we have more than needed
-        while activated_actions > len(self.focused_actions):
+        while activated_actions > buttons_needed:
             activated_actions = activated_actions - 1
             self.focused_action_buttons[activated_actions].hide()
         # Create buttons if we need more than we have
-        while len(self.focused_action_buttons) < len(self.focused_actions):
+        while len(self.focused_action_buttons) < buttons_needed:
             button = QPushButton()
             self.focused_action_buttons.append(button)
-            self.layout().addWidget(button)
+            self.button_pane.layout().addWidget(button)
         # Rename buttons to reflect focused module's actions
-        for i in range(len(self.focused_actions)):
-            action_name = ij().py.from_java(self.focused_actions[i].toString())
-            self.focused_action_buttons[i].show()
+        for i, params in enumerate(self._button_params_from_actions()):
+            # Clean old actions from button
             self.focused_action_buttons[i].disconnect()
-            if action_name == "Run":
-                # "Run" is a little confusing, we won't be running the module
-                # when we click run but will instead pop up an input harvester.
-                # Let's be more clear about what we are doing.
-                action_name = "Initialize"
-                self.focused_action_buttons[i].clicked.connect(
-                    lambda: self._execute_module(
-                        self._convert_searchResult_to_info(self.focused_module)
-                    )
-                )
-            else:
-                self.focused_action_buttons[i].clicked.connect(
-                    self.focused_actions[i].run
-                )
-            self.focused_action_buttons[i].setText(action_name)
+            # Set button name
+            name = params[0]
+            self.focused_action_buttons[i].setText(name)
+            # Set button on-click actions
+            func = params[1]
+            self.focused_action_buttons[i].clicked.connect(func)
+            # Set tooltip
+            if name in self.tooltips:
+                tooltip = self.tooltips[name]
+                self.focused_action_buttons[i].setToolTip(tooltip)
+            # Show button
             self.focused_action_buttons[i].show()
 
-    def _execute_module(self, moduleInfo):
+    def _execute_module(self, name, moduleInfo, modal: bool = False):
         log_debug("Creating module...")
         module = ij().module().createModule(moduleInfo)
 
@@ -244,7 +295,14 @@ class FocusWidget(QWidget):
         func, param_options = functionify_module_execution(
             self.viewer, module, moduleInfo
         )
-        self.viewer.window.add_function_widget(func, magic_kwargs=param_options)
+        if modal:
+            execute_function_modally(
+                viewer=self.viewer, name=name, func=func, param_options=param_options
+            )
+        else:
+            self.viewer.window.add_function_widget(
+                func, name=name, magic_kwargs=param_options
+            )
 
     def _convert_searchResult_to_info(self, search_result):
         info = search_result.info()
