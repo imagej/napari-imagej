@@ -804,10 +804,30 @@ def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
     assert num_widget == len(widget_outputs)
 
 
+script_both_but_optional: str = """
+#@BOTH Img(required=false) d
+
+from net.imglib2.img.array import ArrayImgs
+
+if d is None:
+    d = ArrayImgs.unsignedBytes(10, 10)
+
+d[:, :] = 1
+"""
+
+script_both_but_required: str = """
+#@BOTH Img(required=true) d
+
+from net.imglib2.img.array import ArrayImgs
+
+d[:, :] = 1
+"""
 out_type_params = [
     (script_zero_layer_one_widget, None),
     (script_one_layer_one_widget, List[LayerDataTuple]),
     (script_two_layer_one_widget, List[LayerDataTuple]),
+    (script_both_but_optional, List[LayerDataTuple]),
+    (script_both_but_required, None),
 ]
 
 
@@ -844,8 +864,16 @@ def test_mutable_layers():
         DummyModuleItem(name="b", isOutput=True),
         DummyModuleItem(name="c", isOutput=False),
         DummyModuleItem(name="d", isOutput=True),
+        DummyModuleItem(name="a", isOutput=False, isRequired=False),
+        DummyModuleItem(name="b", isOutput=True, isRequired=False),
+        DummyModuleItem(name="c", isOutput=False, isRequired=False),
+        DummyModuleItem(name="d", isOutput=True, isRequired=False),
     ]
     user_resolved_inputs = [
+        1,
+        2,
+        Image(data=numpy.ones((4, 4))),
+        Image(data=numpy.ones((4, 4))),
         1,
         2,
         Image(data=numpy.ones((4, 4))),
