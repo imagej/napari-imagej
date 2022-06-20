@@ -776,34 +776,6 @@ d = ArrayImgs.unsignedBytes(10, 10)
 e = ArrayImgs.unsignedBytes(10, 10)
 """
 
-widget_parameterizations = [
-    (script_zero_layer_zero_widget, 0, 0),
-    (script_one_layer_zero_widget, 1, 0),
-    (script_two_layer_zero_widget, 2, 0),
-    (script_zero_layer_one_widget, 0, 1),
-    (script_one_layer_one_widget, 1, 1),
-    (script_two_layer_one_widget, 2, 1),
-    (script_zero_layer_two_widget, 0, 2),
-    (script_one_layer_two_widget, 1, 2),
-    (script_two_layer_two_widget, 2, 2),
-]
-
-
-@pytest.mark.parametrize(
-    argnames="script, num_layer, num_widget", argvalues=widget_parameterizations
-)
-def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
-    layer_outputs, widget_outputs = run_module_from_script(ij, tmp_path, script)
-    if num_layer == 0:
-        assert layer_outputs is None
-    else:
-        assert num_layer == len(layer_outputs)
-        for layer_tuple in layer_outputs:
-            assert isinstance(layer_tuple, tuple)
-            assert len(layer_tuple) == 3
-    assert num_widget == len(widget_outputs)
-
-
 script_both_but_optional: str = """
 #@BOTH Img(required=false) d
 
@@ -822,6 +794,37 @@ from net.imglib2.img.array import ArrayImgs
 
 d[:, :] = 1
 """
+
+widget_parameterizations = [
+    (script_zero_layer_zero_widget, 0, 0),
+    (script_one_layer_zero_widget, 1, 0),
+    (script_two_layer_zero_widget, 2, 0),
+    (script_zero_layer_one_widget, 0, 1),
+    (script_one_layer_one_widget, 1, 1),
+    (script_two_layer_one_widget, 2, 1),
+    (script_zero_layer_two_widget, 0, 2),
+    (script_one_layer_two_widget, 1, 2),
+    (script_two_layer_two_widget, 2, 2),
+    (script_both_but_required, 0, 0),
+    (script_both_but_optional, 1, 0),
+]
+
+
+@pytest.mark.parametrize(
+    argnames="script, num_layer, num_widget", argvalues=widget_parameterizations
+)
+def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
+    layer_outputs, widget_outputs = run_module_from_script(ij, tmp_path, script)
+    if num_layer == 0:
+        assert layer_outputs is None
+    else:
+        assert num_layer == len(layer_outputs)
+        for layer_tuple in layer_outputs:
+            assert isinstance(layer_tuple, tuple)
+            assert len(layer_tuple) == 3
+    assert num_widget == len(widget_outputs)
+
+
 out_type_params = [
     (script_zero_layer_one_widget, None),
     (script_one_layer_one_widget, List[LayerDataTuple]),
@@ -838,7 +841,10 @@ def test_module_output_type(ij, tmp_path, script, type):
     p.write_text(script)
 
     info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
-    assert _module_utils._widget_return_type(info) == type
+    module = info.createModule()
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
+    unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
+    assert _module_utils._widget_return_type(info, unresolved_inputs) == type
 
 
 def test_non_layer_widget():
