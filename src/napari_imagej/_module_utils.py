@@ -159,8 +159,8 @@ def _widget_return_type(module_info: "jc.Module") -> type:
     None.
     """
     for output_item in module_info.outputs():
-        # We only return PURE outputs (i.e. not mutable outputs)
-        if output_item.isInput():
+        # If the user passed the output, we shouldn't return it.
+        if output_item.isInput() and output_item.isRequired():
             continue
         if type_mappings().type_displayable_in_napari(output_item.getType()):
             return List[LayerDataTuple]
@@ -257,6 +257,10 @@ def _mutable_layers(
             continue
         # We don't care about input unless it is an output
         if not item.isOutput():
+            continue
+        # We don't care about input unless it was required
+        # as optional mutable outputs are resolved by the module
+        if not item.isRequired():
             continue
 
         mutable_layers.append(input)
@@ -483,9 +487,12 @@ def _pure_module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        # Ignore outputs that are also inputs
+        # Ignore outputs that are also required inputs
         output_name = ij().py.from_java(output_entry.getKey())
-        if output_name in module.getInputs():
+        if (
+            output_name in module.getInputs()
+            and module.getInfo().getInput(output_name).isRequired()
+        ):
             continue
         output = ij().py.from_java(output_entry.getValue())
         # Add LayerDataTuples directly
