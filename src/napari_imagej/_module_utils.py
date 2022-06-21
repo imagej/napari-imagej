@@ -254,18 +254,8 @@ def _mutable_layers(
     """
     mutable_layers: List[Layer] = []
     for item, input in zip(unresolved_inputs, user_resolved_inputs):
-        # We don't care about input unless it is a layer
-        if not isinstance(input, Layer):
-            continue
-        # We don't care about input unless it is an output
-        if not item.isOutput():
-            continue
-        # We don't care about input unless it was required
-        # as optional mutable outputs are resolved by the module
-        if not item.isRequired():
-            continue
-
-        mutable_layers.append(input)
+        if isinstance(input, Layer) and item.isOutput():
+            mutable_layers.append(input)
 
     return mutable_layers
 

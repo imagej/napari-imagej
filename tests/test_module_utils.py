@@ -870,10 +870,10 @@ def test_mutable_layers():
         DummyModuleItem(name="b", isOutput=True),
         DummyModuleItem(name="c", isOutput=False),
         DummyModuleItem(name="d", isOutput=True),
-        DummyModuleItem(name="a", isOutput=False, isRequired=False),
-        DummyModuleItem(name="b", isOutput=True, isRequired=False),
-        DummyModuleItem(name="c", isOutput=False, isRequired=False),
-        DummyModuleItem(name="d", isOutput=True, isRequired=False),
+        DummyModuleItem(name="e", isOutput=False, isRequired=False),
+        DummyModuleItem(name="f", isOutput=True, isRequired=False),
+        DummyModuleItem(name="g", isOutput=False, isRequired=False),
+        DummyModuleItem(name="h", isOutput=True, isRequired=False),
     ]
     user_resolved_inputs = [
         1,
@@ -888,5 +888,6 @@ def test_mutable_layers():
     mutable_layers = _module_utils._mutable_layers(
         unresolved_inputs, user_resolved_inputs
     )
-    assert 1 == len(mutable_layers)
+    assert 2 == len(mutable_layers)
     assert user_resolved_inputs[3] in mutable_layers
+    assert user_resolved_inputs[7] in mutable_layers
