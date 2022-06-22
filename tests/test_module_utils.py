@@ -691,7 +691,9 @@ def run_module_from_script(ij, tmp_path, script):
     )
     _module_utils._run_module(module)
     _module_utils._postprocess_module(module)
-    return _module_utils._pure_module_outputs(module)
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
+    unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
+    return _module_utils._pure_module_outputs(module, unresolved_inputs)
 
 
 script_zero_layer_zero_widget: str = """
@@ -805,7 +807,9 @@ widget_parameterizations = [
     (script_zero_layer_two_widget, 0, 2),
     (script_one_layer_two_widget, 1, 2),
     (script_two_layer_two_widget, 2, 2),
+    # No layers returned, the required BOTH is just updated
     (script_both_but_required, 0, 0),
+    # One layer returned as we create the optional input internally
     (script_both_but_optional, 1, 0),
 ]
 

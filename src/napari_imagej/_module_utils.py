@@ -468,6 +468,7 @@ def _layerDataTuple_from_layer(layer: Layer):
 
 def _pure_module_outputs(
     module: "jc.Module",
+    user_inputs: List["jc.ModuleItem"],
 ) -> Tuple[Optional[List[LayerDataTuple]], List[Tuple[str, Any]]]:
     """Gets the pure outputs of the module, or None if the module has no pure output."""
     # Outputs delivered to users through the return of the magicgui widget.
@@ -481,10 +482,7 @@ def _pure_module_outputs(
     for output_entry in outputs.entrySet():
         # Ignore outputs that are also required inputs
         output_name = ij().py.from_java(output_entry.getKey())
-        if (
-            output_name in module.getInputs()
-            and module.getInfo().getInput(output_name).isRequired()
-        ):
+        if module.getInfo().getInput(output_name) in user_inputs:
             continue
         output = ij().py.from_java(output_entry.getValue())
         # Add LayerDataTuples directly
@@ -711,7 +709,7 @@ def functionify_module_execution(
         # get all outputs
         layer_outputs: List[LayerDataTuple]
         widget_outputs: List[Any]
-        layer_outputs, widget_outputs = _pure_module_outputs(module)
+        layer_outputs, widget_outputs = _pure_module_outputs(module, unresolved_inputs)
         # log outputs
         if layer_outputs is not None:
             for output in layer_outputs:
