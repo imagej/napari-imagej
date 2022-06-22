@@ -151,16 +151,18 @@ def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
     return _checkerUsingFunc(item, isAssignable)
 
 
-def _widget_return_type(module_info: "jc.Module") -> type:
+def _widget_return_type(
+    module_info: "jc.Module", user_resolved_inputs: List["jc.ModuleItem"]
+) -> type:
     """
     Determines the return type of execute_module within functionify_module_execution.
-    If there are ANY "layer" outputs described in module_info, the output will be
-    a List of LayerDataTuple. If there are no "layer" outputs, the return will be
+    If there are "layer" outputs not delegated to the user, the output will be
+    a List of LayerDataTuple. If there are no such outputs, the return will be
     None.
     """
     for output_item in module_info.outputs():
-        # We only return PURE outputs (i.e. not mutable outputs)
-        if output_item.isInput():
+        # If the user passed the output, we shouldn't return it.
+        if output_item in user_resolved_inputs:
             continue
         if type_mappings().type_displayable_in_napari(output_item.getType()):
             return List[LayerDataTuple]
@@ -252,14 +254,8 @@ def _mutable_layers(
     """
     mutable_layers: List[Layer] = []
     for item, input in zip(unresolved_inputs, user_resolved_inputs):
-        # We don't care about input unless it is a layer
-        if not isinstance(input, Layer):
-            continue
-        # We don't care about input unless it is an output
-        if not item.isOutput():
-            continue
-
-        mutable_layers.append(input)
+        if isinstance(input, Layer) and item.isOutput():
+            mutable_layers.append(input)
 
     return mutable_layers
 
@@ -450,7 +446,7 @@ def _modify_function_signature(
             for i in _napari_module_param_additions(module_info).items()
         ]
         all_params = module_params + other_params
-        return_type = _widget_return_type(module_info)
+        return_type = _widget_return_type(module_info, inputs)
         function.__signature__ = sig.replace(
             parameters=all_params, return_annotation=return_type
         )
@@ -472,6 +468,7 @@ def _layerDataTuple_from_layer(layer: Layer):
 
 def _pure_module_outputs(
     module: "jc.Module",
+    user_inputs: List["jc.ModuleItem"],
 ) -> Tuple[Optional[List[LayerDataTuple]], List[Tuple[str, Any]]]:
     """Gets the pure outputs of the module, or None if the module has no pure output."""
     # Outputs delivered to users through the return of the magicgui widget.
@@ -483,9 +480,9 @@ def _pure_module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        # Ignore outputs that are also inputs
+        # Ignore outputs that are also required inputs
         output_name = ij().py.from_java(output_entry.getKey())
-        if output_name in module.getInputs():
+        if module.getInfo().getInput(output_name) in user_inputs:
             continue
         output = ij().py.from_java(output_entry.getValue())
         # Add LayerDataTuples directly
@@ -571,7 +568,7 @@ def _add_napari_metadata(
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
 
-    type_hints["return"] = _widget_return_type(info)
+    type_hints["return"] = _widget_return_type(info, unresolved_inputs)
 
     execute_module._info = info  # type: ignore
     execute_module.__annotation__ = type_hints  # type: ignore
@@ -712,7 +709,7 @@ def functionify_module_execution(
         # get all outputs
         layer_outputs: List[LayerDataTuple]
         widget_outputs: List[Any]
-        layer_outputs, widget_outputs = _pure_module_outputs(module)
+        layer_outputs, widget_outputs = _pure_module_outputs(module, unresolved_inputs)
         # log outputs
         if layer_outputs is not None:
             for output in layer_outputs:

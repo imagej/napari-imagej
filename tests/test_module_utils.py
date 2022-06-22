@@ -691,7 +691,9 @@ def run_module_from_script(ij, tmp_path, script):
     )
     _module_utils._run_module(module)
     _module_utils._postprocess_module(module)
-    return _module_utils._pure_module_outputs(module)
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
+    unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
+    return _module_utils._pure_module_outputs(module, unresolved_inputs)
 
 
 script_zero_layer_zero_widget: str = """
@@ -776,6 +778,25 @@ d = ArrayImgs.unsignedBytes(10, 10)
 e = ArrayImgs.unsignedBytes(10, 10)
 """
 
+script_both_but_optional: str = """
+#@BOTH Img(required=false) d
+
+from net.imglib2.img.array import ArrayImgs
+
+if d is None:
+    d = ArrayImgs.unsignedBytes(10, 10)
+
+d[:, :] = 1
+"""
+
+script_both_but_required: str = """
+#@BOTH Img(required=true) d
+
+from net.imglib2.img.array import ArrayImgs
+
+d[:, :] = 1
+"""
+
 widget_parameterizations = [
     (script_zero_layer_zero_widget, 0, 0),
     (script_one_layer_zero_widget, 1, 0),
@@ -786,6 +807,10 @@ widget_parameterizations = [
     (script_zero_layer_two_widget, 0, 2),
     (script_one_layer_two_widget, 1, 2),
     (script_two_layer_two_widget, 2, 2),
+    # No layers returned, the required BOTH is just updated
+    (script_both_but_required, 0, 0),
+    # One layer returned as we create the optional input internally
+    (script_both_but_optional, 1, 0),
 ]
 
 
@@ -808,6 +833,8 @@ out_type_params = [
     (script_zero_layer_one_widget, None),
     (script_one_layer_one_widget, List[LayerDataTuple]),
     (script_two_layer_one_widget, List[LayerDataTuple]),
+    (script_both_but_optional, List[LayerDataTuple]),
+    (script_both_but_required, None),
 ]
 
 
@@ -818,7 +845,10 @@ def test_module_output_type(ij, tmp_path, script, type):
     p.write_text(script)
 
     info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
-    assert _module_utils._widget_return_type(info) == type
+    module = info.createModule()
+    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
+    unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
+    assert _module_utils._widget_return_type(info, unresolved_inputs) == type
 
 
 def test_non_layer_widget():
@@ -844,8 +874,16 @@ def test_mutable_layers():
         DummyModuleItem(name="b", isOutput=True),
         DummyModuleItem(name="c", isOutput=False),
         DummyModuleItem(name="d", isOutput=True),
+        DummyModuleItem(name="e", isOutput=False, isRequired=False),
+        DummyModuleItem(name="f", isOutput=True, isRequired=False),
+        DummyModuleItem(name="g", isOutput=False, isRequired=False),
+        DummyModuleItem(name="h", isOutput=True, isRequired=False),
     ]
     user_resolved_inputs = [
+        1,
+        2,
+        Image(data=numpy.ones((4, 4))),
+        Image(data=numpy.ones((4, 4))),
         1,
         2,
         Image(data=numpy.ones((4, 4))),
@@ -854,5 +892,6 @@ def test_mutable_layers():
     mutable_layers = _module_utils._mutable_layers(
         unresolved_inputs, user_resolved_inputs
     )
-    assert 1 == len(mutable_layers)
+    assert 2 == len(mutable_layers)
     assert user_resolved_inputs[3] in mutable_layers
+    assert user_resolved_inputs[7] in mutable_layers
