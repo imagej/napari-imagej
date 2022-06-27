@@ -1,5 +1,6 @@
 import pytest
 from napari import Viewer
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -129,7 +130,7 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
     assert button_params[4][0] not in imagej_widget.highlighter.tooltips
 
 
-def test_keymaps(make_napari_viewer):
+def test_keymaps(make_napari_viewer, qtbot):
     """Tests that 'L' is added to the keymap by ImageJWidget"""
     viewer: Viewer = make_napari_viewer()
     assert "L" not in viewer.keymap
@@ -138,3 +139,43 @@ def test_keymaps(make_napari_viewer):
     # TODO: I can't seem to figure out how to assert that pressing 'L'
     # sets the focus of the search bar.
     # Typing viewer.keymap['L'](viewer) does nothing. :(
+
+
+def test_result_single_click(make_napari_viewer, qtbot):
+    viewer: Viewer = make_napari_viewer()
+    imagej_widget: ImageJWidget = ImageJWidget(viewer)
+    viewer
+    # Test single click spawns buttons
+    assert len(imagej_widget.highlighter.focused_action_buttons) == 0
+    imagej_widget.results._search("Frangi")
+    item = imagej_widget.results._tables[0].item(0, 0)
+    assert item is not None
+    rect = imagej_widget.results._tables[0].visualItemRect(item)
+    qtbot.mouseClick(
+        imagej_widget.results._tables[0].viewport(), Qt.LeftButton, pos=rect.center()
+    )
+    assert len(imagej_widget.highlighter.focused_action_buttons) == 5
+
+    # Test double click spawns the widget
+
+
+def test_result_double_click(make_napari_viewer, qtbot):
+    viewer: Viewer = make_napari_viewer()
+    imagej_widget: ImageJWidget = ImageJWidget(viewer)
+    viewer
+    # Test double click spawns the widget
+    assert len(viewer.window._dock_widgets) == 0
+    imagej_widget.results._search("Frangi")
+    item = imagej_widget.results._tables[0].item(0, 0)
+    assert item is not None
+    rect = imagej_widget.results._tables[0].visualItemRect(item)
+    # HACK: For some reason, we need to click before a double click.
+    # This seems to be the issue described in
+    # https://stackoverflow.com/questions/46795224/qlistwidget-doesnt-recognize-signals-from-qtestmousedclick
+    qtbot.mouseClick(
+        imagej_widget.results._tables[0].viewport(), Qt.LeftButton, pos=rect.center()
+    )
+    qtbot.mouseDClick(
+        imagej_widget.results._tables[0].viewport(), Qt.LeftButton, pos=rect.center()
+    )
+    assert len(viewer.window._dock_widgets) == 1

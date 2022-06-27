@@ -62,14 +62,23 @@ class ImageJWidget(QWidget):
         # If the user presses enter in the search bar,
         # highlight the first module in the results
         self.search.bar.returnPressed.connect(
-            lambda: self.highlighter._highlight_module(self.results.results, 0, 0)
-        )
-        # If the user clicks in any table, highlight
-        # the clicked cell
-        for i, tableWidget in enumerate(self.results.widgets):
-            tableWidget.cellClicked.connect(
-                self.highlighter._highlight_from_results_table(self.results.results, i)
+            lambda: self.highlighter._highlight_from_tables_and_run_first(
+                self.results.results, 0, 0
             )
+        )
+
+        for i, tableWidget in enumerate(self.results.widgets):
+            # If the user clicks in any table, highlight
+            # the clicked cell
+            clickFunc = self.highlighter._table_onClick_generator(
+                self.results.results, i
+            )
+            tableWidget.cellClicked.connect(clickFunc)
+            # If the user double clicks in any table, run the clicked cell
+            doubleClickFunc = self.highlighter._table_onDoubleClick_generator(
+                self.results.results, i
+            )
+            tableWidget.cellDoubleClicked.connect(doubleClickFunc)
 
 
 class SearchbarWidget(QWidget):
@@ -193,12 +202,35 @@ class FocusWidget(QWidget):
 
         self.focused_action_buttons = []  # type: ignore
 
-    def _highlight_from_results_table(
+    def _table_onClick_generator(self, tables: List[List["jc.ModuleInfo"]], index: int):
+        # NB: col is needed for tableWidget.cellClicked.
+        # We don't use it in _highlight_module, though.
+        def func(row: int, col: int):
+            self._highlight_module_from_tables(tables, index, row)
+
+        return func
+
+    def _table_onDoubleClick_generator(
         self, tables: List[List["jc.ModuleInfo"]], index: int
     ):
         # NB: col is needed for tableWidget.cellClicked.
         # We don't use it in _highlight_module, though.
-        return lambda row, col: self._highlight_module_from_tables(tables, index, row)
+        def func(row: int, col: int):
+            self._highlight_module_from_tables(tables, index, row)
+            # Find the widget button
+            for button in self.focused_action_buttons:
+                if button.text() == "Widget":
+                    button.click()
+                    return
+
+        return func
+
+    def _highlight_from_tables_and_run_first(
+        self, tables: List[List["jc.ModuleInfo"]], index: int, row: int
+    ):
+        self._highlight_module_from_tables(tables, index, row)
+        if len(self.focused_action_buttons) > 0:
+            self.focused_action_buttons[0].click()
 
     def _action_results(self) -> Dict[str, List[Tuple[str, Callable]]]:
         """
@@ -278,7 +310,11 @@ class FocusWidget(QWidget):
         # Rename buttons to reflect focused module's actions
         for i, params in enumerate(self._button_params_from_actions()):
             # Clean old actions from button
-            self.focused_action_buttons[i].disconnect()
+            # HACK: disconnect() throws an exception if there are no connections.
+            # Thus we use button name as a proxy for when there is a connected action.
+            if self.focused_action_buttons[i].text() != "":
+                self.focused_action_buttons[i].disconnect()
+                self.focused_action_buttons[i].setText("")
             # Set button name
             name = params[0]
             self.focused_action_buttons[i].setText(name)
