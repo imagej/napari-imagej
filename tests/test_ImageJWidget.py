@@ -1,4 +1,5 @@
 import pytest
+from napari import Viewer
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -95,9 +96,7 @@ def example_info(ij):
 jc = JavaClasses()
 
 
-def test_button_param_regression(
-    ij, example_info: "jc.ModuleInfo", imagej_widget: ImageJWidget
-):
+def test_button_param_regression(ij, imagej_widget: ImageJWidget):
     plugins = ij.get("org.scijava.plugin.PluginService")
     searcher = plugins.getPlugin(jc.ModuleSearcher, jc.Searcher).createInstance()
     ij.context().inject(searcher)
@@ -128,3 +127,14 @@ def test_button_param_regression(
     )
     assert button_params[4][0] == "Batch"
     assert button_params[4][0] not in imagej_widget.highlighter.tooltips
+
+
+def test_keymaps(make_napari_viewer):
+    """Tests that 'L' is added to the keymap by ImageJWidget"""
+    viewer: Viewer = make_napari_viewer()
+    assert "L" not in viewer.keymap
+    ImageJWidget(viewer)
+    assert "L" in viewer.keymap
+    # TODO: I can't seem to figure out how to assert that pressing 'L'
+    # sets the focus of the search bar.
+    # Typing viewer.keymap['L'](viewer) does nothing. :(

@@ -41,9 +41,11 @@ class ImageJWidget(QWidget):
         # Search Bar
         self.search: SearchbarWidget = SearchbarWidget()
         self.layout().addWidget(self.search)
-        # Bind L key to search bar. 
+        # Bind L key to search bar.
         # Note the requirement for an input parameter
-        napari_viewer.bind_key("l", lambda _: self.search.bar.setFocus(), overwrite=True)
+        napari_viewer.bind_key(
+            "l", lambda _: self.search.bar.setFocus(), overwrite=True
+        )
 
         self.results: ResultsWidget = ResultsWidget()
         self.layout().addWidget(self.results)
