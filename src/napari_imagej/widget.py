@@ -9,6 +9,7 @@ from threading import Thread
 from typing import Callable, Dict, List, Tuple
 
 from napari import Viewer
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -51,6 +52,8 @@ class ImageJWidget(QWidget):
         self.layout().addWidget(self.results)
 
         # Module highlighter
+        self._focus_table = 0
+        self._focus_row = -1
         self.highlighter: FocusWidget = FocusWidget(napari_viewer)
         self.layout().addWidget(self.highlighter)
 
@@ -58,14 +61,6 @@ class ImageJWidget(QWidget):
 
         # When the text bar changes, update the search results.
         self.search.bar.textChanged.connect(self.results._search)
-
-        # If the user presses enter in the search bar,
-        # highlight the first module in the results
-        self.search.bar.returnPressed.connect(
-            lambda: self.highlighter._highlight_from_tables_and_run_first(
-                self.results.results, 0, 0
-            )
-        )
 
         for i, tableWidget in enumerate(self.results.widgets):
             # If the user clicks in any table, highlight
@@ -79,6 +74,47 @@ class ImageJWidget(QWidget):
                 self.results.results, i
             )
             tableWidget.cellDoubleClicked.connect(doubleClickFunc)
+
+    def _change_focused_table_entry(self, down: bool = True) -> Tuple[int, int]:
+        if down:
+            if (
+                self._focus_row < len(self.results.results[self._focus_table]) - 1
+                and self._focus_row
+                < self.results._tables[self._focus_table].rowCount() - 1
+            ):
+                self._focus_row = self._focus_row + 1
+            else:
+                if self._focus_table < len(self.results.results) - 1:
+                    self.results._tables[self._focus_table].clearSelection()
+                    self._focus_table = self._focus_table + 1
+                    self._focus_row = 0
+        else:
+            if self._focus_row > 0:
+                self._focus_row = self._focus_row - 1
+            else:
+                if self._focus_table > 0:
+                    self.results._tables[self._focus_table].clearSelection()
+                    self._focus_table = self._focus_table - 1
+                    self._focus_row = len(self.results.results[self._focus_table]) - 1
+
+        self.search.bar.clearFocus()
+        self.setFocus()
+        self.results._tables[self._focus_table].selectRow(self._focus_row)
+        self.highlighter._highlight_module_from_tables(
+            self.results.results, self._focus_table, self._focus_row
+        )
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Down:
+            self._change_focused_table_entry(down=True)
+        elif event.key() == Qt.Key_Up:
+            self._change_focused_table_entry(down=False)
+        elif event.key() == Qt.Key_Return:
+            if self._focus_row < 0:
+                self._focus_row = 0
+            self.highlighter._highlight_from_tables_and_run_first(
+                self.results.results, self._focus_table, self._focus_row
+            )
 
 
 class SearchbarWidget(QWidget):

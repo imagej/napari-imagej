@@ -179,3 +179,55 @@ def test_result_double_click(make_napari_viewer, qtbot):
         imagej_widget.results._tables[0].viewport(), Qt.LeftButton, pos=rect.center()
     )
     assert len(viewer.window._dock_widgets) == 1
+
+
+def selected_row_index(table: QTableWidget):
+    rows = table.selectionModel().selectedRows()
+    if len(rows) == 0:
+        return -1
+    if len(rows) == 1:
+        return rows[0].row()
+    raise ValueError()
+
+
+def test_arrow_keys(imagej_widget: ImageJWidget, qtbot):
+    # Search something
+    imagej_widget.results._search("Fi")
+    # Assert that there is a result in each
+    for result in imagej_widget.results.results:
+        assert not result.isEmpty()
+    # Ensure no row is selected
+    for table in imagej_widget.results._tables:
+        assert selected_row_index(table) == -1
+    # Go down, ensure that the first row gets highlighted
+    qtbot.keyPress(imagej_widget, Qt.Key_Down)
+    assert selected_row_index(imagej_widget.results._tables[0]) == 0
+    # Go up, ensure that the first row is still selected
+    qtbot.keyPress(imagej_widget, Qt.Key_Up)
+    assert selected_row_index(imagej_widget.results._tables[0]) == 0
+    # Iterate through the tables, ensure arrow keys change selection
+    imagej_widget._focus_row = -1
+    for i, result_arr in enumerate(imagej_widget.results.results):
+        if len(result_arr) > 12:
+            result_arr = result_arr[:12]
+        for j, result in enumerate(result_arr):
+            qtbot.keyPress(imagej_widget, Qt.Key_Down)
+            assert selected_row_index(imagej_widget.results._tables[i]) == j
+            assert (
+                imagej_widget.highlighter.focused_module
+                == imagej_widget.results.results[i][j]
+            )
+        for j, table in enumerate(imagej_widget.results._tables):
+            if i == j:
+                continue
+            assert selected_row_index(table) == -1
+    # Try going down past the last result, ensure that we can't go further
+    qtbot.keyPress(imagej_widget, Qt.Key_Down)
+    for i, table in enumerate(imagej_widget.results._tables):
+        if i == len(imagej_widget.results._tables) - 1:
+            assert (
+                selected_row_index(table)
+                == imagej_widget.results._tables[i].rowCount() - 1
+            )
+        else:
+            assert selected_row_index(table) == -1
