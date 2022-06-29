@@ -134,10 +134,21 @@ class MutableOutputWidget(Container):
 
         # give the data array to the viewer.
         # Replace blank names with None so the Image class generates a name
-        current_viewer().add_image(
+        layer = current_viewer().add_image(
             name=params["name"] if len(params["name"]) else None,
             data=data,
         )
+
+        # Find the "oldest" magicgui ancestor, and reset choices.
+        # This allows the new layer to propagate to children.
+        mgui = self
+        while hasattr(mgui.parent, "_magic_widget"):
+            mgui = mgui.parent._magic_widget
+        mgui.reset_choices()
+        # Specifically for this widget, set this selection
+        # to the newly created layer.
+        # This is almost definitely what the user wants!
+        self.value = layer
 
     @property
     def value(self) -> Any:

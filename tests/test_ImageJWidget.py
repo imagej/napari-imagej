@@ -1,3 +1,4 @@
+import pytest
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -8,6 +9,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from napari_imagej._flow_layout import FlowLayout
+from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
@@ -72,6 +75,56 @@ def test_focus_widget_layout(imagej_widget: ImageJWidget):
     focuser: FocusWidget = imagej_widget.findChild(FocusWidget)
     subwidgets = focuser.children()
     # Note: This is BEFORE any module is focused.
-    assert len(subwidgets) == 2
+    assert len(subwidgets) == 3
+    # The layout
     assert isinstance(subwidgets[0], QVBoxLayout)
+    # The label describing the focused module
     assert isinstance(subwidgets[1], QLabel)
+    # The button Container
+    assert isinstance(subwidgets[2], QWidget)
+    assert isinstance(subwidgets[2].layout(), FlowLayout)
+
+
+@pytest.fixture
+def example_info(ij):
+    return ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+
+
+jc = JavaClasses()
+
+
+def test_button_param_regression(
+    ij, example_info: "jc.ModuleInfo", imagej_widget: ImageJWidget
+):
+    plugins = ij.get("org.scijava.plugin.PluginService")
+    searcher = plugins.getPlugin(jc.ModuleSearcher, jc.Searcher).createInstance()
+    ij.context().inject(searcher)
+    results = searcher.search("frangi", False)
+    assert len(results) == 1
+    searchService = ij.get("org.scijava.search.SearchService")
+    imagej_widget.highlighter.focused_actions = searchService.actions(results[0])
+    button_params = imagej_widget.highlighter._button_params_from_actions()
+    assert button_params[0][0] == "Run"
+    assert (
+        imagej_widget.highlighter.tooltips[button_params[0][0]]
+        == "Runs functionality from a modal widget. Best for single executions"
+    )
+    assert button_params[1][0] == "Widget"
+    assert (
+        imagej_widget.highlighter.tooltips[button_params[1][0]]
+        == "Runs functionality from a napari widget. Useful for parameter sweeping"
+    )
+    assert button_params[2][0] == "Help"
+    assert (
+        imagej_widget.highlighter.tooltips[button_params[2][0]]
+        == "Opens the functionality's ImageJ.net wiki page"
+    )
+    assert button_params[3][0] == "Source"
+    assert (
+        imagej_widget.highlighter.tooltips[button_params[3][0]]
+        == "Opens the source code on GitHub"
+    )
+    assert button_params[4][0] == "Batch"
+    assert button_params[4][0] not in imagej_widget.highlighter.tooltips

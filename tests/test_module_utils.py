@@ -15,6 +15,7 @@ from magicgui.widgets import (
     SpinBox,
     Widget,
 )
+from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
 from napari.types import LayerDataTuple
 
@@ -895,3 +896,77 @@ def test_mutable_layers():
     assert 2 == len(mutable_layers)
     assert user_resolved_inputs[3] in mutable_layers
     assert user_resolved_inputs[7] in mutable_layers
+
+
+def test_request_values_args():
+    import napari
+
+    def foo(
+        a,
+        b: str,
+        c: Image,
+        d: "napari.layers.Image",
+        e="default",
+        f: str = "also default",
+    ):
+        return "I didn't use any of my parameters"
+
+    param_options = {}
+    param_options["a"] = {}
+    param_options["a"]["tooltip"] = "We don't use this"
+
+    args: dict = _module_utils._request_values_args(foo, param_options)
+
+    import inspect
+
+    assert "a" in args
+    assert args["a"]["annotation"] == inspect._empty
+    assert args["a"]["options"] == dict(tooltip="We don't use this")
+    assert "value" not in args["a"]
+
+    assert "b" in args
+    assert args["b"]["annotation"] == str
+    assert "options" not in args["b"]
+    assert "value" not in args["b"]
+
+    assert "c" in args
+    assert args["c"]["annotation"] == Image
+    assert args["c"]["options"] == dict(choices=_module_utils._get_layers_hack)
+    assert "value" not in args["c"]
+
+    assert "d" in args
+    assert args["d"]["annotation"] == "napari.layers.Image"
+    assert args["d"]["options"] == dict(choices=_module_utils._get_layers_hack)
+    assert "value" not in args["d"]
+
+    assert "e" in args
+    assert args["e"]["annotation"] == inspect._empty
+    assert "options" not in args["e"]
+    assert args["e"]["value"] == "default"
+
+    assert "f" in args
+    assert args["f"]["annotation"] == str
+    assert "options" not in args["f"]
+    assert args["f"]["value"] == "also default"
+
+
+def test_execute_function_with_params(make_napari_viewer, ij):
+    viewer: Viewer = make_napari_viewer()
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    func, _ = _module_utils.functionify_module_execution(
+        viewer, info.createModule(), info
+    )
+    params: Dict[str, Any] = dict(
+        input=numpy.ones((100, 100)),
+        doGauss=False,
+        spacingString="1, 1",
+        scaleString="2, 5",
+    )
+    # Ensure that a None params does nothing
+    _module_utils._execute_function_with_params(viewer, None, func)
+    assert len(viewer.layers) == 0
+
+    _module_utils._execute_function_with_params(viewer, params, func)
+    assert len(viewer.layers) == 1

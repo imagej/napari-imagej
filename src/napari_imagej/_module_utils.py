@@ -2,10 +2,12 @@ from functools import lru_cache
 from inspect import Parameter, Signature, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-from magicgui.widgets import Container, Label, LineEdit, Widget
-from napari import Viewer
+from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
+from magicgui.widgets._bases import CategoricalWidget
+from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.types import LayerDataTuple
+from napari.utils._magicgui import find_viewer_ancestor
 from scyjava import JavaIterable, JavaMap, JavaSet, Priority
 
 from napari_imagej._ptypes import TypeMappings, _supported_styles
@@ -738,3 +740,65 @@ def functionify_module_execution(
     )
 
     return (module_execute, magic_kwargs)
+
+
+def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
+    """Mimics the functional changes of https://github.com/napari/napari/pull/4715"""
+    viewer = find_viewer_ancestor(gui.native)
+    if viewer is None:
+        viewer = current_viewer()
+    return [x for x in viewer.layers if isinstance(x, gui.annotation)]
+
+
+def _request_values_args(
+    func: Callable, param_options: Dict[str, Dict]
+) -> Dict[str, Dict]:
+    """Gets the arguments for request_values from a function"""
+    import inspect
+
+    signature = inspect.signature(func)
+
+    # Convert function parameters and param_options to a dictionary
+    args = {}
+    for param in signature.parameters.values():
+        args[param.name] = {}
+        # Add type to dict
+        args[param.name]["annotation"] = param.annotation
+        # Add magicgui preferences, if they exist, to dict
+        if param.name in param_options:
+            args[param.name]["options"] = param_options[param.name]
+        # Add default value, if we have one, to dict
+        if param.default is not inspect._empty:
+            args[param.name]["value"] = param.default
+        # Add layer choices, if relevant
+        if (
+            inspect.isclass(param.annotation) and issubclass(param.annotation, Layer)
+        ) or (
+            type(param.annotation) is str
+            and param.annotation.startswith("napari.layers")
+        ):
+            if "options" not in args[param.name]:
+                args[param.name]["options"] = {}
+            # TODO: Once napari > 0.4.16 is released, replace this with
+            # napari.util._magicgui.get_layers
+            args[param.name]["options"]["choices"] = _get_layers_hack
+    return args
+
+
+def _execute_function_with_params(viewer: Viewer, params: Dict, func: Callable):
+    if params is not None:
+        inputs = params.values()
+        outputs: Optional[List[LayerDataTuple]] = func(*inputs)
+        if outputs is not None:
+            for output in outputs:
+                viewer.add_layer(Layer.create(*output))
+
+
+def execute_function_modally(
+    viewer: Viewer, name: str, func: Callable, param_options: Dict[str, Dict]
+) -> None:
+
+    args: dict = _request_values_args(func, param_options)
+    # Request values
+    params = request_values(title=name, **args)
+    _execute_function_with_params(viewer, params, func)
