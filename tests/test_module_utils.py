@@ -15,6 +15,7 @@ from magicgui.widgets import (
     SpinBox,
     Widget,
 )
+from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
 from napari.types import LayerDataTuple
 
@@ -947,3 +948,25 @@ def test_request_values_args():
     assert args["f"]["annotation"] == str
     assert "options" not in args["f"]
     assert args["f"]["value"] == "also default"
+
+
+def test_execute_function_with_params(make_napari_viewer, ij):
+    viewer: Viewer = make_napari_viewer()
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    func, _ = _module_utils.functionify_module_execution(
+        viewer, info.createModule(), info
+    )
+    params: Dict[str, Any] = dict(
+        input=numpy.ones((100, 100)),
+        doGauss=False,
+        spacingString="1, 1",
+        scaleString="2, 5",
+    )
+    # Ensure that a None params does nothing
+    _module_utils._execute_function_with_params(viewer, None, func)
+    assert len(viewer.layers) == 0
+
+    _module_utils._execute_function_with_params(viewer, params, func)
+    assert len(viewer.layers) == 1

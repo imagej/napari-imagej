@@ -785,6 +785,15 @@ def _request_values_args(
     return args
 
 
+def _execute_function_with_params(viewer: Viewer, params: Dict, func: Callable):
+    if params is not None:
+        inputs = params.values()
+        outputs: Optional[List[LayerDataTuple]] = func(*inputs)
+        if outputs is not None:
+            for output in outputs:
+                viewer.add_layer(Layer.create(*output))
+
+
 def execute_function_modally(
     viewer: Viewer, name: str, func: Callable, param_options: Dict[str, Dict]
 ) -> None:
@@ -792,9 +801,4 @@ def execute_function_modally(
     args: dict = _request_values_args(func, param_options)
     # Request values
     params = request_values(title=name, **args)
-    if params is not None:
-        inputs = params.values()
-        outputs: Optional[List[LayerDataTuple]] = func(*inputs)
-        if outputs is not None:
-            for output in outputs:
-                viewer.add_layer(Layer.create(*output))
+    _execute_function_with_params(viewer, params, func)
