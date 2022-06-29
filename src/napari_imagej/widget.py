@@ -8,6 +8,7 @@ from functools import lru_cache
 from threading import Thread
 from typing import Callable, Dict, List, Tuple
 
+from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -377,9 +378,9 @@ class FocusWidget(QWidget):
                 viewer=self.viewer, name=name, func=func, param_options=param_options
             )
         else:
-            self.viewer.window.add_function_widget(
-                func, name=name, magic_kwargs=param_options
-            )
+            widget = magicgui(function=func, **param_options)
+            self.viewer.window.add_dock_widget(widget)
+            widget[0].native.setFocus()
 
     def _convert_searchResult_to_info(self, search_result):
         info = search_result.info()
