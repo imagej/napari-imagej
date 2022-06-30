@@ -6,13 +6,14 @@ This Widget is made accessible to napari through napari.yml
 """
 from functools import lru_cache
 from threading import Thread
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, NamedTuple, Tuple
 
 from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -26,10 +27,16 @@ from qtpy.QtWidgets import (
 
 from napari_imagej._flow_layout import FlowLayout
 from napari_imagej._module_utils import (
+    convert_searchResult_to_info,
     execute_function_modally,
     functionify_module_execution,
 )
 from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
+
+
+class SearchAction(NamedTuple):
+    name: str
+    action: Callable[[], None]
 
 
 class ImageJWidget(QWidget):
@@ -43,11 +50,6 @@ class ImageJWidget(QWidget):
         # Search Bar
         self.search: SearchbarWidget = SearchbarWidget()
         self.layout().addWidget(self.search)
-        # Bind L key to search bar.
-        # Note the requirement for an input parameter
-        napari_viewer.bind_key(
-            "l", lambda _: self.search.bar.setFocus(), overwrite=True
-        )
 
         self.results: ResultsWidget = ResultsWidget()
         self.layout().addWidget(self.results)
@@ -75,6 +77,14 @@ class ImageJWidget(QWidget):
                 self.results.results, i
             )
             tableWidget.cellDoubleClicked.connect(doubleClickFunc)
+
+        # -- Final setup -- #
+
+        # Bind L key to search bar.
+        # Note the requirement for an input parameter
+        napari_viewer.bind_key(
+            "l", lambda _: self.search.bar.setFocus(), overwrite=True
+        )
 
     def _change_focused_table_entry(self, down: bool = True) -> Tuple[int, int]:
         if down:
@@ -113,9 +123,9 @@ class ImageJWidget(QWidget):
         elif event.key() == Qt.Key_Return:
             if self._focus_row < 0:
                 self._focus_row = 0
-            self.highlighter._highlight_from_tables_and_run_first(
-                self.results.results, self._focus_table, self._focus_row
-            )
+            self.highlighter._table_onDoubleClick_generator(
+                self.results.results, self._focus_table
+            )(self._focus_row, 0)
 
 
 class SearchbarWidget(QWidget):
@@ -229,7 +239,6 @@ class FocusWidget(QWidget):
 
         self.setLayout(QVBoxLayout())
 
-        self.focused_module = None
         self.focused_module_label = QLabel()
         self.layout().addWidget(self.focused_module_label)
         self.button_pane = QWidget()
@@ -248,16 +257,22 @@ class FocusWidget(QWidget):
         return func
 
     def _table_onDoubleClick_generator(
-        self, tables: List[List["jc.ModuleInfo"]], index: int
+        self, tables: List[List["jc.SearchResult"]], index: int
     ):
         # NB: col is needed for tableWidget.cellClicked.
         # We don't use it in _highlight_module, though.
         def func(row: int, col: int):
-            self._highlight_module_from_tables(tables, index, row)
+            if QApplication.keyboardModifiers() & Qt.ShiftModifier:
+                selection = "Widget"
+            else:
+                selection = "Run"
+
+            result = tables[index][row]
+            actions: List[SearchAction] = self._actions_from_result(result)
             # Find the widget button
-            for button in self.focused_action_buttons:
-                if button.text() == "Widget":
-                    button.click()
+            for action in actions:
+                if action.name == selection:
+                    action.action()
                     return
 
         return func
@@ -269,7 +284,9 @@ class FocusWidget(QWidget):
         if len(self.focused_action_buttons) > 0:
             self.focused_action_buttons[0].click()
 
-    def _action_results(self) -> Dict[str, List[Tuple[str, Callable]]]:
+    def _python_actions_for(
+        self, result: "jc.SearchResult"
+    ) -> Dict[str, List[SearchAction]]:
         """
         Gets the list of predefined button parameters that should appear
         for a given action name.
@@ -279,19 +296,19 @@ class FocusWidget(QWidget):
         """
         return {
             "Run": [
-                (
-                    "Run",
-                    lambda: self._execute_module(
-                        ij().py.from_java(self.focused_module.name()),
-                        self._convert_searchResult_to_info(self.focused_module),
+                SearchAction(
+                    name="Run",
+                    action=lambda: self._execute_module(
+                        ij().py.from_java(result.name()),
+                        convert_searchResult_to_info(result),
                         modal=True,
                     ),
                 ),
-                (
-                    "Widget",
-                    lambda: self._execute_module(
-                        ij().py.from_java(self.focused_module.name()),
-                        self._convert_searchResult_to_info(self.focused_module),
+                SearchAction(
+                    name="Widget",
+                    action=lambda: self._execute_module(
+                        ij().py.from_java(result.name()),
+                        convert_searchResult_to_info(result),
                         modal=False,
                     ),
                 ),
@@ -306,15 +323,22 @@ class FocusWidget(QWidget):
         "Help": "Opens the functionality's ImageJ.net wiki page",
     }
 
-    def _button_params_from_actions(self) -> List[Tuple[str, Callable]]:
-        button_params: List[Tuple[str, Callable]] = []
-        action_results = self._action_results()
-        for i, action in enumerate(self.focused_actions):
-            action_name = ij().py.from_java(action.toString())
-            if action_name in action_results:
-                button_params.extend(action_results[action_name])
+    def _actions_from_result(self, result: "jc.SearchResult") -> List[SearchAction]:
+        button_params: List[SearchAction] = []
+        # Get all additional python actions for result
+        python_action_replacements: Dict[str, SearchAction] = self._python_actions_for(
+            result
+        )
+        # Iterate over all available python actions
+        searchService = ij().get("org.scijava.search.SearchService")
+        for java_action in searchService.actions(result):
+            action_name = ij().py.from_java(java_action.toString())
+            # If we have python replacements for this action, use them
+            if action_name in python_action_replacements:
+                button_params.extend(python_action_replacements[action_name])
+            # Otherwise, wrap the java action into a python action
             else:
-                params = (action_name, self.focused_actions[i].run)
+                params = SearchAction(name=action_name, action=java_action.run)
                 button_params.append(params)
         return button_params
 
@@ -326,14 +350,17 @@ class FocusWidget(QWidget):
             return
         # Print highlighted module
         self.focused_module = tables[index][row]
-        name = ij().py.from_java(self.focused_module.name())  # type: ignore
+        self._highlight_module(tables[index][row])
+
+    def _highlight_module(self, module: "jc.SearchResult"):
+        name = ij().py.from_java(module.name())  # type: ignore
         self.focused_module_label.setText(name)
 
         # Create buttons for each action
-        searchService = ij().get("org.scijava.search.SearchService")
-        self.focused_actions = searchService.actions(self.focused_module)
-        button_data = self._button_params_from_actions()
-        buttons_needed = len(button_data)
+        # searchService = ij().get("org.scijava.search.SearchService")
+        # self.focused_actions = searchService.actions(module)
+        python_actions: List[SearchAction] = self._actions_from_result(module)
+        buttons_needed = len(python_actions)
         activated_actions = len(self.focused_action_buttons)
         # Hide buttons if we have more than needed
         while activated_actions > buttons_needed:
@@ -345,7 +372,8 @@ class FocusWidget(QWidget):
             self.focused_action_buttons.append(button)
             self.button_pane.layout().addWidget(button)
         # Rename buttons to reflect focused module's actions
-        for i, params in enumerate(self._button_params_from_actions()):
+        # TODO: Can we use zip on the buttons and the actions?
+        for i, action in enumerate(python_actions):
             # Clean old actions from button
             # HACK: disconnect() throws an exception if there are no connections.
             # Thus we use button name as a proxy for when there is a connected action.
@@ -353,11 +381,9 @@ class FocusWidget(QWidget):
                 self.focused_action_buttons[i].disconnect()
                 self.focused_action_buttons[i].setText("")
             # Set button name
-            name = params[0]
-            self.focused_action_buttons[i].setText(name)
+            self.focused_action_buttons[i].setText(action.name)
             # Set button on-click actions
-            func = params[1]
-            self.focused_action_buttons[i].clicked.connect(func)
+            self.focused_action_buttons[i].clicked.connect(action.action)
             # Set tooltip
             if name in self.tooltips:
                 tooltip = self.tooltips[name]
@@ -365,7 +391,9 @@ class FocusWidget(QWidget):
             # Show button
             self.focused_action_buttons[i].show()
 
-    def _execute_module(self, name, moduleInfo, modal: bool = False):
+    def _execute_module(
+        self, name: str, moduleInfo: "jc.ModuleInfo", modal: bool = False
+    ) -> None:
         log_debug("Creating module...")
         module = ij().module().createModule(moduleInfo)
 
@@ -381,10 +409,3 @@ class FocusWidget(QWidget):
             widget = magicgui(function=func, **param_options)
             self.viewer.window.add_dock_widget(widget)
             widget[0].native.setFocus()
-
-    def _convert_searchResult_to_info(self, search_result):
-        info = search_result.info()
-        # There is an extra step for Ops - we actually need the CommandInfo
-        if isinstance(info, jc.OpInfo):
-            info = info.cInfo()
-        return info

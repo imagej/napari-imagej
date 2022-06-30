@@ -22,6 +22,7 @@ from napari.types import LayerDataTuple
 from napari_imagej import _module_utils
 from napari_imagej._ptypes import TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import JavaClasses
+from napari_imagej.widget import ImageJWidget
 
 
 class JavaClassesTest(JavaClasses):
@@ -970,3 +971,11 @@ def test_execute_function_with_params(make_napari_viewer, ij):
 
     _module_utils._execute_function_with_params(viewer, params, func)
     assert len(viewer.layers) == 1
+
+
+def test_convert_searchResult_to_info(imagej_widget: ImageJWidget, ij):
+    searchers = imagej_widget.results.searchers
+    for searcher in searchers:
+        result = searcher.search("f", True)[0]
+        info = _module_utils.convert_searchResult_to_info(result)
+        assert isinstance(info, jc.ModuleInfo)

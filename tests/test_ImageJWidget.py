@@ -105,29 +105,29 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
     assert len(results) == 1
     searchService = ij.get("org.scijava.search.SearchService")
     imagej_widget.highlighter.focused_actions = searchService.actions(results[0])
-    button_params = imagej_widget.highlighter._button_params_from_actions()
-    assert button_params[0][0] == "Run"
+    py_actions = imagej_widget.highlighter._actions_from_result(results[0])
+    assert py_actions[0].name == "Run"
     assert (
-        imagej_widget.highlighter.tooltips[button_params[0][0]]
+        imagej_widget.highlighter.tooltips[py_actions[0][0]]
         == "Runs functionality from a modal widget. Best for single executions"
     )
-    assert button_params[1][0] == "Widget"
+    assert py_actions[1].name == "Widget"
     assert (
-        imagej_widget.highlighter.tooltips[button_params[1][0]]
+        imagej_widget.highlighter.tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
-    assert button_params[2][0] == "Help"
+    assert py_actions[2].name == "Help"
     assert (
-        imagej_widget.highlighter.tooltips[button_params[2][0]]
+        imagej_widget.highlighter.tooltips[py_actions[2][0]]
         == "Opens the functionality's ImageJ.net wiki page"
     )
-    assert button_params[3][0] == "Source"
+    assert py_actions[3].name == "Source"
     assert (
-        imagej_widget.highlighter.tooltips[button_params[3][0]]
+        imagej_widget.highlighter.tooltips[py_actions[3][0]]
         == "Opens the source code on GitHub"
     )
-    assert button_params[4][0] == "Batch"
-    assert button_params[4][0] not in imagej_widget.highlighter.tooltips
+    assert py_actions[4].name == "Batch"
+    assert py_actions[4].name not in imagej_widget.highlighter.tooltips
 
 
 def test_keymaps(make_napari_viewer, qtbot):
