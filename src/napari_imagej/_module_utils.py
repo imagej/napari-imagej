@@ -10,7 +10,7 @@ from napari.types import LayerDataTuple
 from napari.utils._magicgui import find_viewer_ancestor
 from scyjava import JavaIterable, JavaMap, JavaSet, Priority
 
-from napari_imagej._ptypes import TypeMappings, _supported_styles
+from napari_imagej._ptypes import TypeMappings, TypePlaceholders, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
 
 
@@ -31,6 +31,25 @@ def type_mappings():
     By lazily initializing this function, we minimize the time this thread is blocked.
     """
     return TypeMappings()
+
+
+@lru_cache(maxsize=None)
+def type_placeholders() -> Dict[Any, Any]:
+    """
+    Lazily creates a map of type placeholders.
+    This object is then cached upon function return,
+    effectively making this function a lazily initialized field.
+
+    This object should be lazily initialized as it will import java classes.
+    Those Java classes should not be imported until ImageJ has been able to set
+    up the JVM, adding its required JARs to the classpath. For that reason,
+    java class importing is done with java_import, which blocks UNTIL the imagej
+    gateway has been created (in a separate thread). Thus, prematurely calling this
+    function would block the calling thread.
+
+    By lazily initializing this function, we minimize the time this thread is blocked.
+    """
+    return TypePlaceholders()
 
 
 # List of Module Item Converters, along with their priority
@@ -71,6 +90,18 @@ def python_type_of(module_item: "jc.ModuleItem"):
             "or file an issue at https://github.com/imagej/napari-imagej!"
         )
     )
+
+
+@module_item_converter(priority=Priority.HIGH)
+def placeholder_converter(item: "jc.ModuleItem"):
+    """
+    Checks to see if this type can be satisfied by a placeholder.
+    For a placeholder to work, it MUST be a pure input.
+    This is because the python type has no functionality, as it is just an Enum choice.
+    """
+    if item.isInput() and not item.isOutput():
+        java_type = item.getType()
+        return type_placeholders().get(java_type, None)
 
 
 def _checkerUsingFunc(
@@ -393,10 +424,18 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
     default = input.getDefaultValue()
     if default is not None:
         try:
-            default = ij().py.from_java(default)
+            return ij().py.from_java(default)
         except Exception:
             pass
-    return default
+    if not input.isRequired():
+        return None
+    # We have to be careful here about passing a default
+    # Parameter uses an internal type to denote a required parameter.
+    # Passing anything EXCEPT that internal type will make that arugment default.
+    # Thus we need to only specify default if we have one.
+    from inspect import _empty
+
+    return _empty
 
 
 def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
@@ -416,14 +455,7 @@ def _module_param(input: "jc.ModuleItem") -> Parameter:
     default = _param_default_or_none(input)
     type_hint = _type_hint_for_module_item(input)
 
-    # We have to be careful here about passing a default
-    # Parameter uses an internal type to denote a required parameter.
-    # Passing anything EXCEPT that internal type will make that arugment default.
-    # Thus we need to only specify default if we have one.
-    if default is not None:
-        return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
-    else:
-        return Parameter(name=name, kind=kind, annotation=type_hint)
+    return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
 
 
 def _modify_function_signature(

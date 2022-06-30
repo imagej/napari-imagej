@@ -395,17 +395,27 @@ def test_param_annotation(imagej_widget):
 
 
 module_param_inputs = [
-    # default, required
+    # required, no default
     (
         DummyModuleItem(name="foo"),
         Parameter(name="foo", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
     ),
-    # default, not required
+    # not required, default
     (
         DummyModuleItem(name="foo", default="bar", isRequired=False),
         Parameter(
             name="foo",
             default="bar",
+            kind=Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=Optional[str],
+        ),
+    ),
+    # not required, no default
+    (
+        DummyModuleItem(name="foo", isRequired=False),
+        Parameter(
+            name="foo",
+            default=None,
             kind=Parameter.POSITIONAL_OR_KEYWORD,
             annotation=Optional[str],
         ),

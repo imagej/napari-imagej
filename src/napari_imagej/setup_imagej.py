@@ -266,6 +266,30 @@ class JavaClasses(object):
         return "net.imglib2.IterableInterval"
 
     @blocking_import
+    def OutOfBoundsFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsFactory"
+
+    @blocking_import
+    def OutOfBoundsBorderFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsBorderFactory"
+
+    @blocking_import
+    def OutOfBoundsMirrorExpWindowingFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsMirrorExpWindowingFactory"
+
+    @blocking_import
+    def OutOfBoundsMirrorFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsMirrorFactory"
+
+    @blocking_import
+    def OutOfBoundsPeriodicFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsPeriodicFactory"
+
+    @blocking_import
+    def OutOfBoundsRandomValueFactory(self):
+        return "net.imglib2.outofbounds.OutOfBoundsRandomValueFactory"
+
+    @blocking_import
     def RandomAccessible(self):
         return "net.imglib2.RandomAccessible"
 
@@ -280,6 +304,12 @@ class JavaClasses(object):
     @blocking_import
     def RealType(self):
         return "net.imglib2.type.numeric.RealType"
+
+    # ImgLib2-algorithm Types
+
+    @blocking_import
+    def StructuringElement(self):
+        return "net.imglib2.algorithm.labeling.ConnectedComponents.StructuringElement"
 
     # ImgLib2-roi Types
 

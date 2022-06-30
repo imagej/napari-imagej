@@ -6,8 +6,11 @@ from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
 from napari.layers import Labels, Points, Shapes
 
+from napari_imagej._module_utils import python_type_of
+from napari_imagej._napari_converters import OutOfBoundsFactory, StructuringElement
 from napari_imagej._ntypes import _labeling_to_layer, _layer_to_labeling
 from napari_imagej.setup_imagej import jc
+from tests.test_module_utils import DummyModuleItem
 
 
 def assert_labels_equality(
@@ -625,3 +628,48 @@ def test_points_to_realpointcollection(ij, points):
     pts = [jc.RealPoint(p) for p in [p1, p2, p3]]
     for e, a in zip(pts, collection.points()):
         assert e == a
+
+
+# -- Enum(like)s -- #
+
+
+def test_StructuringElement_conversion(ij):
+    # Test python_type_of
+    assert (
+        python_type_of(DummyModuleItem(jtype=jc.StructuringElement))
+        == StructuringElement
+    )
+    # Test conversion
+    assert (
+        ij.py.to_java(StructuringElement.FOUR_CONNECTED)
+        == jc.StructuringElement.FOUR_CONNECTED
+    )
+    assert (
+        ij.py.to_java(StructuringElement.EIGHT_CONNECTED)
+        == jc.StructuringElement.EIGHT_CONNECTED
+    )
+
+
+def test_OutOfBoundsFactory_conversion(ij):
+    # Test python_type_of
+    assert (
+        python_type_of(DummyModuleItem(jtype=jc.OutOfBoundsFactory))
+        == OutOfBoundsFactory
+    )
+    # Test conversion
+    assert isinstance(
+        ij.py.to_java(OutOfBoundsFactory.BORDER), jc.OutOfBoundsBorderFactory
+    )
+    assert isinstance(
+        ij.py.to_java(OutOfBoundsFactory.MIRROR_EXP_WINDOWING),
+        jc.OutOfBoundsMirrorExpWindowingFactory,
+    )
+    assert isinstance(
+        ij.py.to_java(OutOfBoundsFactory.MIRROR_SINGLE), jc.OutOfBoundsMirrorFactory
+    )
+    assert isinstance(
+        ij.py.to_java(OutOfBoundsFactory.MIRROR_DOUBLE), jc.OutOfBoundsMirrorFactory
+    )
+    assert isinstance(
+        ij.py.to_java(OutOfBoundsFactory.PERIODIC), jc.OutOfBoundsPeriodicFactory
+    )
