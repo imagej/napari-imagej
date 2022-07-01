@@ -802,3 +802,11 @@ def execute_function_modally(
     # Request values
     params = request_values(title=name, **args)
     _execute_function_with_params(viewer, params, func)
+
+
+def convert_searchResult_to_info(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
+    info = search_result.info()
+    # There is an extra step for Ops - we actually need the CommandInfo
+    if isinstance(info, jc.OpInfo):
+        info = info.cInfo()
+    return info
