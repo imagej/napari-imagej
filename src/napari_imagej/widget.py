@@ -83,7 +83,7 @@ class ImageJWidget(QWidget):
         # Bind L key to search bar.
         # Note the requirement for an input parameter
         napari_viewer.bind_key(
-            "l", lambda _: self.search.bar.setFocus(), overwrite=True
+            "Control-L", lambda _: self.search.bar.setFocus(), overwrite=True
         )
 
     def _change_focused_table_entry(self, down: bool = True) -> Tuple[int, int]:

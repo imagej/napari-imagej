@@ -131,11 +131,11 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
 
 
 def test_keymaps(make_napari_viewer, qtbot):
-    """Tests that 'L' is added to the keymap by ImageJWidget"""
+    """Tests that 'Ctrl+L' is added to the keymap by ImageJWidget"""
     viewer: Viewer = make_napari_viewer()
-    assert "L" not in viewer.keymap
+    assert "Control-L" not in viewer.keymap
     ImageJWidget(viewer)
-    assert "L" in viewer.keymap
+    assert "Control-L" in viewer.keymap
     # TODO: I can't seem to figure out how to assert that pressing 'L'
     # sets the focus of the search bar.
     # Typing viewer.keymap['L'](viewer) does nothing. :(
