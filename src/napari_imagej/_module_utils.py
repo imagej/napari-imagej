@@ -2,13 +2,14 @@ from functools import lru_cache
 from inspect import Parameter, Signature, _empty, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
+from jpype import JException
 from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
 from magicgui.widgets._bases import CategoricalWidget
 from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.types import LayerDataTuple
 from napari.utils._magicgui import find_viewer_ancestor
-from scyjava import JavaIterable, JavaMap, JavaSet, Priority
+from scyjava import JavaIterable, JavaMap, JavaSet, Priority, jstacktrace
 
 from napari_imagej._ptypes import TypeMappings, TypePlaceholders, _supported_styles
 from napari_imagej.setup_imagej import ij, jc, log_debug
@@ -216,13 +217,17 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     """
     log_debug("Preprocessing...")
 
-    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
-    for i, preprocessor in enumerate(preprocessors):
-        # if preprocessor is an InputHarvester, stop and return the remaining list
-        if isinstance(preprocessor, jc.InputHarvester):
-            return list(preprocessors)[i:]
-        # preprocess
-        preprocessor.process(module)
+    try:
+        preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
+        for i, preprocessor in enumerate(preprocessors):
+            # if preprocessor is an InputHarvester, stop and return the remaining list
+            if isinstance(preprocessor, jc.InputHarvester):
+                return list(preprocessors)[i:]
+            # preprocess
+            preprocessor.process(module)
+    except JException as exc:
+        # chain exc to a Python exception
+        raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
 
 
 def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleItem", input: Any):
@@ -327,24 +332,16 @@ def _filter_unresolved_inputs(
 
 def _initialize_module(module: "jc.Module"):
     """Initializes the passed module."""
-    try:
-        module.initialize()
-        # HACK: module.initialize() does not seem to call
-        # Initializable.initialize()
-        if isinstance(module.getDelegateObject(), jc.Initializable):
-            module.getDelegateObject().initialize()
-    except Exception as e:
-        print("Initialization Error")
-        print(e.stacktrace())
+    module.initialize()
+    # HACK: module.initialize() does not seem to call
+    # Initializable.initialize()
+    if isinstance(module.getDelegateObject(), jc.Initializable):
+        module.getDelegateObject().initialize()
 
 
 def _run_module(module: "jc.Module"):
     """Runs the passed module."""
-    try:
-        module.run()
-    except Exception as e:
-        print("Run Error")
-        print(e.stacktrace())
+    module.run()
 
 
 def _postprocess_module(module: "jc.Module"):
@@ -459,27 +456,24 @@ def _modify_function_signature(
 ) -> None:
     """Rewrites function with type annotations for all module I/O items."""
 
-    try:
-        sig: Signature = signature(function)
-        # Grab all options after the module inputs
-        inputs = _sink_optional_inputs(inputs)
-        module_params = [_module_param(i) for i in inputs]
-        other_params = [
-            Parameter(
-                i[0],
-                kind=Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=i[1][0],
-                default=i[1][1],
-            )
-            for i in _napari_module_param_additions(module_info).items()
-        ]
-        all_params = module_params + other_params
-        return_type = _widget_return_type(module_info, inputs)
-        function.__signature__ = sig.replace(
-            parameters=all_params, return_annotation=return_type
+    sig: Signature = signature(function)
+    # Grab all options after the module inputs
+    inputs = _sink_optional_inputs(inputs)
+    module_params = [_module_param(i) for i in inputs]
+    other_params = [
+        Parameter(
+            i[0],
+            kind=Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=i[1][0],
+            default=i[1][1],
         )
-    except Exception as e:
-        print(e)
+        for i in _napari_module_param_additions(module_info).items()
+    ]
+    all_params = module_params + other_params
+    return_type = _widget_return_type(module_info, inputs)
+    function.__signature__ = sig.replace(
+        parameters=all_params, return_annotation=return_type
+    )
 
 
 def _layerDataTuple_from_layer(layer: Layer):
@@ -707,57 +701,62 @@ def functionify_module_execution(
         :return: A List[LayerDataTuple] of the layer data outputs of the module,
             or None if this module does not return any layer data.
         """
+        try:
+            # Resolve remaining inputs
+            resolved_java_args = _preprocess_remaining_inputs(
+                module,
+                info.inputs(),
+                unresolved_inputs,
+                user_resolved_inputs,
+                input_harvesters,
+            )
 
-        # Resolve remaining inputs
-        resolved_java_args = _preprocess_remaining_inputs(
-            module,
-            info.inputs(),
-            unresolved_inputs,
-            user_resolved_inputs,
-            input_harvesters,
-        )
+            mutated_layers = _mutable_layers(
+                unresolved_inputs,
+                user_resolved_inputs,
+            )
 
-        mutated_layers = _mutable_layers(
-            unresolved_inputs,
-            user_resolved_inputs,
-        )
+            # run module
+            log_debug(
+                f"Running {module_execute.__qualname__} \
+                    ({resolved_java_args}) -- {info.getIdentifier()}"
+            )
+            _initialize_module(module)
+            _run_module(module)
 
-        # run module
-        log_debug(
-            f"Running {module_execute.__qualname__} \
-                ({resolved_java_args}) -- {info.getIdentifier()}"
-        )
-        _initialize_module(module)
-        _run_module(module)
+            # postprocess
+            _postprocess_module(module)
+            log_debug("Execution complete")
 
-        # postprocess
-        _postprocess_module(module)
-        log_debug("Execution complete")
+            # get all outputs
+            layer_outputs: List[LayerDataTuple]
+            widget_outputs: List[Any]
+            layer_outputs, widget_outputs = _pure_module_outputs(
+                module, unresolved_inputs
+            )
+            # log outputs
+            if layer_outputs is not None:
+                for output in layer_outputs:
+                    log_debug(f"Result: ({output[2]}) {output[1]['name']}")
+            for output in widget_outputs:
+                log_debug(f"Result: ({type(output[1])}) {output[0]}")
 
-        # get all outputs
-        layer_outputs: List[LayerDataTuple]
-        widget_outputs: List[Any]
-        layer_outputs, widget_outputs = _pure_module_outputs(module, unresolved_inputs)
-        # log outputs
-        if layer_outputs is not None:
-            for output in layer_outputs:
-                log_debug(f"Result: ({output[2]}) {output[1]['name']}")
-        for output in widget_outputs:
-            log_debug(f"Result: ({type(output[1])}) {output[0]}")
+            # display non-layer outputs in a widget
+            display_externally = _napari_specific_parameter(
+                module_execute, user_resolved_inputs, "display_results_in_new_window"
+            )
+            if display_externally is not None and len(widget_outputs) > 0:
+                _display_result(widget_outputs, info, viewer, display_externally)
 
-        # display non-layer outputs in a widget
-        display_externally = _napari_specific_parameter(
-            module_execute, user_resolved_inputs, "display_results_in_new_window"
-        )
-        if display_externally is not None and len(widget_outputs) > 0:
-            _display_result(widget_outputs, info, viewer, display_externally)
+            # Refresh the modified layers
+            for layer in mutated_layers:
+                layer.refresh()
 
-        # Refresh the modified layers
-        for layer in mutated_layers:
-            layer.refresh()
-
-        # Hand off layer outputs to napari via return
-        return layer_outputs
+            # Hand off layer outputs to napari via return
+            return layer_outputs
+        except JException as exc:
+            # chain exc to a Python exception
+            raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
 
     # Add metadata for widget creation
     _add_napari_metadata(module_execute, info, unresolved_inputs)
