@@ -20,7 +20,7 @@ from napari.layers import Image, Labels, Layer, Points, Shapes
 from napari.types import LayerDataTuple
 
 from napari_imagej import _module_utils
-from napari_imagej._ptypes import TypeMappings, _supported_styles
+from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widget import ImageJWidget
 
@@ -227,6 +227,26 @@ type_pairs = direct_match_pairs + convertible_match_pairs
 def test_python_type_of_IO(jtype, ptype):
     module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=True)
     assert _module_utils.python_type_of(module_item) == ptype
+
+
+def test_python_type_of_placeholder_IO():
+    # Test that a pure input matches
+    module_item = DummyModuleItem(
+        jtype=jc.OutOfBoundsFactory, isInput=True, isOutput=False
+    )
+    assert _module_utils.python_type_of(module_item) == OutOfBoundsFactory
+
+    # Test that a mutable input does not match
+    module_item._isOutput = True
+    try:
+        _module_utils.python_type_of(module_item)
+        pytest.fail()
+    except ValueError:
+        pass
+
+    # Test that a pure output does not match the enum
+    module_item._isInput = False
+    assert _module_utils.python_type_of(module_item) == str
 
 
 @pytest.fixture
