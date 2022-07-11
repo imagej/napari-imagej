@@ -7,6 +7,7 @@ from napari.layers import Image, Labels, Points, Shapes
 from scyjava import Converter, Priority, add_java_converter, add_py_converter
 
 from napari_imagej import _ntypes
+from napari_imagej._ptypes import OutOfBoundsFactory, StructuringElement
 from napari_imagej.setup_imagej import ij, jc
 
 # -- Image / Img -- #
@@ -305,6 +306,31 @@ def _realpointcollection_to_points(collection):
     return Points(data=data)
 
 
+# -- Enum(like)s -- #
+
+
+def _py_to_java_structuringElement(obj):
+    if obj == StructuringElement.FOUR_CONNECTED:
+        return jc.StructuringElement.FOUR_CONNECTED
+    if obj == StructuringElement.EIGHT_CONNECTED:
+        return jc.StructuringElement.EIGHT_CONNECTED
+    raise ValueError(f"{obj} is not a StructuringElement!")
+
+
+def _py_to_java_outOfBoundsFactory(obj):
+    if obj == OutOfBoundsFactory.BORDER:
+        return jc.OutOfBoundsBorderFactory()
+    if obj == OutOfBoundsFactory.MIRROR_EXP_WINDOWING:
+        return jc.OutOfBoundsMirrorExpWindowingFactory()
+    if obj == OutOfBoundsFactory.MIRROR_SINGLE:
+        return jc.OutOfBoundsMirrorFactory(jc.OutOfBoundsMirrorFactory.Boundary.SINGLE)
+    if obj == OutOfBoundsFactory.MIRROR_DOUBLE:
+        return jc.OutOfBoundsMirrorFactory(jc.OutOfBoundsMirrorFactory.Boundary.DOUBLE)
+    if obj == OutOfBoundsFactory.PERIODIC:
+        return jc.OutOfBoundsPeriodicFactory()
+    raise ValueError(f"{obj} is not a StructuringElement!")
+
+
 # -- Converters -- #
 
 
@@ -329,6 +355,14 @@ def _napari_to_java_converters() -> List[Converter]:
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
             priority=Priority.VERY_HIGH,
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, StructuringElement),
+            converter=_py_to_java_structuringElement,
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, OutOfBoundsFactory),
+            converter=_py_to_java_outOfBoundsFactory,
         ),
     ]
 
