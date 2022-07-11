@@ -4,13 +4,7 @@ import numpy as np
 from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
 from napari.layers import Image, Labels, Points, Shapes
-from scyjava import (
-    Converter,
-    Priority,
-    add_java_converter,
-    add_py_converter,
-    when_jvm_starts,
-)
+from scyjava import Converter, Priority, add_java_converter, add_py_converter
 
 from napari_imagej import _ntypes
 from napari_imagej._ptypes import OutOfBoundsFactory, StructuringElement
@@ -313,25 +307,6 @@ def _realpointcollection_to_points(collection):
 
 
 # -- Enum(like)s -- #
-
-
-class EnumLikes(dict):
-    def __init__(self):
-        self.enum_likes = {}
-        self._put_after_jvm(
-            StructuringElement.FOUR_CONNECTED,
-            lambda: jc.StructuringElement.FOUR_CONNECTED,
-        )
-        self._put_after_jvm(
-            StructuringElement.EIGHT_CONNECTED,
-            lambda: jc.StructuringElement.EIGHT_CONNECTED,
-        )
-        self._put_after_jvm(
-            OutOfBoundsFactory.BORDER, lambda: jc.OutOfBoundsBorderFactory()
-        )
-
-    def _put_after_jvm(self, py_enum, j_enum):
-        when_jvm_starts(lambda: self.__setitem__(py_enum, j_enum))
 
 
 def _py_to_java_structuringElement(obj):
