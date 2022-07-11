@@ -1,5 +1,5 @@
 from functools import lru_cache
-from inspect import Parameter, Signature, signature
+from inspect import Parameter, Signature, _empty, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
@@ -422,20 +422,14 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
     Gets the Python function's default value, if it exists, for input.
     """
     default = input.getDefaultValue()
-    if default is not None:
-        try:
-            return ij().py.from_java(default)
-        except Exception:
-            pass
-    if not input.isRequired():
-        return None
-    # We have to be careful here about passing a default
-    # Parameter uses an internal type to denote a required parameter.
-    # Passing anything EXCEPT that internal type will make that arugment default.
-    # Thus we need to only specify default if we have one.
-    from inspect import _empty
-
-    return _empty
+    if default is None and input.isRequired():
+        # We have to be careful here about passing a default of None
+        # Parameter uses an internal type to denote a required parameter.
+        return _empty
+    try:
+        return ij().py.from_java(default)
+    except Exception:
+        return default
 
 
 def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
