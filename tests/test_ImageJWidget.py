@@ -2,11 +2,10 @@ import pytest
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QAbstractItemView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QTableWidget,
+    QTreeWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -34,15 +33,6 @@ def test_widget_searchbar_layout(imagej_widget: ImageJWidget):
     assert search_widget is not None
 
 
-def test_widget_table_layout(imagej_widget: ImageJWidget):
-    """Tests basic features of the search results table."""
-    table: QTableWidget = imagej_widget.findChild(QTableWidget)
-    assert 12 == table.rowCount()
-    assert 1 == table.columnCount()
-    assert QAbstractItemView.SelectRows == table.selectionBehavior()
-    assert table.showGrid() is False
-
-
 def test_widget_subwidget_layout(imagej_widget: ImageJWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = imagej_widget.children()
@@ -66,10 +56,9 @@ def test_results_widget_layout(imagej_widget: ImageJWidget):
     """Tests the number and expected order of results widget children"""
     results: ResultsWidget = imagej_widget.findChild(ResultsWidget)
     subwidgets = results.children()
-    assert len(subwidgets) == 3
+    assert len(subwidgets) == 2
     assert isinstance(subwidgets[0], QVBoxLayout)
-    assert isinstance(subwidgets[1], QTableWidget)
-    assert isinstance(subwidgets[2], QTableWidget)
+    assert isinstance(subwidgets[1], QTreeWidget)
 
 
 def test_focus_widget_layout(imagej_widget: ImageJWidget):
@@ -147,63 +136,38 @@ def test_result_single_click(make_napari_viewer, qtbot):
     viewer
     # Test single click spawns buttons
     assert len(imagej_widget.highlighter.focused_action_buttons) == 0
+    imagej_widget.results._wait_for_tree_setup()
     imagej_widget.results._search("Frangi")
-    item = imagej_widget.results._tables[0].item(0, 0)
-    assert item is not None
-    rect = imagej_widget.results._tables[0].visualItemRect(item)
-    qtbot.mouseClick(
-        imagej_widget.results._tables[0].viewport(), Qt.LeftButton, pos=rect.center()
-    )
+    tree = imagej_widget.results._tree
+    item = tree.topLevelItem(0).child(0)
+    rect = tree.visualItemRect(item)
+    qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
     assert len(imagej_widget.highlighter.focused_action_buttons) == 5
 
 
-def selected_row_index(table: QTableWidget):
-    rows = table.selectionModel().selectedRows()
-    if len(rows) == 0:
-        return -1
-    if len(rows) == 1:
-        return rows[0].row()
-    raise ValueError()
-
-
 def test_arrow_keys(imagej_widget: ImageJWidget, qtbot):
+    # Wait for the searchers to be ready
+    imagej_widget.results._wait_for_tree_setup()
     # Search something
     imagej_widget.results._search("Fi")
+    tree = imagej_widget.results._tree
     # Assert that there is a result in each
-    for result in imagej_widget.results.results:
-        assert not result.isEmpty()
+    for i in range(tree.topLevelItemCount()):
+        assert tree.topLevelItem(i).childCount() > 0
     # Ensure no row is selected
-    for table in imagej_widget.results._tables:
-        assert selected_row_index(table) == -1
+    assert tree.currentItem() is None
     # Go down, ensure that the first row gets highlighted
-    qtbot.keyPress(imagej_widget, Qt.Key_Down)
-    assert selected_row_index(imagej_widget.results._tables[0]) == 0
-    # Go up, ensure that the first row is still selected
-    qtbot.keyPress(imagej_widget, Qt.Key_Up)
-    assert selected_row_index(imagej_widget.results._tables[0]) == 0
+    qtbot.keyPress(imagej_widget.search.bar, Qt.Key_Down)
+    assert tree.currentItem() is tree.topLevelItem(0)
     # Iterate through the tables, ensure arrow keys change selection
-    imagej_widget._focus_row = -1
-    for i, result_arr in enumerate(imagej_widget.results.results):
-        if len(result_arr) > 12:
-            result_arr = result_arr[:12]
-        for j, result in enumerate(result_arr):
-            qtbot.keyPress(imagej_widget, Qt.Key_Down)
-            assert selected_row_index(imagej_widget.results._tables[i]) == j
-            assert (
-                imagej_widget.highlighter.focused_module
-                == imagej_widget.results.results[i][j]
-            )
-        for j, table in enumerate(imagej_widget.results._tables):
-            if i == j:
-                continue
-            assert selected_row_index(table) == -1
-    # Try going down past the last result, ensure that we can't go further
-    qtbot.keyPress(imagej_widget, Qt.Key_Down)
-    for i, table in enumerate(imagej_widget.results._tables):
-        if i == len(imagej_widget.results._tables) - 1:
-            assert (
-                selected_row_index(table)
-                == imagej_widget.results._tables[i].rowCount() - 1
-            )
-        else:
-            assert selected_row_index(table) == -1
+    for i in range(tree.topLevelItemCount()):
+        for j in range(tree.topLevelItem(i).childCount()):
+            qtbot.keyPress(tree, Qt.Key_Down)
+            assert tree.currentItem() is tree.topLevelItem(i).child(j)
+        if i < tree.topLevelItemCount() - 1:
+            qtbot.keyPress(tree, Qt.Key_Down)
+            assert tree.currentItem() is tree.topLevelItem(i + 1)
+    # The last key press was with the last element selected.
+    # ensure that we can't go further
+    last_searcher = tree.topLevelItem(tree.topLevelItemCount() - 1)
+    assert tree.currentItem() is last_searcher.child(last_searcher.childCount() - 1)
