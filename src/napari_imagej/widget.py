@@ -180,6 +180,7 @@ class SearchTree(QTreeWidget):
         super().__init__()
         self.setColumnCount(1)
         self.setHeaderLabels(["Search"])
+        self.setIndentation(self.indentation() // 2)
         self.keyUpAction = property()
         self.returnAction = property()
 
