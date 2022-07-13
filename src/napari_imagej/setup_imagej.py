@@ -232,6 +232,14 @@ class JavaClasses(object):
         return "org.scijava.search.Searcher"
 
     @blocking_import
+    def SearchEvent(self):
+        return "org.scijava.search.SearchEvent"
+
+    @blocking_import
+    def SearchListener(self):
+        return "org.scijava.search.SearchListener"
+
+    @blocking_import
     def SearchResult(self):
         return "org.scijava.search.SearchResult"
 

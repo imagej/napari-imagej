@@ -237,14 +237,19 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
         self._searcher = searcher
 
-    def search(self, text: str):
-        results = self._searcher.search(text, True)
+    def update(self, results: List["jc.SearchResult"]):
         while self.childCount() > 0:
             self.removeChild(self.child(0))
+        if results is None:
+            return
         for result in results:
             self.addChild(ResultTreeItem(result))
         if len(results) > 0:
             self.setExpanded(True)
+
+    def wraps(self, searcher: "jc.Searcher") -> bool:
+        """Determines whether this class wraps searcher"""
+        return searcher.title().equals(self._searcher.title())
 
 
 class SearchBar(QLineEdit):

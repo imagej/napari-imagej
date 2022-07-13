@@ -4,13 +4,15 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
-from functools import lru_cache
+import atexit
+from queue import Queue
 from threading import Thread
 from typing import Callable, Dict, List, NamedTuple
 
+from jpype import JArray, JImplements, JOverride
 from magicgui import magicgui
 from napari import Viewer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, QThread
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -61,12 +63,16 @@ class ImageJWidget(QWidget):
 
         # -- Interwidget connections -- #
 
+        # When the text bar changes, update the search results.
+        self.search.bar.textEdited.connect(self.results.search)
+
         # When clicking a result, focus it in the focus widget
         def clickFunc(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.focus(treeItem.result)
 
-        self.results.onClick = clickFunc
+        # self.results.onClick = clickFunc
+        self.results.itemClicked.connect(clickFunc)
 
         # When double clicking a result,
         # focus it in the focus widget and run the first action
@@ -83,14 +89,12 @@ class ImageJWidget(QWidget):
 
         self.results.keyAboveResults = keyUpFromResults
 
-        # When pressing the down arrow on the search bar,
-        # go to the first result item
-        def keyDownFromSearchBar():
+        def searchBarKeyDown():
             self.search.bar.clearFocus()
             self.results.setFocus()
             self.results.setCurrentItem(self.results.topLevelItem(0))
 
-        self.search.on_key_down = keyDownFromSearchBar
+        self.search.on_key_down = searchBarKeyDown
 
         # When pressing return on the search bar, focus the first result
         # in the results list and run it
@@ -102,8 +106,8 @@ class ImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(searchBarReturnFunc)
 
-        # When changing the text in the search bar, update the search results
-        self.search.bar.textChanged.connect(self.results._search)
+        self.results.itemDoubleClicked.connect(doubleClickFunc)
+        self.results.keyUpAction = lambda: self.search.bar.setFocus()
 
         # -- Final setup -- #
 
@@ -122,8 +126,6 @@ class SearchbarWidget(QWidget):
         self,
     ):
         super().__init__()
-        # self._results = results
-        # self._focuser = focuser
         self.on_key_down = property()
         self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
 
@@ -140,8 +142,22 @@ class SearchbarWidget(QWidget):
             self.bar.setText("")
             self.bar.setEnabled(True)
 
-        self._searchbar_generator = Thread(target=enable_searchbar)
-        self._searchbar_generator.start()
+        self.startup_thread = Thread(target=enable_searchbar)
+        self.startup_thread.start()
+
+
+class ResultUpdater(QThread):
+    def __init__(self, tree: "SearchTree"):
+        super().__init__()
+        self.tree = tree
+
+    def run(self):
+        while not self.isInterruptionRequested():
+            event: "jc.SearchEvent" = self.tree.resultsQueue.get(block=True)
+            searcher_name: str = ij().py.from_java(event.searcher().title())
+            if searcher_name not in ["Ops", "Commands"]:
+                continue
+            self.tree._get_matching_item(event.searcher()).update(event.results())
 
 
 class SearchTree(QTreeWidget):
@@ -154,18 +170,59 @@ class SearchTree(QTreeWidget):
         self.setColumnCount(1)
         self.setHeaderLabels(["Search"])
         self.setIndentation(self.indentation() // 2)
-        self.onClick = property()
-        self.itemClicked.connect(lambda item: self.onClick(item))
+        # self.onClick = property()
+        # self.itemClicked.connect(lambda item: self.onClick(item))
         self.onDoubleClick = property()
         self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
         self.keyAboveResults = property()
+        self.resultsQueue: Queue = Queue()
+        self.resultUpdater: ResultUpdater = ResultUpdater(self)
+        self.resultUpdater.start()
+        atexit.register(self.resultUpdater.requestInterruption)
 
-        def init_searchers():
-            for searcher in self.searchers:
-                self.addTopLevelItem(SearcherTreeItem(searcher))
+        self._startup_thread = Thread(target=self._init_searchers)
+        self._startup_thread.start()
 
-        self._searcher_setup = Thread(target=init_searchers)
-        self._searcher_setup.start()
+    @property
+    def search_service(self) -> "jc.SearchService":
+        ensure_jvm_started()
+        return ij().get("org.scijava.search.SearchService")
+
+    def _wait_for_setup(self):
+        """
+        This object does some setup asynchronously.
+        This function can be used to ensure all that is done
+        """
+        return self._startup_thread.join()
+
+    def _init_searchers(self):
+        # First, wait for the JVM to start up
+        ensure_jvm_started()
+
+        # Then, define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariSearchListener:
+            def __init__(self, queue: Queue):
+                super().__init__()
+                self.queue = queue
+
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.queue.put(event)
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)(
+            [NapariSearchListener(self.resultsQueue)]
+        )
+        self._searchOperation = self.search_service.search(listener_arr)
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        atexit.register(self._searchOperation.terminate)
+
+    def search(self, text: str):
+        self._startup_thread.join()
+        self._searchOperation.search(text)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
@@ -191,36 +248,24 @@ class SearchTree(QTreeWidget):
         else:
             super().keyPressEvent(event)
 
-    @property
-    @lru_cache(maxsize=None)
-    def searchers(self) -> List["jc.Searcher"]:
-        searcherClasses = [
-            jc.ModuleSearcher,
-            jc.OpSearcher,
-        ]
-        pluginService = ij().get("org.scijava.plugin.PluginService")
-        searchers = [
-            pluginService.getPlugin(cls, jc.Searcher).createInstance()
-            for cls in searcherClasses
-        ]
-        for searcher in searchers:
-            ij().context().inject(searcher)
-        return searchers
-
-    def _wait_for_setup(self):
-        self._searcher_setup.join()
-
-    def _search(self, text):
-        # TODO: Consider adding a button to toggle fuzziness
-        for i in range(self.topLevelItemCount()):
-            self.topLevelItem(i).search(text)
-
     def first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
             searcher = self.topLevelItem(i)
             if searcher.childCount() > 0:
                 return searcher.child(0).result
         return None
+
+    def _get_matching_item(self, searcher: "jc.Searcher") -> SearcherTreeItem:
+        name: str = ij().py.from_java(searcher.title())
+        matches = self.findItems(name, Qt.MatchExactly, 0)
+        if len(matches) == 0:
+            tree_item = SearcherTreeItem(searcher)
+            self.addTopLevelItem(tree_item)
+            return tree_item
+        elif len(matches) == 1:
+            return matches[0]
+        else:
+            raise ValueError(f"Multiple Search Result Items matching name {name}")
 
 
 class FocusWidget(QWidget):

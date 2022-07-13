@@ -969,8 +969,8 @@ def test_execute_function_with_params(make_napari_viewer, ij):
 
 
 def test_convert_searchResult_to_info(imagej_widget: ImageJWidget, ij):
-    searchers = imagej_widget.results.searchers
-    for searcher in searchers:
+    for i in range(imagej_widget.results.topLevelItemCount()):
+        searcher = imagej_widget.results.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]
         info = _module_utils.convert_searchResult_to_info(result)
         assert isinstance(info, jc.ModuleInfo)
