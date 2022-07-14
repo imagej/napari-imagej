@@ -186,14 +186,17 @@ class SearchTree(QTreeWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
-            self.returnAction(self.currentItem())
-            return
-        if event.key() == Qt.Key_Up:
-            if self.currentItem() is self.topLevelItem(0):
-                self.clearSelection()
-                self.keyUpAction()
-                return
-        super().keyPressEvent(event)
+            # Use the enter key to toggle non-leaves
+            if self.currentItem().childCount() > 0:
+                self.currentItem().setExpanded(not self.currentItem().isExpanded())
+            # Use the enter key to run leaves (Plugins)
+            else:
+                self.returnAction(self.currentItem())
+        elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
+            self.clearSelection()
+            self.keyUpAction()
+        else:
+            super().keyPressEvent(event)
 
 
 class ResultsWidget(QWidget):
