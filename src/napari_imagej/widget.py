@@ -195,6 +195,16 @@ class SearchTree(QTreeWidget):
         elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
             self.clearSelection()
             self.keyUpAction()
+        elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
+            if self.currentItem().isExpanded():
+                self.setCurrentItem(self.currentItem().child(0))
+            else:
+                self.currentItem().setExpanded(True)
+        elif event.key() == Qt.Key_Left:
+            if self.currentItem().parent() is None:
+                self.currentItem().setExpanded(False)
+            else:
+                self.setCurrentItem(self.currentItem().parent())
         else:
             super().keyPressEvent(event)
 

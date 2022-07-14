@@ -145,7 +145,37 @@ def test_result_single_click(make_napari_viewer, qtbot):
     assert len(imagej_widget.highlighter.focused_action_buttons) == 5
 
 
-def test_arrow_keys(imagej_widget: ImageJWidget, qtbot):
+def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
+    # Wait for the searchers to be ready
+    imagej_widget.results._wait_for_tree_setup()
+    # Search something
+    imagej_widget.results._search("Fi")
+    tree = imagej_widget.results._tree
+    tree.setCurrentItem(tree.topLevelItem(0))
+    expanded = tree.currentItem().isExpanded()
+    # Part 1: toggle with Enter
+    qtbot.keyPress(tree, Qt.Key_Return)
+    assert tree.currentItem().isExpanded() is not expanded
+    qtbot.keyPress(tree, Qt.Key_Return)
+    assert tree.currentItem().isExpanded() is expanded
+    # Part 2: test arrow keys
+    tree.currentItem().setExpanded(True)
+    # Part 2.1: Expanded + Left hides children
+    qtbot.keyPress(tree, Qt.Key_Left)
+    assert tree.currentItem().isExpanded() is False
+    # Part 2.2: Hidden + Right shows children
+    qtbot.keyPress(tree, Qt.Key_Right)
+    assert tree.currentItem().isExpanded() is True
+    # Part 2.3: Expanded + Right selects first child
+    parent = tree.currentItem()
+    qtbot.keyPress(tree, Qt.Key_Right)
+    qtbot.waitUntil(lambda: tree.currentItem() is parent.child(0))
+    # Part 2.4: Child + Left returns to parent
+    qtbot.keyPress(tree, Qt.Key_Left)
+    qtbot.waitUntil(lambda: tree.currentItem() is parent)
+
+
+def test_arrow_key_selection(imagej_widget: ImageJWidget, qtbot):
     # Wait for the searchers to be ready
     imagej_widget.results._wait_for_tree_setup()
     # Search something
@@ -158,16 +188,19 @@ def test_arrow_keys(imagej_widget: ImageJWidget, qtbot):
     assert tree.currentItem() is None
     # Go down, ensure that the first row gets highlighted
     qtbot.keyPress(imagej_widget.search.bar, Qt.Key_Down)
-    assert tree.currentItem() is tree.topLevelItem(0)
+    qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(0))
     # Iterate through the tables, ensure arrow keys change selection
     for i in range(tree.topLevelItemCount()):
         for j in range(tree.topLevelItem(i).childCount()):
             qtbot.keyPress(tree, Qt.Key_Down)
-            assert tree.currentItem() is tree.topLevelItem(i).child(j)
+            qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(i).child(j))
         if i < tree.topLevelItemCount() - 1:
             qtbot.keyPress(tree, Qt.Key_Down)
-            assert tree.currentItem() is tree.topLevelItem(i + 1)
+            qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(i + 1))
     # The last key press was with the last element selected.
     # ensure that we can't go further
     last_searcher = tree.topLevelItem(tree.topLevelItemCount() - 1)
-    assert tree.currentItem() is last_searcher.child(last_searcher.childCount() - 1)
+    qtbot.waitUntil(
+        lambda: tree.currentItem()
+        is last_searcher.child(last_searcher.childCount() - 1)
+    )
