@@ -226,10 +226,6 @@ class ResultsWidget(QWidget):
         self._searcher_setup.start()
 
     @property
-    def results(self) -> List[List["jc.SearchResult"]]:
-        return self._results
-
-    @property
     @lru_cache(maxsize=None)
     def searchers(self) -> List["jc.Searcher"]:
         searcherClasses = [
