@@ -6,26 +6,24 @@ This Widget is made accessible to napari through napari.yml
 """
 from functools import lru_cache
 from threading import Thread
-from typing import Callable, Dict, List, NamedTuple, Tuple
+from typing import Callable, Dict, List, NamedTuple
 
 from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QAbstractItemView,
     QApplication,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
-    QLineEdit,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from napari_imagej._flow_layout import FlowLayout
+from napari_imagej._helper_widgets import ResultTreeItem, SearchBar, SearcherTreeItem
 from napari_imagej._module_utils import (
     convert_searchResult_to_info,
     execute_function_modally,
@@ -45,38 +43,67 @@ class ImageJWidget(QWidget):
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
 
+        # We actually create the widgets in the opposite order,
+        # as the top widgets will want to control the ones below.
         self.setLayout(QVBoxLayout())
 
+        # Module highlighter
+        self.focuser: FocusWidget = FocusWidget(napari_viewer)
+        # Results List
+        self.results: SearchTree = SearchTree()
         # Search Bar
         self.search: SearchbarWidget = SearchbarWidget()
+
+        # Add each in the preferred order
         self.layout().addWidget(self.search)
-
-        self.results: ResultsWidget = ResultsWidget()
         self.layout().addWidget(self.results)
-
-        # Module highlighter
-        self._focus_table = 0
-        self._focus_row = -1
-        self.highlighter: FocusWidget = FocusWidget(napari_viewer)
-        self.layout().addWidget(self.highlighter)
+        self.layout().addWidget(self.focuser)
 
         # -- Interwidget connections -- #
 
-        # When the text bar changes, update the search results.
-        self.search.bar.textChanged.connect(self.results._search)
+        # When clicking a result, focus it in the focus widget
+        def clickFunc(treeItem: QTreeWidgetItem):
+            if isinstance(treeItem, ResultTreeItem):
+                self.focuser.focus(treeItem.result)
 
-        for i, tableWidget in enumerate(self.results.widgets):
-            # If the user clicks in any table, highlight
-            # the clicked cell
-            clickFunc = self.highlighter._table_onClick_generator(
-                self.results.results, i
-            )
-            tableWidget.cellClicked.connect(clickFunc)
-            # If the user double clicks in any table, run the clicked cell
-            doubleClickFunc = self.highlighter._table_onDoubleClick_generator(
-                self.results.results, i
-            )
-            tableWidget.cellDoubleClicked.connect(doubleClickFunc)
+        self.results.onClick = clickFunc
+
+        # When double clicking a result,
+        # focus it in the focus widget and run the first action
+        def doubleClickFunc(treeItem: QTreeWidgetItem):
+            if isinstance(treeItem, ResultTreeItem):
+                self.focuser.run(treeItem.result)
+
+        self.results.onDoubleClick = doubleClickFunc
+
+        # When pressing the up arrow on the topmost row in the results list,
+        # go back up to the search bar
+        def keyUpFromResults():
+            self.search.bar.setFocus()
+
+        self.results.keyAboveResults = keyUpFromResults
+
+        # When pressing the down arrow on the search bar,
+        # go to the first result item
+        def keyDownFromSearchBar():
+            self.search.bar.clearFocus()
+            self.results.setFocus()
+            self.results.setCurrentItem(self.results.topLevelItem(0))
+
+        self.search.on_key_down = keyDownFromSearchBar
+
+        # When pressing return on the search bar, focus the first result
+        # in the results list and run it
+        def searchBarReturnFunc():
+            """Define the return behavior for this widget"""
+            result = self.results.first_result()
+            if result is not None:
+                self.focuser.run(result)
+
+        self.search.bar.returnPressed.connect(searchBarReturnFunc)
+
+        # When changing the text in the search bar, update the search results
+        self.search.bar.textChanged.connect(self.results._search)
 
         # -- Final setup -- #
 
@@ -86,54 +113,23 @@ class ImageJWidget(QWidget):
             "Control-L", lambda _: self.search.bar.setFocus(), overwrite=True
         )
 
-    def _change_focused_table_entry(self, down: bool = True) -> Tuple[int, int]:
-        if down:
-            if (
-                self._focus_row < len(self.results.results[self._focus_table]) - 1
-                and self._focus_row
-                < self.results._tables[self._focus_table].rowCount() - 1
-            ):
-                self._focus_row = self._focus_row + 1
-            else:
-                if self._focus_table < len(self.results.results) - 1:
-                    self.results._tables[self._focus_table].clearSelection()
-                    self._focus_table = self._focus_table + 1
-                    self._focus_row = 0
-        else:
-            if self._focus_row > 0:
-                self._focus_row = self._focus_row - 1
-            else:
-                if self._focus_table > 0:
-                    self.results._tables[self._focus_table].clearSelection()
-                    self._focus_table = self._focus_table - 1
-                    self._focus_row = len(self.results.results[self._focus_table]) - 1
-
-        self.search.bar.clearFocus()
-        self.setFocus()
-        self.results._tables[self._focus_table].selectRow(self._focus_row)
-        self.highlighter._highlight_module_from_tables(
-            self.results.results, self._focus_table, self._focus_row
-        )
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Down:
-            self._change_focused_table_entry(down=True)
-        elif event.key() == Qt.Key_Up:
-            self._change_focused_table_entry(down=False)
-        elif event.key() == Qt.Key_Return:
-            if self._focus_row < 0:
-                self._focus_row = 0
-            self.highlighter._table_onDoubleClick_generator(
-                self.results.results, self._focus_table
-            )(self._focus_row, 0)
+        # Put the focus on the search bar
+        self.search.bar.setFocus()
 
 
 class SearchbarWidget(QWidget):
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         super().__init__()
+        # self._results = results
+        # self._focuser = focuser
+        self.on_key_down = property()
+        self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
+
+        # Set GUI options
         self.setLayout(QHBoxLayout())
-        self._searchbar: QLineEdit = self._generate_searchbar()
-        self.layout().addWidget(self._searchbar)
+        self.layout().addWidget(self.bar)
 
         # Initialize the searchers, which will spin up an ImageJ gateway.
         # By running this in a new thread,
@@ -141,46 +137,59 @@ class SearchbarWidget(QWidget):
         def enable_searchbar():
             ensure_jvm_started()
             # Enable the searchbar now that the searchers are ready
-            self._searchbar.setText("")
-            self._searchbar.setEnabled(True)
+            self.bar.setText("")
+            self.bar.setEnabled(True)
 
-        Thread(target=enable_searchbar).start()
-
-    @property
-    def bar(self) -> QLineEdit:
-        return self._searchbar
-
-    def _generate_searchbar(self) -> QLineEdit:
-        searchbar = QLineEdit()
-        # Disable the searchbar until the searchers are ready
-        searchbar.setText("Initializing ImageJ...Please Wait")
-        searchbar.setEnabled(False)
-        return searchbar
+        self._searchbar_generator = Thread(target=enable_searchbar)
+        self._searchbar_generator.start()
 
 
-class ResultsWidget(QWidget):
-    def __init__(self):
+class SearchTree(QTreeWidget):
+    def __init__(
+        self,
+    ):
         super().__init__()
-        self.setLayout(QVBoxLayout())
 
-        # Results box
-        self.resultTableNames = ["Modules:", "Ops:"]
-        self._results: List[List["jc.SearchResult"]] = [
-            [] for _ in self.resultTableNames
-        ]
-        self._tables: List[QTableWidget] = self._generate_results_tables(
-            self.resultTableNames
-        )
-        for table in self._tables:
-            self.layout().addWidget(table)
+        # Configure GUI Options
+        self.setColumnCount(1)
+        self.setHeaderLabels(["Search"])
+        self.setIndentation(self.indentation() // 2)
+        self.onClick = property()
+        self.itemClicked.connect(lambda item: self.onClick(item))
+        self.onDoubleClick = property()
+        self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
+        self.keyAboveResults = property()
 
-    @property
-    def results(self) -> List[List["jc.SearchResult"]]:
-        return self._results
+        def init_searchers():
+            for searcher in self.searchers:
+                self.addTopLevelItem(SearcherTreeItem(searcher))
 
-    @property
-    def widgets(self) -> List[QTableWidget]:
-        return self._tables
+        self._searcher_setup = Thread(target=init_searchers)
+        self._searcher_setup.start()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            # Use the enter key to toggle non-leaves
+            if self.currentItem().childCount() > 0:
+                self.currentItem().setExpanded(not self.currentItem().isExpanded())
+            # Use the enter key to run leaves (Plugins)
+            else:
+                self.onDoubleClick(self.currentItem())
+        elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
+            self.clearSelection()
+            self.keyAboveResults()
+        elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
+            if self.currentItem().isExpanded():
+                self.setCurrentItem(self.currentItem().child(0))
+            else:
+                self.currentItem().setExpanded(True)
+        elif event.key() == Qt.Key_Left:
+            if self.currentItem().parent() is None:
+                self.currentItem().setExpanded(False)
+            else:
+                self.setCurrentItem(self.currentItem().parent())
+        else:
+            super().keyPressEvent(event)
 
     @property
     @lru_cache(maxsize=None)
@@ -198,38 +207,20 @@ class ResultsWidget(QWidget):
             ij().context().inject(searcher)
         return searchers
 
-    def _table_from_name(self, name: str) -> QTableWidget:
-        # GUI properties
-        labels = [name]
-        max_results = 12
-        tableWidget = QTableWidget(max_results, len(labels))
-        # Modules take up a row, so highlight the entire thing
-        tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # Label the columns with labels
-        tableWidget.setHorizontalHeaderLabels(labels)
-        tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        tableWidget.verticalHeader().hide()
-        tableWidget.setShowGrid(False)
-        tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
-        return tableWidget
-
-    def _generate_results_tables(
-        self, result_table_names: List[str]
-    ) -> List[QTableWidget]:
-        return [self._table_from_name(name) for name in result_table_names]
+    def _wait_for_setup(self):
+        self._searcher_setup.join()
 
     def _search(self, text):
         # TODO: Consider adding a button to toggle fuzziness
-        for i in range(len(self.searchers)):
-            self.results[i] = self.searchers[i].search(text, True)
-            for j in range(len(self.results[i])):
-                name = ij().py.from_java(self.results[i][j].name())
-                self.widgets[i].setItem(j, 0, QTableWidgetItem(name))
-                self.widgets[i].showRow(j)
-            for j in range(len(self.results[i]), self.widgets[i].rowCount()):
-                self.widgets[i].setItem(j, 0, QTableWidgetItem(""))
-                self.widgets[i].hideRow(j)
+        for i in range(self.topLevelItemCount()):
+            self.topLevelItem(i).search(text)
+
+    def first_result(self) -> "jc.SearchResult":
+        for i in range(self.topLevelItemCount()):
+            searcher = self.topLevelItem(i)
+            if searcher.childCount() > 0:
+                return searcher.child(0).result
+        return None
 
 
 class FocusWidget(QWidget):
@@ -248,41 +239,17 @@ class FocusWidget(QWidget):
 
         self.focused_action_buttons = []  # type: ignore
 
-    def _table_onClick_generator(self, tables: List[List["jc.ModuleInfo"]], index: int):
-        # NB: col is needed for tableWidget.cellClicked.
-        # We don't use it in _highlight_module, though.
-        def func(row: int, col: int):
-            self._highlight_module_from_tables(tables, index, row)
+    def run(self, result: "jc.SearchResult"):
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
+            selection = "Widget"
+        else:
+            selection = "Run"
 
-        return func
-
-    def _table_onDoubleClick_generator(
-        self, tables: List[List["jc.SearchResult"]], index: int
-    ):
-        # NB: col is needed for tableWidget.cellClicked.
-        # We don't use it in _highlight_module, though.
-        def func(row: int, col: int):
-            if QApplication.keyboardModifiers() & Qt.ShiftModifier:
-                selection = "Widget"
-            else:
-                selection = "Run"
-
-            result = tables[index][row]
-            actions: List[SearchAction] = self._actions_from_result(result)
-            # Find the widget button
-            for action in actions:
-                if action.name == selection:
-                    action.action()
-                    return
-
-        return func
-
-    def _highlight_from_tables_and_run_first(
-        self, tables: List[List["jc.ModuleInfo"]], index: int, row: int
-    ):
-        self._highlight_module_from_tables(tables, index, row)
-        if len(self.focused_action_buttons) > 0:
-            self.focused_action_buttons[0].click()
+        actions: List[SearchAction] = self._actions_from_result(result)
+        # Find the widget button
+        for action in actions:
+            if action.name == selection:
+                action.action()
 
     def _python_actions_for(
         self, result: "jc.SearchResult"
@@ -342,24 +309,14 @@ class FocusWidget(QWidget):
                 button_params.append(params)
         return button_params
 
-    def _highlight_module_from_tables(
-        self, tables: List[List["jc.ModuleInfo"]], index: int, row: int
-    ):
-        # Ensure the clicked module is an actual selection
-        if row >= len(tables[index]):
-            return
-        # Print highlighted module
-        self.focused_module = tables[index][row]
-        self._highlight_module(tables[index][row])
-
-    def _highlight_module(self, module: "jc.SearchResult"):
-        name = ij().py.from_java(module.name())  # type: ignore
+    def focus(self, result: "jc.SearchResult"):
+        name = ij().py.from_java(result.name())  # type: ignore
         self.focused_module_label.setText(name)
 
         # Create buttons for each action
         # searchService = ij().get("org.scijava.search.SearchService")
         # self.focused_actions = searchService.actions(module)
-        python_actions: List[SearchAction] = self._actions_from_result(module)
+        python_actions: List[SearchAction] = self._actions_from_result(result)
         buttons_needed = len(python_actions)
         activated_actions = len(self.focused_action_buttons)
         # Hide buttons if we have more than needed

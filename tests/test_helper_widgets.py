@@ -6,8 +6,14 @@ import pytest
 from magicgui.widgets import ComboBox, PushButton
 from napari import current_viewer
 from napari.layers import Image
+from qtpy.QtCore import Qt
 
-from napari_imagej._helper_widgets import MutableOutputWidget
+from napari_imagej._helper_widgets import (
+    MutableOutputWidget,
+    ResultTreeItem,
+    SearchBar,
+    SearcherTreeItem,
+)
 
 
 @pytest.fixture
@@ -119,3 +125,38 @@ def test_mutable_output_add_new_image(
     assert foo in input_widget.choices
     assert foo in output_widget.choices
     assert foo is output_widget.value
+
+
+def test_resultTreeItem_regression():
+    class DummySearchResult(object):
+        def name(self):
+            return "This is not a Search Result"
+
+    dummy = DummySearchResult()
+    item = ResultTreeItem(dummy)
+    assert item.result == dummy
+    assert item.text(0) == dummy.name()
+
+
+def test_searcherTreeItem_regression():
+    class DummySearcher(object):
+        def title(self):
+            return "This is not a Searcher"
+
+    dummy = DummySearcher()
+    item = SearcherTreeItem(dummy)
+    assert item._searcher == dummy
+    assert (
+        item.flags()
+        == Qt.ItemIsUserCheckable
+        | Qt.ItemIsEnabled
+        | Qt.ItemIsDragEnabled
+        | Qt.ItemIsDropEnabled
+    )
+    assert item.text(0) == dummy.title()
+
+
+def test_searchBar_regression():
+    bar = SearchBar()
+    assert bar.text() == "Initializing ImageJ...Please Wait"
+    assert not bar.isEnabled()

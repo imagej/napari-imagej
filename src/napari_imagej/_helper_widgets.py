@@ -1,11 +1,15 @@
 import importlib
-from typing import Any, List
+from typing import Any, Callable, List
 
 from magicgui.types import ChoicesType
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
+
+from napari_imagej.setup_imagej import ij, jc
 
 
 class MutableOutputWidget(Container):
@@ -212,3 +216,47 @@ class MutableOutputWidget(Container):
     @choices.setter
     def choices(self, choices: ChoicesType):
         self.layer_select.choices = choices
+
+
+class ResultTreeItem(QTreeWidgetItem):
+    def __init__(self, result: "jc.SearchResult"):
+        super().__init__()
+        self.name = ij().py.from_java(result.name())
+        self.setText(0, self.name)
+        self._result = result
+
+    @property
+    def result(self):
+        return self._result
+
+
+class SearcherTreeItem(QTreeWidgetItem):
+    def __init__(self, searcher: "jc.Searcher"):
+        super().__init__()
+        self.setText(0, ij().py.from_java(searcher.title()))
+        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+        self._searcher = searcher
+
+    def search(self, text: str):
+        results = self._searcher.search(text, True)
+        while self.childCount() > 0:
+            self.removeChild(self.child(0))
+        for result in results:
+            self.addChild(ResultTreeItem(result))
+        if len(results) > 0:
+            self.setExpanded(True)
+
+
+class SearchBar(QLineEdit):
+    def __init__(self, on_key_down: Callable = lambda: None):
+        super().__init__()
+        # Disable the searchbar until the searchers are ready
+        self.setText("Initializing ImageJ...Please Wait")
+        self.setEnabled(False)
+        self._on_key_down = on_key_down
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Down:
+            self._on_key_down()
+        else:
+            super().keyPressEvent(event)
