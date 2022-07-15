@@ -62,23 +62,30 @@ class ImageJWidget(QWidget):
 
         # -- Interwidget connections -- #
 
+        # When clicking a result, focus it in the focus widget
         def clickFunc(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.focus(treeItem.result)
 
         self.results.onClick = clickFunc
 
+        # When double clicking a result,
+        # focus it in the focus widget and run the first action
         def doubleClickFunc(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser._highlight_and_run(treeItem.result)
 
         self.results.onDoubleClick = doubleClickFunc
 
+        # When pressing the up arrow on the topmost row in the results list,
+        # go back up to the search bar
         def keyUpFromResults():
             self.search.bar.setFocus()
 
         self.results.keyAboveResults = keyUpFromResults
 
+        # When pressing the down arrow on the search bar,
+        # go to the first result item
         def keyDownFromSearchBar():
             self.search.bar.clearFocus()
             self.results.setFocus()
@@ -86,6 +93,8 @@ class ImageJWidget(QWidget):
 
         self.search.on_key_down = keyDownFromSearchBar
 
+        # When pressing return on the search bar, focus the first result
+        # in the results list and run it
         def searchBarReturnFunc():
             """Define the return behavior for this widget"""
             result = self.results.first_result()
@@ -94,7 +103,9 @@ class ImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(searchBarReturnFunc)
 
+        # When changing the text in the search bar, update the search results
         self.search.bar.textChanged.connect(self.results._search)
+
         # -- Final setup -- #
 
         # Bind L key to search bar.
