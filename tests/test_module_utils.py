@@ -16,7 +16,7 @@ from magicgui.widgets import (
     Widget,
 )
 from napari import Viewer
-from napari.layers import Image, Labels, Layer, Points, Shapes
+from napari.layers import Image, Layer
 
 from napari_imagej import _module_utils
 from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
@@ -673,39 +673,6 @@ def test_modify_functional_signature():
 
     # assert return annotation is None
     assert sig.return_annotation is None
-
-
-layer_parameterizations = [
-    (Image(data=numpy.random.rand(4, 4), name="foo"), ["name"]),
-    (Points(data=numpy.random.rand(4, 2), name="bar"), ["name"]),
-    (
-        Labels(
-            data=numpy.random.randint(3, size=(4, 4)),
-            name="bar",
-            metadata={"pyLabelingData": "foo"},
-        ),
-        ["name", "metadata"],
-    ),
-    (
-        Shapes(
-            data=numpy.random.rand(3, 4, 4),
-            name="bar",
-            shape_type=["rectangle", "ellipse", "path"],
-        ),
-        ["name", "shape_type"],
-    ),
-]
-
-
-@pytest.mark.parametrize(argnames="layer, params", argvalues=layer_parameterizations)
-def test_layerDataTuple_from_layer(layer: Layer, params: List[str]):
-    layerDataTuple = _module_utils._layerDataTuple_from_layer(layer)
-    assert isinstance(layerDataTuple, tuple)
-    assert len(layerDataTuple) == 3
-    assert numpy.allclose(layer.data, layerDataTuple[0])
-    assert type(layer).__name__ == layerDataTuple[2]
-    for param in params:
-        assert getattr(layer, param) == layerDataTuple[1][param]
 
 
 def run_module_from_script(ij, tmp_path, script):

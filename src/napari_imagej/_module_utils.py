@@ -471,18 +471,6 @@ def _modify_function_signature(
     )
 
 
-def _layerDataTuple_from_layer(layer: Layer):
-    data = layer.data
-    metadata: Dict[str, Any] = {}
-    layer_type = type(layer).__name__
-    metadata["name"] = layer.name
-    metadata["metadata"] = layer.metadata
-    if hasattr(layer, "shape_type"):
-        metadata["shape_type"] = getattr(layer, "shape_type")
-
-    return (data, metadata, layer_type)
-
-
 def _pure_module_outputs(
     module: "jc.Module",
     user_inputs: List["jc.ModuleItem"],
