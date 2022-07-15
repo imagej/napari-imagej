@@ -73,7 +73,7 @@ class ImageJWidget(QWidget):
         # focus it in the focus widget and run the first action
         def doubleClickFunc(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
-                self.focuser._highlight_and_run(treeItem.result)
+                self.focuser.run(treeItem.result)
 
         self.results.onDoubleClick = doubleClickFunc
 
@@ -99,7 +99,7 @@ class ImageJWidget(QWidget):
             """Define the return behavior for this widget"""
             result = self.results.first_result()
             if result is not None:
-                self.focuser._highlight_and_run(result)
+                self.focuser.run(result)
 
         self.search.bar.returnPressed.connect(searchBarReturnFunc)
 
@@ -134,7 +134,7 @@ class FocusWidget(QWidget):
 
         self.focused_action_buttons = []  # type: ignore
 
-    def _highlight_and_run(self, result: "jc.SearchResult"):
+    def run(self, result: "jc.SearchResult"):
         if QApplication.keyboardModifiers() & Qt.ShiftModifier:
             selection = "Widget"
         else:
