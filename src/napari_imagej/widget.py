@@ -117,6 +117,112 @@ class ImageJWidget(QWidget):
         self.search.bar.setFocus()
 
 
+class SearchbarWidget(QWidget):
+    def __init__(
+        self,
+    ):
+        super().__init__()
+        # self._results = results
+        # self._focuser = focuser
+        self.on_key_down = property()
+        self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
+
+        # Set GUI options
+        self.setLayout(QHBoxLayout())
+        self.layout().addWidget(self.bar)
+
+        # Initialize the searchers, which will spin up an ImageJ gateway.
+        # By running this in a new thread,
+        # the GUI can be shown before the searchers are ready.
+        def enable_searchbar():
+            ensure_jvm_started()
+            # Enable the searchbar now that the searchers are ready
+            self.bar.setText("")
+            self.bar.setEnabled(True)
+
+        self._searchbar_generator = Thread(target=enable_searchbar)
+        self._searchbar_generator.start()
+
+
+class SearchTree(QTreeWidget):
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+        # Configure GUI Options
+        self.setColumnCount(1)
+        self.setHeaderLabels(["Search"])
+        self.setIndentation(self.indentation() // 2)
+        self.onClick = property()
+        self.itemClicked.connect(lambda item: self.onClick(item))
+        self.onDoubleClick = property()
+        self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
+        self.keyAboveResults = property()
+
+        def init_searchers():
+            for searcher in self.searchers:
+                self.addTopLevelItem(SearcherTreeItem(searcher))
+
+        self._searcher_setup = Thread(target=init_searchers)
+        self._searcher_setup.start()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            # Use the enter key to toggle non-leaves
+            if self.currentItem().childCount() > 0:
+                self.currentItem().setExpanded(not self.currentItem().isExpanded())
+            # Use the enter key to run leaves (Plugins)
+            else:
+                self.onDoubleClick(self.currentItem())
+        elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
+            self.clearSelection()
+            self.keyAboveResults()
+        elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
+            if self.currentItem().isExpanded():
+                self.setCurrentItem(self.currentItem().child(0))
+            else:
+                self.currentItem().setExpanded(True)
+        elif event.key() == Qt.Key_Left:
+            if self.currentItem().parent() is None:
+                self.currentItem().setExpanded(False)
+            else:
+                self.setCurrentItem(self.currentItem().parent())
+        else:
+            super().keyPressEvent(event)
+
+    @property
+    @lru_cache(maxsize=None)
+    def searchers(self) -> List["jc.Searcher"]:
+        searcherClasses = [
+            jc.ModuleSearcher,
+            jc.OpSearcher,
+        ]
+        pluginService = ij().get("org.scijava.plugin.PluginService")
+        searchers = [
+            pluginService.getPlugin(cls, jc.Searcher).createInstance()
+            for cls in searcherClasses
+        ]
+        for searcher in searchers:
+            ij().context().inject(searcher)
+        return searchers
+
+    def _wait_for_setup(self):
+        self._searcher_setup.join()
+
+    def _search(self, text):
+        # TODO: Consider adding a button to toggle fuzziness
+        for i in range(self.topLevelItemCount()):
+            self.topLevelItem(i).search(text)
+
+    def first_result(self) -> "jc.SearchResult":
+        for i in range(self.topLevelItemCount()):
+            searcher = self.topLevelItem(i)
+            if searcher.childCount() > 0:
+                return searcher.child(0).result
+        return None
+
+
 class FocusWidget(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
@@ -260,109 +366,3 @@ class FocusWidget(QWidget):
             widget = magicgui(function=func, **param_options)
             self.viewer.window.add_dock_widget(widget)
             widget[0].native.setFocus()
-
-
-class SearchTree(QTreeWidget):
-    def __init__(
-        self,
-    ):
-        super().__init__()
-
-        # Configure GUI Options
-        self.setColumnCount(1)
-        self.setHeaderLabels(["Search"])
-        self.setIndentation(self.indentation() // 2)
-        self.onClick = property()
-        self.itemClicked.connect(lambda item: self.onClick(item))
-        self.onDoubleClick = property()
-        self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
-        self.keyAboveResults = property()
-
-        def init_searchers():
-            for searcher in self.searchers:
-                self.addTopLevelItem(SearcherTreeItem(searcher))
-
-        self._searcher_setup = Thread(target=init_searchers)
-        self._searcher_setup.start()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            # Use the enter key to toggle non-leaves
-            if self.currentItem().childCount() > 0:
-                self.currentItem().setExpanded(not self.currentItem().isExpanded())
-            # Use the enter key to run leaves (Plugins)
-            else:
-                self.onDoubleClick(self.currentItem())
-        elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
-            self.clearSelection()
-            self.keyAboveResults()
-        elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
-            if self.currentItem().isExpanded():
-                self.setCurrentItem(self.currentItem().child(0))
-            else:
-                self.currentItem().setExpanded(True)
-        elif event.key() == Qt.Key_Left:
-            if self.currentItem().parent() is None:
-                self.currentItem().setExpanded(False)
-            else:
-                self.setCurrentItem(self.currentItem().parent())
-        else:
-            super().keyPressEvent(event)
-
-    @property
-    @lru_cache(maxsize=None)
-    def searchers(self) -> List["jc.Searcher"]:
-        searcherClasses = [
-            jc.ModuleSearcher,
-            jc.OpSearcher,
-        ]
-        pluginService = ij().get("org.scijava.plugin.PluginService")
-        searchers = [
-            pluginService.getPlugin(cls, jc.Searcher).createInstance()
-            for cls in searcherClasses
-        ]
-        for searcher in searchers:
-            ij().context().inject(searcher)
-        return searchers
-
-    def _wait_for_setup(self):
-        self._searcher_setup.join()
-
-    def _search(self, text):
-        # TODO: Consider adding a button to toggle fuzziness
-        for i in range(self.topLevelItemCount()):
-            self.topLevelItem(i).search(text)
-
-    def first_result(self) -> "jc.SearchResult":
-        for i in range(self.topLevelItemCount()):
-            searcher = self.topLevelItem(i)
-            if searcher.childCount() > 0:
-                return searcher.child(0).result
-        return None
-
-
-class SearchbarWidget(QWidget):
-    def __init__(
-        self,
-    ):
-        super().__init__()
-        # self._results = results
-        # self._focuser = focuser
-        self.on_key_down = property()
-        self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
-
-        # Set GUI options
-        self.setLayout(QHBoxLayout())
-        self.layout().addWidget(self.bar)
-
-        # Initialize the searchers, which will spin up an ImageJ gateway.
-        # By running this in a new thread,
-        # the GUI can be shown before the searchers are ready.
-        def enable_searchbar():
-            ensure_jvm_started()
-            # Enable the searchbar now that the searchers are ready
-            self.bar.setText("")
-            self.bar.setEnabled(True)
-
-        self._searchbar_generator = Thread(target=enable_searchbar)
-        self._searchbar_generator.start()
