@@ -16,8 +16,7 @@ from magicgui.widgets import (
     Widget,
 )
 from napari import Viewer
-from napari.layers import Image, Labels, Layer, Points, Shapes
-from napari.types import LayerDataTuple
+from napari.layers import Image, Layer
 
 from napari_imagej import _module_utils
 from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
@@ -676,39 +675,6 @@ def test_modify_functional_signature():
     assert sig.return_annotation is None
 
 
-layer_parameterizations = [
-    (Image(data=numpy.random.rand(4, 4), name="foo"), ["name"]),
-    (Points(data=numpy.random.rand(4, 2), name="bar"), ["name"]),
-    (
-        Labels(
-            data=numpy.random.randint(3, size=(4, 4)),
-            name="bar",
-            metadata={"pyLabelingData": "foo"},
-        ),
-        ["name", "metadata"],
-    ),
-    (
-        Shapes(
-            data=numpy.random.rand(3, 4, 4),
-            name="bar",
-            shape_type=["rectangle", "ellipse", "path"],
-        ),
-        ["name", "shape_type"],
-    ),
-]
-
-
-@pytest.mark.parametrize(argnames="layer, params", argvalues=layer_parameterizations)
-def test_layerDataTuple_from_layer(layer: Layer, params: List[str]):
-    layerDataTuple = _module_utils._layerDataTuple_from_layer(layer)
-    assert isinstance(layerDataTuple, tuple)
-    assert len(layerDataTuple) == 3
-    assert numpy.allclose(layer.data, layerDataTuple[0])
-    assert type(layer).__name__ == layerDataTuple[2]
-    for param in params:
-        assert getattr(layer, param) == layerDataTuple[1][param]
-
-
 def run_module_from_script(ij, tmp_path, script):
     # Write the script to a file
     p = tmp_path / "script.py"
@@ -855,17 +821,16 @@ def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
         assert layer_outputs is None
     else:
         assert num_layer == len(layer_outputs)
-        for layer_tuple in layer_outputs:
-            assert isinstance(layer_tuple, tuple)
-            assert len(layer_tuple) == 3
+        for layer in layer_outputs:
+            assert isinstance(layer, Layer)
     assert num_widget == len(widget_outputs)
 
 
 out_type_params = [
     (script_zero_layer_one_widget, None),
-    (script_one_layer_one_widget, List[LayerDataTuple]),
-    (script_two_layer_one_widget, List[LayerDataTuple]),
-    (script_both_but_optional, List[LayerDataTuple]),
+    (script_one_layer_one_widget, List[Layer]),
+    (script_two_layer_one_widget, List[Layer]),
+    (script_both_but_optional, List[Layer]),
     (script_both_but_required, None),
 ]
 
