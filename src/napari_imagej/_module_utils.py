@@ -217,17 +217,13 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     """
     log_debug("Preprocessing...")
 
-    try:
-        preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
-        for i, preprocessor in enumerate(preprocessors):
-            # if preprocessor is an InputHarvester, stop and return the remaining list
-            if isinstance(preprocessor, jc.InputHarvester):
-                return list(preprocessors)[i:]
-            # preprocess
-            preprocessor.process(module)
-    except JException as exc:
-        # chain exc to a Python exception
-        raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
+    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
+    for i, preprocessor in enumerate(preprocessors):
+        # if preprocessor is an InputHarvester, stop and return the remaining list
+        if isinstance(preprocessor, jc.InputHarvester):
+            return list(preprocessors)[i:]
+        # preprocess
+        preprocessor.process(module)
 
 
 def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleItem", input: Any):
@@ -680,91 +676,99 @@ def functionify_module_execution(
     viewer: Viewer, module: "jc.Module", info: "jc.ModuleInfo"
 ) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
-    # Run preprocessors until we hit input harvesting
-    input_harvesters: List["jc.PreprocessorPlugin"]
-    input_harvesters = _preprocess_to_harvester(module)
+    try:
+        # Run preprocessors until we hit input harvesting
+        input_harvesters: List["jc.PreprocessorPlugin"]
+        input_harvesters = _preprocess_to_harvester(module)
 
-    # Determine which inputs must be resolved by the user
-    unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
-    unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
+        # Determine which inputs must be resolved by the user
+        unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
+        unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
-    # Package the rest of the execution into a widget
-    # TODO: Ideally, we'd have a return type hint List[LayerDataTuple] here,
-    # and we wouldn't need _widget_return_type. This won't work when we return
-    # no layers, however: see https://github.com/napari/napari/issues/4571.
-    def module_execute(
-        *user_resolved_inputs,
-    ):
-        """
-        A function designed to execute module.
-        :param user_resolved_inputs: Inputs passed from magicgui
-        :return: A List[LayerDataTuple] of the layer data outputs of the module,
-            or None if this module does not return any layer data.
-        """
-        try:
-            # Resolve remaining inputs
-            resolved_java_args = _preprocess_remaining_inputs(
-                module,
-                info.inputs(),
-                unresolved_inputs,
-                user_resolved_inputs,
-                input_harvesters,
-            )
+        # Package the rest of the execution into a widget
+        # TODO: Ideally, we'd have a return type hint List[LayerDataTuple] here,
+        # and we wouldn't need _widget_return_type. This won't work when we return
+        # no layers, however: see https://github.com/napari/napari/issues/4571.
+        def module_execute(
+            *user_resolved_inputs,
+        ):
+            """
+            A function designed to execute module.
+            :param user_resolved_inputs: Inputs passed from magicgui
+            :return: A List[LayerDataTuple] of the layer data outputs of the module,
+                or None if this module does not return any layer data.
+            """
+            try:
+                # Resolve remaining inputs
+                resolved_java_args = _preprocess_remaining_inputs(
+                    module,
+                    info.inputs(),
+                    unresolved_inputs,
+                    user_resolved_inputs,
+                    input_harvesters,
+                )
 
-            mutated_layers = _mutable_layers(
-                unresolved_inputs,
-                user_resolved_inputs,
-            )
+                mutated_layers = _mutable_layers(
+                    unresolved_inputs,
+                    user_resolved_inputs,
+                )
 
-            # run module
-            log_debug(
-                f"Running {module_execute.__qualname__} \
-                    ({resolved_java_args}) -- {info.getIdentifier()}"
-            )
-            _initialize_module(module)
-            _run_module(module)
+                # run module
+                log_debug(
+                    f"Running {module_execute.__qualname__} \
+                        ({resolved_java_args}) -- {info.getIdentifier()}"
+                )
+                _initialize_module(module)
+                _run_module(module)
 
-            # postprocess
-            _postprocess_module(module)
-            log_debug("Execution complete")
+                # postprocess
+                _postprocess_module(module)
+                log_debug("Execution complete")
 
-            # get all outputs
-            layer_outputs: List[LayerDataTuple]
-            widget_outputs: List[Any]
-            layer_outputs, widget_outputs = _pure_module_outputs(
-                module, unresolved_inputs
-            )
-            # log outputs
-            if layer_outputs is not None:
-                for output in layer_outputs:
-                    log_debug(f"Result: ({output[2]}) {output[1]['name']}")
-            for output in widget_outputs:
-                log_debug(f"Result: ({type(output[1])}) {output[0]}")
+                # get all outputs
+                layer_outputs: List[LayerDataTuple]
+                widget_outputs: List[Any]
+                layer_outputs, widget_outputs = _pure_module_outputs(
+                    module, unresolved_inputs
+                )
+                # log outputs
+                if layer_outputs is not None:
+                    for output in layer_outputs:
+                        log_debug(f"Result: ({output[2]}) {output[1]['name']}")
+                for output in widget_outputs:
+                    log_debug(f"Result: ({type(output[1])}) {output[0]}")
 
-            # display non-layer outputs in a widget
-            display_externally = _napari_specific_parameter(
-                module_execute, user_resolved_inputs, "display_results_in_new_window"
-            )
-            if display_externally is not None and len(widget_outputs) > 0:
-                _display_result(widget_outputs, info, viewer, display_externally)
+                # display non-layer outputs in a widget
+                display_externally = _napari_specific_parameter(
+                    module_execute,
+                    user_resolved_inputs,
+                    "display_results_in_new_window",
+                )
+                if display_externally is not None and len(widget_outputs) > 0:
+                    _display_result(widget_outputs, info, viewer, display_externally)
 
-            # Refresh the modified layers
-            for layer in mutated_layers:
-                layer.refresh()
+                # Refresh the modified layers
+                for layer in mutated_layers:
+                    layer.refresh()
 
-            # Hand off layer outputs to napari via return
-            return layer_outputs
-        except JException as exc:
-            # chain exc to a Python exception
-            raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
+                # Hand off layer outputs to napari via return
+                return layer_outputs
+            except JException as exc:
+                # chain exc to a Python exception
+                raise Exception(
+                    f"Caught Java Exception\n\n {jstacktrace(exc)}"
+                ) from None
 
-    # Add metadata for widget creation
-    _add_napari_metadata(module_execute, info, unresolved_inputs)
-    magic_kwargs = _add_scijava_metadata(
-        unresolved_inputs, module_execute.__annotation__
-    )
+        # Add metadata for widget creation
+        _add_napari_metadata(module_execute, info, unresolved_inputs)
+        magic_kwargs = _add_scijava_metadata(
+            unresolved_inputs, module_execute.__annotation__
+        )
 
-    return (module_execute, magic_kwargs)
+        return (module_execute, magic_kwargs)
+    except JException as exc:
+        # chain exc to a Python exception
+        raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
 
 
 def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
