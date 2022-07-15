@@ -15,7 +15,6 @@ from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -24,7 +23,7 @@ from qtpy.QtWidgets import (
 )
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej._helper_widgets import ResultTreeItem, SearcherTreeItem
+from napari_imagej._helper_widgets import ResultTreeItem, SearchBar, SearcherTreeItem
 from napari_imagej._module_utils import (
     convert_searchResult_to_info,
     execute_function_modally,
@@ -340,21 +339,6 @@ class SearchTree(QTreeWidget):
             if searcher.childCount() > 0:
                 return searcher.child(0).result
         return None
-
-
-class SearchBar(QLineEdit):
-    def __init__(self, on_key_down: Callable = lambda: None):
-        super().__init__()
-        # Disable the searchbar until the searchers are ready
-        self.setText("Initializing ImageJ...Please Wait")
-        self.setEnabled(False)
-        self._on_key_down = on_key_down
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Down:
-            self._on_key_down()
-        else:
-            super().keyPressEvent(event)
 
 
 class SearchbarWidget(QWidget):

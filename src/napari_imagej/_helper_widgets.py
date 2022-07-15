@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, List
+from typing import Any, Callable, List
 
 from magicgui.types import ChoicesType
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
@@ -7,7 +7,7 @@ from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QTreeWidgetItem
+from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
 
 from napari_imagej.setup_imagej import ij, jc
 
@@ -245,3 +245,18 @@ class SearcherTreeItem(QTreeWidgetItem):
             self.addChild(ResultTreeItem(result))
         if len(results) > 0:
             self.setExpanded(True)
+
+
+class SearchBar(QLineEdit):
+    def __init__(self, on_key_down: Callable = lambda: None):
+        super().__init__()
+        # Disable the searchbar until the searchers are ready
+        self.setText("Initializing ImageJ...Please Wait")
+        self.setEnabled(False)
+        self._on_key_down = on_key_down
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Down:
+            self._on_key_down()
+        else:
+            super().keyPressEvent(event)

@@ -11,6 +11,7 @@ from qtpy.QtCore import Qt
 from napari_imagej._helper_widgets import (
     MutableOutputWidget,
     ResultTreeItem,
+    SearchBar,
     SearcherTreeItem,
 )
 
@@ -153,3 +154,9 @@ def test_searcherTreeItem_regression():
         | Qt.ItemIsDropEnabled
     )
     assert item.text(0) == dummy.title()
+
+
+def test_searchBar_regression():
+    bar = SearchBar()
+    assert bar.text() == "Initializing ImageJ...Please Wait"
+    assert not bar.isEnabled()
