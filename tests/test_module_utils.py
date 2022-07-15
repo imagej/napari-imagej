@@ -17,7 +17,6 @@ from magicgui.widgets import (
 )
 from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
-from napari.types import LayerDataTuple
 
 from napari_imagej import _module_utils
 from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
@@ -855,17 +854,16 @@ def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget):
         assert layer_outputs is None
     else:
         assert num_layer == len(layer_outputs)
-        for layer_tuple in layer_outputs:
-            assert isinstance(layer_tuple, tuple)
-            assert len(layer_tuple) == 3
+        for layer in layer_outputs:
+            assert isinstance(layer, Layer)
     assert num_widget == len(widget_outputs)
 
 
 out_type_params = [
     (script_zero_layer_one_widget, None),
-    (script_one_layer_one_widget, List[LayerDataTuple]),
-    (script_two_layer_one_widget, List[LayerDataTuple]),
-    (script_both_but_optional, List[LayerDataTuple]),
+    (script_one_layer_one_widget, List[Layer]),
+    (script_two_layer_one_widget, List[Layer]),
+    (script_both_but_optional, List[Layer]),
     (script_both_but_required, None),
 ]
 
