@@ -1,23 +1,11 @@
 import pytest
 from napari import Viewer
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QTreeWidget,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from napari_imagej._flow_layout import FlowLayout
 from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej.widget import (
-    FocusWidget,
-    ImageJWidget,
-    ResultsWidget,
-    SearchbarWidget,
-)
+from napari_imagej.widget import FocusWidget, ImageJWidget, SearchbarWidget, SearchTree
 
 
 def test_widget_layout(imagej_widget: ImageJWidget):
@@ -39,7 +27,7 @@ def test_widget_subwidget_layout(imagej_widget: ImageJWidget):
     assert len(subwidgets) == 4
     assert isinstance(subwidgets[0], QVBoxLayout)
     assert isinstance(subwidgets[1], SearchbarWidget)
-    assert isinstance(subwidgets[2], ResultsWidget)
+    assert isinstance(subwidgets[2], SearchTree)
     assert isinstance(subwidgets[3], FocusWidget)
 
 
@@ -50,15 +38,6 @@ def test_searchbar_widget_layout(imagej_widget: ImageJWidget):
     assert len(subwidgets) == 2
     assert isinstance(subwidgets[0], QHBoxLayout)
     assert isinstance(subwidgets[1], QLineEdit)
-
-
-def test_results_widget_layout(imagej_widget: ImageJWidget):
-    """Tests the number and expected order of results widget children"""
-    results: ResultsWidget = imagej_widget.findChild(ResultsWidget)
-    subwidgets = results.children()
-    assert len(subwidgets) == 2
-    assert isinstance(subwidgets[0], QVBoxLayout)
-    assert isinstance(subwidgets[1], QTreeWidget)
 
 
 def test_focus_widget_layout(imagej_widget: ImageJWidget):
@@ -93,30 +72,30 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
     results = searcher.search("frangi", False)
     assert len(results) == 1
     searchService = ij.get("org.scijava.search.SearchService")
-    imagej_widget.highlighter.focused_actions = searchService.actions(results[0])
-    py_actions = imagej_widget.highlighter._actions_from_result(results[0])
+    imagej_widget.focuser.focused_actions = searchService.actions(results[0])
+    py_actions = imagej_widget.focuser._actions_from_result(results[0])
     assert py_actions[0].name == "Run"
     assert (
-        imagej_widget.highlighter.tooltips[py_actions[0][0]]
+        imagej_widget.focuser.tooltips[py_actions[0][0]]
         == "Runs functionality from a modal widget. Best for single executions"
     )
     assert py_actions[1].name == "Widget"
     assert (
-        imagej_widget.highlighter.tooltips[py_actions[1][0]]
+        imagej_widget.focuser.tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
     assert py_actions[2].name == "Help"
     assert (
-        imagej_widget.highlighter.tooltips[py_actions[2][0]]
+        imagej_widget.focuser.tooltips[py_actions[2][0]]
         == "Opens the functionality's ImageJ.net wiki page"
     )
     assert py_actions[3].name == "Source"
     assert (
-        imagej_widget.highlighter.tooltips[py_actions[3][0]]
+        imagej_widget.focuser.tooltips[py_actions[3][0]]
         == "Opens the source code on GitHub"
     )
     assert py_actions[4].name == "Batch"
-    assert py_actions[4].name not in imagej_widget.highlighter.tooltips
+    assert py_actions[4].name not in imagej_widget.focuser.tooltips
 
 
 def test_keymaps(make_napari_viewer, qtbot):
@@ -133,24 +112,23 @@ def test_keymaps(make_napari_viewer, qtbot):
 def test_result_single_click(make_napari_viewer, qtbot):
     viewer: Viewer = make_napari_viewer()
     imagej_widget: ImageJWidget = ImageJWidget(viewer)
-    viewer
     # Test single click spawns buttons
-    assert len(imagej_widget.highlighter.focused_action_buttons) == 0
-    imagej_widget.results._wait_for_tree_setup()
+    assert len(imagej_widget.focuser.focused_action_buttons) == 0
+    imagej_widget.results._wait_for_setup()
     imagej_widget.results._search("Frangi")
-    tree = imagej_widget.results._tree
+    tree = imagej_widget.results
     item = tree.topLevelItem(0).child(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    assert len(imagej_widget.highlighter.focused_action_buttons) == 5
+    assert len(imagej_widget.focuser.focused_action_buttons) == 5
 
 
 def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
     # Wait for the searchers to be ready
-    imagej_widget.results._wait_for_tree_setup()
+    imagej_widget.results._wait_for_setup()
     # Search something
     imagej_widget.results._search("Fi")
-    tree = imagej_widget.results._tree
+    tree = imagej_widget.results
     tree.setCurrentItem(tree.topLevelItem(0))
     expanded = tree.currentItem().isExpanded()
     # Part 1: toggle with Enter
@@ -177,10 +155,10 @@ def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
 
 def test_arrow_key_selection(imagej_widget: ImageJWidget, qtbot):
     # Wait for the searchers to be ready
-    imagej_widget.results._wait_for_tree_setup()
+    imagej_widget.results._wait_for_setup()
     # Search something
     imagej_widget.results._search("Fi")
-    tree = imagej_widget.results._tree
+    tree = imagej_widget.results
     # Assert that there is a result in each
     for i in range(tree.topLevelItemCount()):
         assert tree.topLevelItem(i).childCount() > 0
