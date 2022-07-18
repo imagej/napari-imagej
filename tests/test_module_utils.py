@@ -677,7 +677,7 @@ def test_modify_functional_signature():
 
 def run_module_from_script(ij, tmp_path, script):
     # Write the script to a file
-    p = tmp_path / "script.py"
+    p = tmp_path / "script.groovy"
     p.write_text(script)
 
     info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
@@ -694,14 +694,18 @@ def run_module_from_script(ij, tmp_path, script):
     return _module_utils._pure_module_outputs(module, unresolved_inputs)
 
 
+#     module = ij.py.run_script(language="Groovy", script=script, args=[])
+#     return _module_utils._module_outputs(module)
+
+
 script_zero_layer_zero_widget: str = """
-c = 1
+import net.imglib2.img.array.ArrayImgs
 """
 
 script_one_layer_zero_widget: str = """
 #@OUTPUT Img d
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 d = ArrayImgs.unsignedBytes(10, 10)
 """
@@ -710,7 +714,7 @@ script_two_layer_zero_widget: str = """
 #@OUTPUT Img d
 #@OUTPUT Img e
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 d = ArrayImgs.unsignedBytes(10, 10)
 e = ArrayImgs.unsignedBytes(10, 10)
@@ -725,7 +729,7 @@ script_one_layer_one_widget: str = """
 #@OUTPUT Long a
 #@OUTPUT Img d
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 a = 4
 d = ArrayImgs.unsignedBytes(10, 10)
@@ -736,7 +740,7 @@ script_two_layer_one_widget: str = """
 #@OUTPUT Img d
 #@OUTPUT Img e
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 a = 1
 d = ArrayImgs.unsignedBytes(10, 10)
@@ -755,7 +759,7 @@ script_one_layer_two_widget: str = """
 #@OUTPUT Long b
 #@OUTPUT Img d
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 a = 4
 b = 4
@@ -768,7 +772,7 @@ script_two_layer_two_widget: str = """
 #@OUTPUT Img d
 #@OUTPUT Img e
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
 a = 1
 b = 1
@@ -779,20 +783,24 @@ e = ArrayImgs.unsignedBytes(10, 10)
 script_both_but_optional: str = """
 #@BOTH Img(required=false) d
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
-if d is None:
+if( d == null)
     d = ArrayImgs.unsignedBytes(10, 10)
 
-d[:, :] = 1
+cursor = d.cursor()
+while(cursor.hasNext())
+    cursor.next().set(1)
 """
 
 script_both_but_required: str = """
 #@BOTH Img(required=true) d
 
-from net.imglib2.img.array import ArrayImgs
+import net.imglib2.img.array.ArrayImgs
 
-d[:, :] = 1
+cursor = d.cursor()
+while(cursor.hasNext())
+    cursor.next().set(1)
 """
 
 widget_parameterizations = [
