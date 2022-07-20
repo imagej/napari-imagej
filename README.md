@@ -1,6 +1,6 @@
 # napari-imagej
 
-***VERY EARLY AND EXPERIMENTAL PROTOTYPE***
+***EARLY AND EXPERIMENTAL PROTOTYPE***
 
 See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
 
