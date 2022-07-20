@@ -1,8 +1,6 @@
 # napari-imagej
 
-***EARLY AND EXPERIMENTAL PROTOTYPE***
-
-See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
+### A [napari] plugin for access to [ImageJ2]
 
 [![License](https://img.shields.io/pypi/l/napari-imagej.svg?color=green)](https://github.com/imagej/napari-imagej/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-imagej.svg?color=green)](https://pypi.org/project/napari-imagej)
@@ -11,19 +9,14 @@ See the [project roadmap](https://github.com/orgs/imagej/projects/2), still unde
 [![codecov](https://codecov.io/gh/imagej/napari-imagej/branch/main/graph/badge.svg)](https://codecov.io/gh/imagej/napari-imagej)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-imagej)](https://napari-hub.org/plugins/napari-imagej)
 
-Use ImageJ functionality from napari
+**napari-imagej** aims to provide access to all [ImageJ2] functionality through the [napari] graphical user interface. It builds on the foundation of [PyImageJ], a project allowing ImageJ2 access from Python.
 
-----------------------------------
+See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
 
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
-
-<!--
-Don't miss the full getting started guide to set up your new package:
-https://github.com/napari/cookiecutter-napari-plugin#getting-started
-
-and review the napari docs for plugin developers:
-https://napari.org/plugins/stable/index.html
--->
+## With napari-imagej, you can access:
+* [ImageJ2 Commands] - 100+ image processing algorithms
+* [ImageJ Ops] - 500+ *functional* image processing algorithms
+* [SciJava Scripts] - migrated from Fiji or ImageJ2, or written yourself!
 
 ## Installation
 
@@ -57,7 +50,7 @@ Selecting a result will show buttons at the bottom of the widget for executing t
 
 ![Running an Op within napari-imagej](resources/napari_imagej_simple_example.gif)
 
-### Running a [SciJava Script]
+### Running your own [SciJava Scripts]
 
 napari-imagej is able to automatically detect and expose user-written SciJava scripts. To discover these scripts, they must be located in a *subdirectory* of a `scripts` directory relative to the location where napari is lauched.
 
@@ -135,6 +128,9 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [flake8]: https://flake8.pycqa.org/en/latest/
 [GNU GPL v3.0]: http://www.gnu.org/licenses/gpl-3.0.txt
 [GNU LGPL v3.0]: http://www.gnu.org/licenses/lgpl-3.0.txt
+[ImageJ2]: https://imagej.net/software/imagej2/index
+[ImageJ2 Commands]: https://github.com/imagej/imagej-plugins-commands
+[ImageJ Ops]: https://imagej.net/libs/imagej-ops/index
 [isort]: https://pycqa.github.io/isort/
 [mamba]: https://mamba.readthedocs.io/en/latest/user_guide/mamba.html
 [MIT]: http://opensource.org/licenses/MIT
@@ -142,6 +138,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [napari]: https://github.com/napari/napari
 [npe2]: https://github.com/napari/npe2/
 [pip]: https://pypi.org/project/pip/
+[PyImageJ]: https://github.com/imagej/pyimagej/
 [PyPI]: https://pypi.org/
-[SciJava Script]: https://imagej.net/scripting
+[SciJava Scripts]: https://imagej.net/scripting
 [tox]: https://tox.readthedocs.io/en/latest/
