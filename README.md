@@ -27,16 +27,19 @@ https://napari.org/plugins/stable/index.html
 
 ## Installation
 
-You can install `napari-imagej` via [pip]:
+Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda] to install the environment. We prefer using [mamba] over conda for drastically shorter setup times:
 
-    pip install napari-imagej
+    conda install mamba -n base -c conda-forge
+    mamba env create -f environment.yml
+    pip install -e .
 
+For developers, please instead use `dev-environment.yml`. Using this environment file will also install the developer tools:
 
+    conda install mamba -n base -c conda-forge
+    mamba env create -f dev-environment.yml
+    pip install -e .
 
-To install latest development version :
-
-    pip install git+https://github.com/imagej/napari-imagej.git
-
+Once napari-imagej is ready for an initial release, it will be installable from [PyPI] and conda-forge.
 
 ## Contributing
 
@@ -53,6 +56,9 @@ Distributed under the terms of the [BSD-3] license,
 If you encounter any problems, please [file an issue] along with a detailed description.
 
 [napari]: https://github.com/napari/napari
+[conda]: https://docs.conda.io/projects/conda/en/latest/index.html
+[conda-forge]: https://conda-forge.org/#page-top
+[mamba]: https://mamba.readthedocs.io/en/latest/user_guide/mamba.html
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
 [@napari]: https://github.com/napari
 [MIT]: http://opensource.org/licenses/MIT
