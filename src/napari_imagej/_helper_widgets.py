@@ -242,8 +242,8 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.takeChildren()
         if results and len(results):
             self.addChildren([ResultTreeItem(r) for r in results])
-        self.setExpanded(True)
         self.setText(0, f"{self.title} ({len(results)})")
+        self.setExpanded(len(results) < 10)
 
 
 class SearchBar(QLineEdit):
