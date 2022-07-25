@@ -25,8 +25,8 @@ from qtpy.QtWidgets import (
 
 from napari_imagej._flow_layout import FlowLayout
 from napari_imagej._helper_widgets import (
+    JLineEdit,
     ResultTreeItem,
-    SearchBar,
     SearcherTreeItem,
     SearchEventWrapper,
 )
@@ -125,28 +125,23 @@ class ImageJWidget(QWidget):
 
 
 class SearchbarWidget(QWidget):
+    """
+    A QWidget for streamlining ImageJ functionality searching
+    """
+
     def __init__(
         self,
     ):
         super().__init__()
         self.on_key_down = property()
-        self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
+
+        # The main functionality is a search bar
+        self.bar: JLineEdit = JLineEdit(on_key_down=lambda: self.on_key_down())
+        Thread(target=self.bar.enable).start()
 
         # Set GUI options
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(self.bar)
-
-        # Initialize the searchers, which will spin up an ImageJ gateway.
-        # By running this in a new thread,
-        # the GUI can be shown before the searchers are ready.
-        def enable_searchbar():
-            ensure_jvm_started()
-            # Enable the searchbar now that the searchers are ready
-            self.bar.setText("")
-            self.bar.setEnabled(True)
-
-        self.startup_thread = Thread(target=enable_searchbar)
-        self.startup_thread.start()
 
 
 class SearchTree(QTreeWidget):

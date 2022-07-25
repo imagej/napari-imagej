@@ -9,9 +9,9 @@ from napari.layers import Image
 from qtpy.QtCore import Qt
 
 from napari_imagej._helper_widgets import (
+    JLineEdit,
     MutableOutputWidget,
     ResultTreeItem,
-    SearchBar,
     SearcherTreeItem,
 )
 
@@ -157,6 +157,6 @@ def test_searcherTreeItem_regression():
 
 
 def test_searchBar_regression():
-    bar = SearchBar()
+    bar = JLineEdit()
     assert bar.text() == "Initializing ImageJ...Please Wait"
     assert not bar.isEnabled()

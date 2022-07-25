@@ -9,7 +9,7 @@ from napari.utils._magicgui import get_layers
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
 
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc
 
 
 class MutableOutputWidget(Container):
@@ -219,15 +219,17 @@ class MutableOutputWidget(Container):
 
 
 class ResultTreeItem(QTreeWidgetItem):
+    """
+    A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
+    """
+
     def __init__(self, result: "jc.SearchResult"):
         super().__init__()
         self.name = ij().py.from_java(result.name())
-        self.setText(0, self.name)
-        self._result = result
+        self.result = result
 
-    @property
-    def result(self):
-        return self._result
+        # Set QtPy properties
+        self.setText(0, self.name)
 
 
 class SearchEventWrapper:
@@ -242,14 +244,24 @@ class SearchEventWrapper:
 
 
 class SearcherTreeItem(QTreeWidgetItem):
+    """
+    A QTreeWidgetItem wrapping a org.scijava.search.Searcher
+    with a set of org.scijava.search.SearchResults
+    """
+
     def __init__(self, searcher: "jc.Searcher"):
         super().__init__()
         self.title = ij().py.from_java(searcher.title())
-        self.setText(0, self.title)
-        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
         self._searcher = searcher
 
+        # Set QtPy properties
+        self.setText(0, self.title)
+        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+
     def update(self, results: List[SearchEventWrapper]):
+        """
+        Update children with the results stored in the SearchEventWrapper
+        """
         self.takeChildren()
         if results and len(results):
             self.addChildren(results)
@@ -257,16 +269,27 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setExpanded(len(results) < 10)
 
 
-class SearchBar(QLineEdit):
+class JLineEdit(QLineEdit):
+    """
+    A QLineEdit that is disabled until the JVM is ready
+    """
+
     def __init__(self, on_key_down: Callable = lambda: None):
         super().__init__()
-        # Disable the searchbar until the searchers are ready
+        self._on_key_down = on_key_down
+
+        # Set QtPy properties
         self.setText("Initializing ImageJ...Please Wait")
         self.setEnabled(False)
-        self._on_key_down = on_key_down
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Down:
             self._on_key_down()
         else:
             super().keyPressEvent(event)
+
+    def enable(self):
+        # Once the JVM is ready, allow editing
+        ensure_jvm_started()
+        self.setText("")
+        self.setEnabled(True)
