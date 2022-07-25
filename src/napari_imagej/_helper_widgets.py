@@ -238,14 +238,10 @@ class SearcherTreeItem(QTreeWidgetItem):
         self._searcher = searcher
 
     def update(self, results: List["jc.SearchResult"]):
-        while self.childCount() > 0:
-            self.removeChild(self.child(0))
-        if results is None:
-            return
-        for result in results:
-            self.addChild(ResultTreeItem(result))
-        if len(results) > 0:
-            self.setExpanded(True)
+        self.takeChildren()
+        if results and len(results):
+            self.addChildren([ResultTreeItem(r) for r in results])
+        self.setExpanded(True)
 
     def wraps(self, searcher: "jc.Searcher") -> bool:
         """Determines whether this class wraps searcher"""

@@ -5,14 +5,13 @@ graphical access to ImageJ functionality.
 This Widget is made accessible to napari through napari.yml
 """
 import atexit
-from queue import Queue
 from threading import Thread
-from typing import Callable, Dict, List, NamedTuple
+from typing import Callable, Dict, List, NamedTuple, Optional
 
 from jpype import JArray, JImplements, JOverride
 from magicgui import magicgui
 from napari import Viewer
-from qtpy.QtCore import Qt, QThread
+from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -80,14 +79,14 @@ class ImageJWidget(QWidget):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.run(treeItem.result)
 
-        self.results.onDoubleClick = doubleClickFunc
+        self.results.on_double_click = doubleClickFunc
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
         def keyUpFromResults():
             self.search.bar.setFocus()
 
-        self.results.keyAboveResults = keyUpFromResults
+        self.results.key_above_results = keyUpFromResults
 
         def searchBarKeyDown():
             self.search.bar.clearFocus()
@@ -106,7 +105,6 @@ class ImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(searchBarReturnFunc)
 
-        self.results.itemDoubleClicked.connect(doubleClickFunc)
         self.results.keyUpAction = lambda: self.search.bar.setFocus()
 
         # -- Final setup -- #
@@ -146,42 +144,38 @@ class SearchbarWidget(QWidget):
         self.startup_thread.start()
 
 
-class ResultUpdater(QThread):
-    def __init__(self, tree: "SearchTree"):
-        super().__init__()
-        self.tree = tree
-
-    def run(self):
-        while not self.isInterruptionRequested():
-            event: "jc.SearchEvent" = self.tree.resultsQueue.get(block=True)
-            searcher_name: str = ij().py.from_java(event.searcher().title())
-            if searcher_name not in ["Ops", "Commands"]:
-                continue
-            self.tree._get_matching_item(event.searcher()).update(event.results())
+class SearchEventWrapper:
+    def __init__(self, event: "jc.SearchEvent"):
+        self.event = event
 
 
 class SearchTree(QTreeWidget):
+
+    process = Signal(SearchEventWrapper)
+
     def __init__(
         self,
     ):
         super().__init__()
 
-        # Configure GUI Options
+        # -- Configure GUI Options -- #
         self.setColumnCount(1)
         self.setHeaderLabels(["Search"])
         self.setIndentation(self.indentation() // 2)
-        # self.onClick = property()
-        # self.itemClicked.connect(lambda item: self.onClick(item))
-        self.onDoubleClick = property()
-        self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
-        self.keyAboveResults = property()
-        self.resultsQueue: Queue = Queue()
-        self.resultUpdater: ResultUpdater = ResultUpdater(self)
-        self.resultUpdater.start()
-        atexit.register(self.resultUpdater.requestInterruption)
 
-        self._startup_thread = Thread(target=self._init_searchers)
-        self._startup_thread.start()
+        # Set up Double click behavior
+        self.on_double_click = property()
+        self.itemDoubleClicked.connect(lambda item: self.on_double_click(item))
+
+        # Set up behavior for pressing up at the top result
+        self.key_above_results = property()
+
+        # Start up the SearchResult producer/consumer chain
+        # The search
+        self.process.connect(self.update)
+
+        self._producer_initializer = Thread(target=self._init_producer)
+        self._producer_initializer.start()
 
     @property
     def search_service(self) -> "jc.SearchService":
@@ -193,35 +187,33 @@ class SearchTree(QTreeWidget):
         This object does some setup asynchronously.
         This function can be used to ensure all that is done
         """
-        return self._startup_thread.join()
+        return self._producer_initializer.join()
 
-    def _init_searchers(self):
+    def _init_producer(self):
         # First, wait for the JVM to start up
         ensure_jvm_started()
 
         # Then, define our SearchListener
         @JImplements("org.scijava.search.SearchListener")
         class NapariSearchListener:
-            def __init__(self, queue: Queue):
+            def __init__(self, event_handler: Signal):
                 super().__init__()
-                self.queue = queue
+                self.handler = event_handler
 
             @JOverride
             def searchCompleted(self, event: "jc.SearchEvent"):
-                self.queue.put(event)
+                self.handler.emit(SearchEventWrapper(event))
 
         # Start the search!
         # NB: SearchService.search takes varargs, so we need an array
-        listener_arr = JArray(jc.SearchListener)(
-            [NapariSearchListener(self.resultsQueue)]
-        )
+        listener_arr = JArray(jc.SearchListener)([NapariSearchListener(self.process)])
         self._searchOperation = self.search_service.search(listener_arr)
         # Make sure that the search stops when we close napari
         # Otherwise the Java threads like to continue
         atexit.register(self._searchOperation.terminate)
 
     def search(self, text: str):
-        self._startup_thread.join()
+        self._producer_initializer.join()
         self._searchOperation.search(text)
 
     def keyPressEvent(self, event):
@@ -234,7 +226,7 @@ class SearchTree(QTreeWidget):
                 self.onDoubleClick(self.currentItem())
         elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
             self.clearSelection()
-            self.keyAboveResults()
+            self.key_above_results()
         elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
             if self.currentItem().isExpanded():
                 self.setCurrentItem(self.currentItem().child(0))
@@ -255,17 +247,53 @@ class SearchTree(QTreeWidget):
                 return searcher.child(0).result
         return None
 
-    def _get_matching_item(self, searcher: "jc.Searcher") -> SearcherTreeItem:
+    def _add_new_searcher(self, searcher: "jc.Searcher") -> SearcherTreeItem:
+        tree_item = SearcherTreeItem(searcher)
+        tree_item.setExpanded(True)
+        self.addTopLevelItem(tree_item)
+        return tree_item
+
+    def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
         name: str = ij().py.from_java(searcher.title())
         matches = self.findItems(name, Qt.MatchExactly, 0)
         if len(matches) == 0:
-            tree_item = SearcherTreeItem(searcher)
-            self.addTopLevelItem(tree_item)
-            return tree_item
+            return None
         elif len(matches) == 1:
             return matches[0]
         else:
             raise ValueError(f"Multiple Search Result Items matching name {name}")
+
+    def _valid_results(self, event: "jc.SearchEvent"):
+        results = event.results()
+        # Return False for results == null
+        if not results:
+            return False
+        # Return False for empty results
+        if not len(results):
+            return False
+        # Return False for search errors
+        if len(results) == 1:
+            if str(results[0].name()) == "<error>":
+                return False
+        return True
+
+    @Slot(SearchEventWrapper)
+    def update(self, event: SearchEventWrapper):
+        """
+        Update the search results using event
+
+        :param event: The org.scijava.search.SearchResult asynchronously
+        returned by the org.scijava.search.SearchService
+        """
+        event: "jc.SearchEvent" = event.event
+        header = self._get_matching_item(event.searcher())
+        if self._valid_results(event):
+            if header is None:
+                header = self._add_new_searcher(event.searcher())
+                self.sortItems(0, Qt.AscendingOrder)
+            header.update(event.results())
+        elif header is not None:
+            self.invisibleRootItem().removeChild(header)
 
 
 class FocusWidget(QWidget):
