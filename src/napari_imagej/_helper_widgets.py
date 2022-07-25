@@ -233,7 +233,8 @@ class ResultTreeItem(QTreeWidgetItem):
 class SearcherTreeItem(QTreeWidgetItem):
     def __init__(self, searcher: "jc.Searcher"):
         super().__init__()
-        self.setText(0, ij().py.from_java(searcher.title()))
+        self.title = ij().py.from_java(searcher.title())
+        self.setText(0, self.title)
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
         self._searcher = searcher
 
@@ -242,6 +243,7 @@ class SearcherTreeItem(QTreeWidgetItem):
         if results and len(results):
             self.addChildren([ResultTreeItem(r) for r in results])
         self.setExpanded(True)
+        self.setText(0, f"{self.title} ({len(results)})")
 
     def wraps(self, searcher: "jc.Searcher") -> bool:
         """Determines whether this class wraps searcher"""

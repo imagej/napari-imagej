@@ -255,7 +255,7 @@ class SearchTree(QTreeWidget):
 
     def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
         name: str = ij().py.from_java(searcher.title())
-        matches = self.findItems(name, Qt.MatchExactly, 0)
+        matches = self.findItems(name, Qt.MatchStartsWith, 0)
         if len(matches) == 0:
             return None
         elif len(matches) == 1:
