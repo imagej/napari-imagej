@@ -245,10 +245,6 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setExpanded(True)
         self.setText(0, f"{self.title} ({len(results)})")
 
-    def wraps(self, searcher: "jc.Searcher") -> bool:
-        """Determines whether this class wraps searcher"""
-        return searcher.title().equals(self._searcher.title())
-
 
 class SearchBar(QLineEdit):
     def __init__(self, on_key_down: Callable = lambda: None):
