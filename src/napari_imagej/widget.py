@@ -24,7 +24,12 @@ from qtpy.QtWidgets import (
 )
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej._helper_widgets import ResultTreeItem, SearchBar, SearcherTreeItem
+from napari_imagej._helper_widgets import (
+    ResultTreeItem,
+    SearchBar,
+    SearcherTreeItem,
+    SearchEventWrapper,
+)
 from napari_imagej._module_utils import (
     convert_searchResult_to_info,
     execute_function_modally,
@@ -101,7 +106,7 @@ class ImageJWidget(QWidget):
         # in the results list and run it
         def return_search_bar():
             """Define the return behavior for this widget"""
-            result = self.results.first_result()
+            result = self.results._first_result()
             if result is not None:
                 self.focuser.run(result)
 
@@ -144,16 +149,6 @@ class SearchbarWidget(QWidget):
         self.startup_thread.start()
 
 
-class SearchEventWrapper:
-    """
-    Python Class wrapping org.scijava.search.SearchEvent.
-    Needed for SearchTree.process, as signal types must be Python types.
-    """
-
-    def __init__(self, event: "jc.SearchEvent"):
-        self.event = event
-
-
 class SearchTree(QTreeWidget):
 
     process = Signal(SearchEventWrapper)
@@ -182,44 +177,35 @@ class SearchTree(QTreeWidget):
         self._producer_initializer = Thread(target=self._init_producer)
         self._producer_initializer.start()
 
-    @property
-    def search_service(self) -> "jc.SearchService":
-        ensure_jvm_started()
-        return ij().get("org.scijava.search.SearchService")
-
-    def _wait_for_setup(self):
+    def wait_for_setup(self):
         """
         This object does some setup asynchronously.
         This function can be used to ensure all that is done
         """
         return self._producer_initializer.join()
 
-    def _init_producer(self):
-        # First, wait for the JVM to start up
-        ensure_jvm_started()
-
-        # Then, define our SearchListener
-        @JImplements("org.scijava.search.SearchListener")
-        class NapariSearchListener:
-            def __init__(self, event_handler: Signal):
-                super().__init__()
-                self.handler = event_handler
-
-            @JOverride
-            def searchCompleted(self, event: "jc.SearchEvent"):
-                self.handler.emit(SearchEventWrapper(event))
-
-        # Start the search!
-        # NB: SearchService.search takes varargs, so we need an array
-        listener_arr = JArray(jc.SearchListener)([NapariSearchListener(self.process)])
-        self._searchOperation = self.search_service.search(listener_arr)
-        # Make sure that the search stops when we close napari
-        # Otherwise the Java threads like to continue
-        atexit.register(self._searchOperation.terminate)
-
     def search(self, text: str):
-        self._producer_initializer.join()
+        self.wait_for_setup()
         self._searchOperation.search(text)
+
+    @Slot(SearchEventWrapper)
+    def update(self, event: SearchEventWrapper):
+        """
+        Update the search results using event
+
+        :param event: The org.scijava.search.SearchResult asynchronously
+        returned by the org.scijava.search.SearchService
+        """
+        header = self._get_matching_item(event.searcher)
+        if self._valid_results(event):
+            if header is None:
+                header = self._add_new_searcher(event.searcher)
+                self.sortItems(0, Qt.AscendingOrder)
+            header.update(event.results)
+        elif header is not None:
+            self.invisibleRootItem().removeChild(header)
+
+    # -- QWidget Overrides -- #
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
@@ -245,7 +231,34 @@ class SearchTree(QTreeWidget):
         else:
             super().keyPressEvent(event)
 
-    def first_result(self) -> "jc.SearchResult":
+    # -- Helper Functionality -- #
+
+    def _init_producer(self):
+        # First, wait for the JVM to start up
+        ensure_jvm_started()
+
+        # Then, define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariSearchListener:
+            def __init__(self, event_handler: Signal):
+                super().__init__()
+                self.handler = event_handler
+
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.handler.emit(SearchEventWrapper(event.searcher(), event.results()))
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)([NapariSearchListener(self.process)])
+        self._searchOperation = (
+            ij().get("org.scijava.search.SearchService").search(listener_arr)
+        )
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        atexit.register(self._searchOperation.terminate)
+
+    def _first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
             searcher = self.topLevelItem(i)
             if searcher.childCount() > 0:
@@ -268,8 +281,8 @@ class SearchTree(QTreeWidget):
         else:
             raise ValueError(f"Multiple Search Result Items matching name {name}")
 
-    def _valid_results(self, event: "jc.SearchEvent"):
-        results = event.results()
+    def _valid_results(self, event: SearchEventWrapper):
+        results = event.results
         # Return False for results == null
         if not results:
             return False
@@ -278,27 +291,9 @@ class SearchTree(QTreeWidget):
             return False
         # Return False for search errors
         if len(results) == 1:
-            if str(results[0].name()) == "<error>":
+            if str(results[0].name) == "<error>":
                 return False
         return True
-
-    @Slot(SearchEventWrapper)
-    def update(self, event: SearchEventWrapper):
-        """
-        Update the search results using event
-
-        :param event: The org.scijava.search.SearchResult asynchronously
-        returned by the org.scijava.search.SearchService
-        """
-        event: "jc.SearchEvent" = event.event
-        header = self._get_matching_item(event.searcher())
-        if self._valid_results(event):
-            if header is None:
-                header = self._add_new_searcher(event.searcher())
-                self.sortItems(0, Qt.AscendingOrder)
-            header.update(event.results())
-        elif header is not None:
-            self.invisibleRootItem().removeChild(header)
 
 
 class FocusWidget(QWidget):

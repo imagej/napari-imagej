@@ -230,6 +230,17 @@ class ResultTreeItem(QTreeWidgetItem):
         return self._result
 
 
+class SearchEventWrapper:
+    """
+    Python Class wrapping org.scijava.search.SearchEvent.
+    Needed for SearchTree.process, as signal types must be Python types.
+    """
+
+    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
+        self.searcher = searcher
+        self.results = [ResultTreeItem(r) for r in results]
+
+
 class SearcherTreeItem(QTreeWidgetItem):
     def __init__(self, searcher: "jc.Searcher"):
         super().__init__()
@@ -238,10 +249,10 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
         self._searcher = searcher
 
-    def update(self, results: List["jc.SearchResult"]):
+    def update(self, results: List[SearchEventWrapper]):
         self.takeChildren()
         if results and len(results):
-            self.addChildren([ResultTreeItem(r) for r in results])
+            self.addChildren(results)
         self.setText(0, f"{self.title} ({len(results)})")
         self.setExpanded(len(results) < 10)
 

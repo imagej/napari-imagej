@@ -8,6 +8,7 @@ from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
+    ResultTreeItem,
     SearchbarWidget,
     SearcherTreeItem,
     SearchTree,
@@ -126,7 +127,7 @@ def test_result_single_click(make_napari_viewer, qtbot):
     # Assert that there are initially no buttons
     viewer: Viewer = make_napari_viewer()
     imagej_widget: ImageJWidget = ImageJWidget(viewer)
-    imagej_widget.results._wait_for_setup()
+    imagej_widget.results.wait_for_setup()
     assert len(imagej_widget.focuser.focused_action_buttons) == 0
     # Search something, then wait for the results to populate
     imagej_widget.results.search("Frangi")
@@ -158,13 +159,15 @@ def _populate_tree(tree: SearchTree, qtbot):
         def name(self):
             return self._name
 
-    tree._wait_for_setup()
+    tree.wait_for_setup()
     assert tree.topLevelItemCount() == 0
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))
-    searcher1.update([DummySearchResult(s) for s in ("foo1", "foo2", "foo3")])
+    searcher1.update(
+        [ResultTreeItem(DummySearchResult(s)) for s in ("foo1", "foo2", "foo3")]
+    )
     tree.addTopLevelItem(searcher1)
     searcher2 = SearcherTreeItem(DummySearcher("Ops"))
-    searcher2.update([DummySearchResult(s) for s in ("bar1", "bar2")])
+    searcher2.update([ResultTreeItem(DummySearchResult(s)) for s in ("bar1", "bar2")])
     tree.addTopLevelItem(searcher2)
 
     # Wait for the tree to populate
@@ -175,7 +178,7 @@ def _populate_tree(tree: SearchTree, qtbot):
 
 def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
     # Wait for the searchers to be ready
-    imagej_widget.results._wait_for_setup()
+    imagej_widget.results.wait_for_setup()
     # Search something
     imagej_widget.results.search("Frangi")
     tree = imagej_widget.results
