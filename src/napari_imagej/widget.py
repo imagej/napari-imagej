@@ -66,46 +66,46 @@ class ImageJWidget(QWidget):
         self.search.bar.textEdited.connect(self.results.search)
 
         # When clicking a result, focus it in the focus widget
-        def clickFunc(treeItem: QTreeWidgetItem):
+        def click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.focus(treeItem.result)
 
         # self.results.onClick = clickFunc
-        self.results.itemClicked.connect(clickFunc)
+        self.results.itemClicked.connect(click)
 
         # When double clicking a result,
         # focus it in the focus widget and run the first action
-        def doubleClickFunc(treeItem: QTreeWidgetItem):
+        def double_click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.run(treeItem.result)
 
-        self.results.on_double_click = doubleClickFunc
+        self.results.on_double_click = double_click
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
-        def keyUpFromResults():
+        def key_up_from_results():
             self.search.bar.setFocus()
 
-        self.results.key_above_results = keyUpFromResults
+        self.results.key_above_results = key_up_from_results
 
-        def searchBarKeyDown():
+        # When pressing the down arrow on the search bar,
+        # go to the first result item
+        def key_down_from_search_bar():
             self.search.bar.clearFocus()
             self.results.setFocus()
             self.results.setCurrentItem(self.results.topLevelItem(0))
 
-        self.search.on_key_down = searchBarKeyDown
+        self.search.on_key_down = key_down_from_search_bar
 
         # When pressing return on the search bar, focus the first result
         # in the results list and run it
-        def searchBarReturnFunc():
+        def return_search_bar():
             """Define the return behavior for this widget"""
             result = self.results.first_result()
             if result is not None:
                 self.focuser.run(result)
 
-        self.search.bar.returnPressed.connect(searchBarReturnFunc)
-
-        self.results.keyUpAction = lambda: self.search.bar.setFocus()
+        self.search.bar.returnPressed.connect(return_search_bar)
 
         # -- Final setup -- #
 
@@ -145,6 +145,11 @@ class SearchbarWidget(QWidget):
 
 
 class SearchEventWrapper:
+    """
+    Python Class wrapping org.scijava.search.SearchEvent.
+    Needed for SearchTree.process, as signal types must be Python types.
+    """
+
     def __init__(self, event: "jc.SearchEvent"):
         self.event = event
 
