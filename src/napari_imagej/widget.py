@@ -146,6 +146,8 @@ class SearchbarWidget(QWidget):
 
 class SearchTree(QTreeWidget):
 
+    # Signal used to update this widget with org.scijava.search.SearchResults.
+    # Given a SearchEventWrapper w, process.emit(w) will update the widget.
     process = Signal(SearchEventWrapper)
 
     def __init__(
