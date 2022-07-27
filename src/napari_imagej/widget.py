@@ -74,6 +74,8 @@ class ImageJWidget(QWidget):
         def click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.focus(treeItem.result)
+            else:
+                self.focuser.clear_focus()
 
         # self.results.onClick = clickFunc
         self.results.itemClicked.connect(click)
@@ -211,22 +213,27 @@ class SearchTree(QTreeWidget):
                 self.currentItem().setExpanded(not self.currentItem().isExpanded())
             # Use the enter key to run leaves (Plugins)
             else:
-                self.onDoubleClick(self.currentItem())
+                self.on_double_click(self.currentItem())
+        # Pressing the up arrow while at the top should go back to the search bar
         elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
             self.clearSelection()
             self.key_above_results()
+        # Pressing right on a searcher should either expand it or go to its first child
         elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
             if self.currentItem().isExpanded():
                 self.setCurrentItem(self.currentItem().child(0))
             else:
                 self.currentItem().setExpanded(True)
         elif event.key() == Qt.Key_Left:
+            # Pressing left on a searcher should close it
             if self.currentItem().parent() is None:
                 self.currentItem().setExpanded(False)
+            # Pressing left on a result should go to the searcher
             else:
                 self.setCurrentItem(self.currentItem().parent())
         else:
             super().keyPressEvent(event)
+        self.itemClicked.emit(self.currentItem(), 0)
 
     # -- Helper Functionality -- #
 
@@ -305,21 +312,25 @@ class FocusWidget(QWidget):
         self.button_pane = QWidget()
         self.button_pane.setLayout(FlowLayout())
         self.layout().addWidget(self.button_pane)
-        self.focused_module_label.setText("Display Module Here")
 
         self.focused_action_buttons = []  # type: ignore
 
-    def run(self, result: "jc.SearchResult"):
-        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
-            selection = "Widget"
+    def setText(self, text: str):
+        if text:
+            self.focused_module_label.show()
+            self.focused_module_label.setText(text)
         else:
-            selection = "Run"
+            self.focused_module_label.hide()
 
+    def run(self, result: "jc.SearchResult"):
         actions: List[SearchAction] = self._actions_from_result(result)
-        # Find the widget button
-        for action in actions:
-            if action.name == selection:
-                action.action()
+        # Run the first action UNLESS Shift is also pressed.
+        # If so, run the second action
+        if len(actions) > 0:
+            if len(actions) > 1 and QApplication.keyboardModifiers() & Qt.ShiftModifier:
+                actions[1].action()
+            else:
+                actions[0].action()
 
     def _python_actions_for(
         self, result: "jc.SearchResult"
@@ -379,9 +390,15 @@ class FocusWidget(QWidget):
                 button_params.append(params)
         return button_params
 
+    def clear_focus(self):
+        self.setText("")
+        # Hide buttons
+        for button in self.focused_action_buttons:
+            button.hide()
+
     def focus(self, result: "jc.SearchResult"):
         name = ij().py.from_java(result.name())  # type: ignore
-        self.focused_module_label.setText(name)
+        self.setText(name)
 
         # Create buttons for each action
         # searchService = ij().get("org.scijava.search.SearchService")

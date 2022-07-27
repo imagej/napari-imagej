@@ -2,9 +2,10 @@ import pytest
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
+from scyjava import jimport
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej.setup_imagej import JavaClasses
+from napari_imagej.setup_imagej import jc
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
@@ -76,9 +77,6 @@ def example_info(ij):
     )
 
 
-jc = JavaClasses()
-
-
 def test_button_param_regression(ij, imagej_widget: ImageJWidget):
     plugins = ij.get("org.scijava.plugin.PluginService")
     searcher = plugins.getPlugin(jc.ModuleSearcher, jc.Searcher).createInstance()
@@ -134,11 +132,38 @@ def test_result_single_click(make_napari_viewer, qtbot):
     tree = imagej_widget.results
     qtbot.waitUntil(lambda: tree.topLevelItemCount() > 0)
     qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() > 0)
+    buttons = imagej_widget.focuser.focused_action_buttons
     # Test single click spawns buttons
     item = tree.topLevelItem(0).child(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    qtbot.waitUntil(lambda: len(imagej_widget.focuser.focused_action_buttons) > 0)
+    qtbot.waitUntil(lambda: len(buttons) > 0)
+    # Test single click on searcher hides buttons
+    item = tree.topLevelItem(0)
+    rect = tree.visualItemRect(item)
+    qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
+    # Ensure we don't see any text in the focuser
+    qtbot.waitUntil(
+        lambda: imagej_widget.focuser.focused_module_label.isHidden()
+        or imagej_widget.focuser.focused_module_label.text() == ""
+    )
+    # Ensure we don't see any buttons in the focuser
+    qtbot.waitUntil(
+        lambda: len(buttons) == 0 or all(button.isHidden() for button in buttons)
+    )
+
+
+def test_searchers_disappear(imagej_widget: ImageJWidget, qtbot):
+    # Wait for the searchers to be ready
+    imagej_widget.results.wait_for_setup()
+    # Search something
+    imagej_widget.results.search("Frangi")
+    tree = imagej_widget.results
+    qtbot.waitUntil(lambda: tree.topLevelItemCount() > 0)
+    qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() > 0)
+    # Search something for which there will surely be zero results
+    imagej_widget.results.search("Frangiabcdefghi")
+    qtbot.waitUntil(lambda: tree.topLevelItemCount() == 0)
 
 
 def _populate_tree(tree: SearchTree, qtbot):
@@ -152,22 +177,21 @@ def _populate_tree(tree: SearchTree, qtbot):
         def title(self):
             return self._title
 
-    class DummySearchResult:
-        def __init__(self, name: str):
-            self._name = name
-
-        def name(self):
-            return self._name
-
     tree.wait_for_setup()
+    ClassSearchResult = jimport("org.scijava.search.classes.ClassSearchResult")
     assert tree.topLevelItemCount() == 0
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))
     searcher1.update(
-        [ResultTreeItem(DummySearchResult(s)) for s in ("foo1", "foo2", "foo3")]
+        [
+            ResultTreeItem(ClassSearchResult(c, ""))
+            for c in (jc.Short, jc.Integer, jc.Long)
+        ]
     )
     tree.addTopLevelItem(searcher1)
     searcher2 = SearcherTreeItem(DummySearcher("Ops"))
-    searcher2.update([ResultTreeItem(DummySearchResult(s)) for s in ("bar1", "bar2")])
+    searcher2.update(
+        [ResultTreeItem(ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
+    )
     tree.addTopLevelItem(searcher2)
 
     # Wait for the tree to populate
