@@ -1,15 +1,15 @@
 import importlib
-from typing import Any, Callable, List
+from typing import Any, List
 
 from magicgui.types import ChoicesType
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
 
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc
 
 
 class MutableOutputWidget(Container):
@@ -219,44 +219,79 @@ class MutableOutputWidget(Container):
 
 
 class ResultTreeItem(QTreeWidgetItem):
+    """
+    A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
+    """
+
     def __init__(self, result: "jc.SearchResult"):
         super().__init__()
         self.name = ij().py.from_java(result.name())
-        self.setText(0, self.name)
-        self._result = result
+        self.result = result
 
-    @property
-    def result(self):
-        return self._result
+        # Set QtPy properties
+        self.setText(0, self.name)
+
+
+class SearchEventWrapper:
+    """
+    Python Class wrapping org.scijava.search.SearchEvent.
+    Needed for SearchTree.process, as signal types must be Python types.
+    """
+
+    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
+        self.searcher = searcher
+        self.results = [ResultTreeItem(r) for r in results]
 
 
 class SearcherTreeItem(QTreeWidgetItem):
+    """
+    A QTreeWidgetItem wrapping a org.scijava.search.Searcher
+    with a set of org.scijava.search.SearchResults
+    """
+
     def __init__(self, searcher: "jc.Searcher"):
         super().__init__()
-        self.setText(0, ij().py.from_java(searcher.title()))
-        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+        self.title = ij().py.from_java(searcher.title())
         self._searcher = searcher
 
-    def search(self, text: str):
-        results = self._searcher.search(text, True)
-        while self.childCount() > 0:
-            self.removeChild(self.child(0))
-        for result in results:
-            self.addChild(ResultTreeItem(result))
-        if len(results) > 0:
-            self.setExpanded(True)
+        # Set QtPy properties
+        self.setText(0, self.title)
+        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+
+    def update(self, results: List[SearchEventWrapper]):
+        """
+        Update children with the results stored in the SearchEventWrapper
+        """
+        self.takeChildren()
+        if results and len(results):
+            self.addChildren(results)
+        self.setText(0, f"{self.title} ({len(results)})")
+        self.setExpanded(len(results) < 10)
 
 
-class SearchBar(QLineEdit):
-    def __init__(self, on_key_down: Callable = lambda: None):
+class JLineEdit(QLineEdit):
+    """
+    A QLineEdit that is disabled until the JVM is ready
+    """
+
+    # Signal that identifies a down arrow pressed
+    floatBelow = Signal()
+
+    def __init__(self):
         super().__init__()
-        # Disable the searchbar until the searchers are ready
+
+        # Set QtPy properties
         self.setText("Initializing ImageJ...Please Wait")
         self.setEnabled(False)
-        self._on_key_down = on_key_down
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Down:
-            self._on_key_down()
+            self.floatBelow.emit()
         else:
             super().keyPressEvent(event)
+
+    def enable(self):
+        # Once the JVM is ready, allow editing
+        ensure_jvm_started()
+        self.setText("")
+        self.setEnabled(True)

@@ -4,13 +4,14 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
-from functools import lru_cache
+import atexit
 from threading import Thread
-from typing import Callable, Dict, List, NamedTuple
+from typing import Callable, Dict, List, NamedTuple, Optional
 
+from jpype import JArray, JImplements, JOverride
 from magicgui import magicgui
 from napari import Viewer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -23,7 +24,12 @@ from qtpy.QtWidgets import (
 )
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej._helper_widgets import ResultTreeItem, SearchBar, SearcherTreeItem
+from napari_imagej._helper_widgets import (
+    JLineEdit,
+    ResultTreeItem,
+    SearcherTreeItem,
+    SearchEventWrapper,
+)
 from napari_imagej._module_utils import (
     convert_searchResult_to_info,
     execute_function_modally,
@@ -61,49 +67,49 @@ class ImageJWidget(QWidget):
 
         # -- Interwidget connections -- #
 
+        # When the text bar changes, update the search results.
+        self.search.bar.textEdited.connect(self.results.search)
+
         # When clicking a result, focus it in the focus widget
-        def clickFunc(treeItem: QTreeWidgetItem):
+        def click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.focus(treeItem.result)
+            else:
+                self.focuser.clear_focus()
 
-        self.results.onClick = clickFunc
+        # self.results.onClick = clickFunc
+        self.results.itemClicked.connect(click)
 
         # When double clicking a result,
         # focus it in the focus widget and run the first action
-        def doubleClickFunc(treeItem: QTreeWidgetItem):
+        def double_click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.run(treeItem.result)
 
-        self.results.onDoubleClick = doubleClickFunc
+        self.results.itemDoubleClicked.connect(double_click)
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
-        def keyUpFromResults():
-            self.search.bar.setFocus()
-
-        self.results.keyAboveResults = keyUpFromResults
+        self.results.floatAbove.connect(self.search.bar.setFocus)
 
         # When pressing the down arrow on the search bar,
         # go to the first result item
-        def keyDownFromSearchBar():
+        def key_down_from_search_bar():
             self.search.bar.clearFocus()
             self.results.setFocus()
             self.results.setCurrentItem(self.results.topLevelItem(0))
 
-        self.search.on_key_down = keyDownFromSearchBar
+        self.search.bar.floatBelow.connect(key_down_from_search_bar)
 
         # When pressing return on the search bar, focus the first result
         # in the results list and run it
-        def searchBarReturnFunc():
+        def return_search_bar():
             """Define the return behavior for this widget"""
-            result = self.results.first_result()
+            result = self.results._first_result()
             if result is not None:
                 self.focuser.run(result)
 
-        self.search.bar.returnPressed.connect(searchBarReturnFunc)
-
-        # When changing the text in the search bar, update the search results
-        self.search.bar.textChanged.connect(self.results._search)
+        self.search.bar.returnPressed.connect(return_search_bar)
 
         # -- Final setup -- #
 
@@ -118,109 +124,168 @@ class ImageJWidget(QWidget):
 
 
 class SearchbarWidget(QWidget):
+    """
+    A QWidget for streamlining ImageJ functionality searching
+    """
+
     def __init__(
         self,
     ):
         super().__init__()
-        # self._results = results
-        # self._focuser = focuser
-        self.on_key_down = property()
-        self.bar: SearchBar = SearchBar(on_key_down=lambda: self.on_key_down())
+
+        # The main functionality is a search bar
+        self.bar: JLineEdit = JLineEdit()
+        Thread(target=self.bar.enable).start()
 
         # Set GUI options
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(self.bar)
 
-        # Initialize the searchers, which will spin up an ImageJ gateway.
-        # By running this in a new thread,
-        # the GUI can be shown before the searchers are ready.
-        def enable_searchbar():
-            ensure_jvm_started()
-            # Enable the searchbar now that the searchers are ready
-            self.bar.setText("")
-            self.bar.setEnabled(True)
-
-        self._searchbar_generator = Thread(target=enable_searchbar)
-        self._searchbar_generator.start()
-
 
 class SearchTree(QTreeWidget):
+
+    # Signal used to update this widget with org.scijava.search.SearchResults.
+    # Given a SearchEventWrapper w, process.emit(w) will update the widget.
+    process = Signal(SearchEventWrapper)
+    floatAbove = Signal()
+
     def __init__(
         self,
     ):
         super().__init__()
 
-        # Configure GUI Options
+        # -- Configure GUI Options -- #
         self.setColumnCount(1)
         self.setHeaderLabels(["Search"])
         self.setIndentation(self.indentation() // 2)
-        self.onClick = property()
-        self.itemClicked.connect(lambda item: self.onClick(item))
-        self.onDoubleClick = property()
-        self.itemDoubleClicked.connect(lambda item: self.onDoubleClick(item))
-        self.keyAboveResults = property()
 
-        def init_searchers():
-            for searcher in self.searchers:
-                self.addTopLevelItem(SearcherTreeItem(searcher))
+        # Start up the SearchResult producer/consumer chain
+        self._producer_initializer = Thread(target=self._init_producer)
+        self._producer_initializer.start()
+        self.process.connect(self.update)
 
-        self._searcher_setup = Thread(target=init_searchers)
-        self._searcher_setup.start()
+    def wait_for_setup(self):
+        """
+        This object does some setup asynchronously.
+        This function can be used to ensure all that is done
+        """
+        return self._producer_initializer.join()
+
+    def search(self, text: str):
+        self.wait_for_setup()
+        self._searchOperation.search(text)
+
+    @Slot(SearchEventWrapper)
+    def update(self, event: SearchEventWrapper):
+        """
+        Update the search results using event
+
+        :param event: The org.scijava.search.SearchResult asynchronously
+        returned by the org.scijava.search.SearchService
+        """
+        header = self._get_matching_item(event.searcher)
+        if self._valid_results(event):
+            if header is None:
+                header = self._add_new_searcher(event.searcher)
+                self.sortItems(0, Qt.AscendingOrder)
+            header.update(event.results)
+        elif header is not None:
+            self.invisibleRootItem().removeChild(header)
+
+    # -- QWidget Overrides -- #
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
-            # Use the enter key to toggle non-leaves
+            # Use the enter key to toggle Searchers
             if self.currentItem().childCount() > 0:
                 self.currentItem().setExpanded(not self.currentItem().isExpanded())
-            # Use the enter key to run leaves (Plugins)
+            # use the enter key like double clicking for Results
             else:
-                self.onDoubleClick(self.currentItem())
+                self.itemDoubleClicked.emit(self.currentItem(), 0)
+        # Pressing the up arrow while at the top should go back to the search bar
         elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
             self.clearSelection()
-            self.keyAboveResults()
+            self.floatAbove.emit()
+        # Pressing right on a searcher should either expand it or go to its first child
         elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
             if self.currentItem().isExpanded():
                 self.setCurrentItem(self.currentItem().child(0))
             else:
                 self.currentItem().setExpanded(True)
         elif event.key() == Qt.Key_Left:
+            # Pressing left on a searcher should close it
             if self.currentItem().parent() is None:
                 self.currentItem().setExpanded(False)
+            # Pressing left on a result should go to the searcher
             else:
                 self.setCurrentItem(self.currentItem().parent())
         else:
             super().keyPressEvent(event)
+        self.itemClicked.emit(self.currentItem(), 0)
 
-    @property
-    @lru_cache(maxsize=None)
-    def searchers(self) -> List["jc.Searcher"]:
-        searcherClasses = [
-            jc.ModuleSearcher,
-            jc.OpSearcher,
-        ]
-        pluginService = ij().get("org.scijava.plugin.PluginService")
-        searchers = [
-            pluginService.getPlugin(cls, jc.Searcher).createInstance()
-            for cls in searcherClasses
-        ]
-        for searcher in searchers:
-            ij().context().inject(searcher)
-        return searchers
+    # -- Helper Functionality -- #
 
-    def _wait_for_setup(self):
-        self._searcher_setup.join()
+    def _init_producer(self):
+        # First, wait for the JVM to start up
+        ensure_jvm_started()
 
-    def _search(self, text):
-        # TODO: Consider adding a button to toggle fuzziness
-        for i in range(self.topLevelItemCount()):
-            self.topLevelItem(i).search(text)
+        # Then, define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariSearchListener:
+            def __init__(self, event_handler: Signal):
+                super().__init__()
+                self.handler = event_handler
 
-    def first_result(self) -> "jc.SearchResult":
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.handler.emit(SearchEventWrapper(event.searcher(), event.results()))
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)([NapariSearchListener(self.process)])
+        self._searchOperation = (
+            ij().get("org.scijava.search.SearchService").search(listener_arr)
+        )
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        atexit.register(self._searchOperation.terminate)
+
+    def _first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
             searcher = self.topLevelItem(i)
             if searcher.childCount() > 0:
                 return searcher.child(0).result
         return None
+
+    def _add_new_searcher(self, searcher: "jc.Searcher") -> SearcherTreeItem:
+        tree_item = SearcherTreeItem(searcher)
+        tree_item.setExpanded(True)
+        self.addTopLevelItem(tree_item)
+        return tree_item
+
+    def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
+        name: str = ij().py.from_java(searcher.title())
+        matches = self.findItems(name, Qt.MatchStartsWith, 0)
+        if len(matches) == 0:
+            return None
+        elif len(matches) == 1:
+            return matches[0]
+        else:
+            raise ValueError(f"Multiple Search Result Items matching name {name}")
+
+    def _valid_results(self, event: SearchEventWrapper):
+        results = event.results
+        # Return False for results == null
+        if not results:
+            return False
+        # Return False for empty results
+        if not len(results):
+            return False
+        # Return False for search errors
+        if len(results) == 1:
+            if str(results[0].name) == "<error>":
+                return False
+        return True
 
 
 class FocusWidget(QWidget):
@@ -235,21 +300,25 @@ class FocusWidget(QWidget):
         self.button_pane = QWidget()
         self.button_pane.setLayout(FlowLayout())
         self.layout().addWidget(self.button_pane)
-        self.focused_module_label.setText("Display Module Here")
 
         self.focused_action_buttons = []  # type: ignore
 
-    def run(self, result: "jc.SearchResult"):
-        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
-            selection = "Widget"
+    def setText(self, text: str):
+        if text:
+            self.focused_module_label.show()
+            self.focused_module_label.setText(text)
         else:
-            selection = "Run"
+            self.focused_module_label.hide()
 
+    def run(self, result: "jc.SearchResult"):
         actions: List[SearchAction] = self._actions_from_result(result)
-        # Find the widget button
-        for action in actions:
-            if action.name == selection:
-                action.action()
+        # Run the first action UNLESS Shift is also pressed.
+        # If so, run the second action
+        if len(actions) > 0:
+            if len(actions) > 1 and QApplication.keyboardModifiers() & Qt.ShiftModifier:
+                actions[1].action()
+            else:
+                actions[0].action()
 
     def _python_actions_for(
         self, result: "jc.SearchResult"
@@ -309,9 +378,15 @@ class FocusWidget(QWidget):
                 button_params.append(params)
         return button_params
 
+    def clear_focus(self):
+        self.setText("")
+        # Hide buttons
+        for button in self.focused_action_buttons:
+            button.hide()
+
     def focus(self, result: "jc.SearchResult"):
         name = ij().py.from_java(result.name())  # type: ignore
-        self.focused_module_label.setText(name)
+        self.setText(name)
 
         # Create buttons for each action
         # searchService = ij().get("org.scijava.search.SearchService")

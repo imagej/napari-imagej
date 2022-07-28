@@ -474,7 +474,6 @@ def metadata_module_item(ij) -> DummyModuleItem:
     stepSize = ij.py.to_java(2.0)
     item.setStepSize(stepSize)
     label = ij.py.to_java("bar")
-    print(type(label))
     item.setLabel(label)
     description = ij.py.to_java("The foo.")
     item.setDescription(description)
@@ -783,16 +782,12 @@ from net.imglib2.img.array import ArrayImgs
 
 if d is None:
     d = ArrayImgs.unsignedBytes(10, 10)
-
-d[:, :] = 1
 """
 
 script_both_but_required: str = """
 #@BOTH Img(required=true) d
 
 from net.imglib2.img.array import ArrayImgs
-
-d[:, :] = 1
 """
 
 widget_parameterizations = [
@@ -969,8 +964,8 @@ def test_execute_function_with_params(make_napari_viewer, ij):
 
 
 def test_convert_searchResult_to_info(imagej_widget: ImageJWidget, ij):
-    searchers = imagej_widget.results.searchers
-    for searcher in searchers:
+    for i in range(imagej_widget.results.topLevelItemCount()):
+        searcher = imagej_widget.results.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]
         info = _module_utils.convert_searchResult_to_info(result)
         assert isinstance(info, jc.ModuleInfo)
