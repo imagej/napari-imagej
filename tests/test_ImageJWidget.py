@@ -21,14 +21,6 @@ def test_widget_layout(imagej_widget: ImageJWidget):
     assert isinstance(imagej_widget.layout(), QVBoxLayout)
 
 
-def test_widget_searchbar_layout(imagej_widget: ImageJWidget):
-    """Tests basic features of the searchbar widget."""
-    searchbar: QWidget = imagej_widget.search
-    assert isinstance(searchbar.layout(), QHBoxLayout)
-    search_widget: QLineEdit = searchbar.findChild(QLineEdit)
-    assert search_widget is not None
-
-
 def test_widget_subwidget_layout(imagej_widget: ImageJWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = imagej_widget.children()
