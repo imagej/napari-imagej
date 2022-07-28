@@ -117,28 +117,28 @@ Distributed under the terms of the [BSD-3] license,
 If you encounter any problems, please [file an issue] along with a detailed description.
 
 
-[Apache Software License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
-[black]: https://github.com/psf/blackhttps://github.com/psf/black
-[BSD-3]: http://opensource.org/licenses/BSD-3-Clause
+[Apache Software License 2.0]: https://www.apache.org/licenses/LICENSE-2.0
+[black]: https://github.com/psf/black
+[BSD-3]: https://opensource.org/licenses/BSD-3-Clause
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
 [cookiecutter-napari-plugin]: https://github.com/napari/cookiecutter-napari-plugin
-[conda]: https://docs.conda.io/projects/conda/en/latest/index.html
-[conda-forge]: https://conda-forge.org/#page-top
+[conda]: https://docs.conda.io/
+[conda-forge]: https://conda-forge.org/
 [file an issue]: https://github.com/imagej/napari-imagej/issues
-[flake8]: https://flake8.pycqa.org/en/latest/
-[GNU GPL v3.0]: http://www.gnu.org/licenses/gpl-3.0.txt
-[GNU LGPL v3.0]: http://www.gnu.org/licenses/lgpl-3.0.txt
-[ImageJ2]: https://imagej.net/software/imagej2/index
+[flake8]: https://flake8.pycqa.org/
+[GNU GPL v3.0]: https://www.gnu.org/licenses/gpl-3.0.txt
+[GNU LGPL v3.0]: https://www.gnu.org/licenses/lgpl-3.0.txt
+[ImageJ2]: https://imagej.net/software/imagej2
 [ImageJ2 Commands]: https://github.com/imagej/imagej-plugins-commands
-[ImageJ Ops]: https://imagej.net/libs/imagej-ops/index
+[ImageJ Ops]: https://imagej.net/libs/imagej-ops
 [isort]: https://pycqa.github.io/isort/
 [mamba]: https://mamba.readthedocs.io/en/latest/user_guide/mamba.html
-[MIT]: http://opensource.org/licenses/MIT
+[MIT]: https://opensource.org/licenses/MIT
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [napari]: https://github.com/napari/napari
-[npe2]: https://github.com/napari/npe2/
+[npe2]: https://github.com/napari/npe2
 [pip]: https://pypi.org/project/pip/
-[PyImageJ]: https://github.com/imagej/pyimagej/
+[PyImageJ]: https://github.com/imagej/pyimagej
 [PyPI]: https://pypi.org/
 [SciJava Scripts]: https://imagej.net/scripting
-[tox]: https://tox.readthedocs.io/en/latest/
+[tox]: https://tox.readthedocs.io/
