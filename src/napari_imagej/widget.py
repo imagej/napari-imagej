@@ -160,11 +160,9 @@ class SearchTree(QTreeWidget):
         self.setIndentation(self.indentation() // 2)
 
         # Start up the SearchResult producer/consumer chain
-        # The search
-        self.process.connect(self.update)
-
         self._producer_initializer = Thread(target=self._init_producer)
         self._producer_initializer.start()
+        self.process.connect(self.update)
 
     def wait_for_setup(self):
         """

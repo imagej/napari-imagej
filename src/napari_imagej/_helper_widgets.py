@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, Callable, List
+from typing import Any, List
 
 from magicgui.types import ChoicesType
 from magicgui.widgets import ComboBox, Container, PushButton, request_values
