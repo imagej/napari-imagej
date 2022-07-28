@@ -20,7 +20,9 @@ See the [project roadmap](https://github.com/orgs/imagej/projects/2), still unde
 
 ## Installation
 
-Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda]/[mamba] to install the environment. First, [install mamba]. Then:
+Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda]/[mamba] to install the environment.
+
+First, **[install mamba]**. Then:
 
     git clone https://github.com/imagej/napari-imagej
     cd napari-imagej
@@ -28,7 +30,7 @@ Currently, the only way to install napari-imagej is by downloading this reposito
     mamba activate napari-imagej
     pip install -e .
 
-We will be publishing a release of napari-imagej to [PyPI] and [conda-forge] soon.
+We will be publishing a release of napari-imagej to [napari hub] and [PyPI] and [conda-forge] soon.
 
 To start napari with napari-imagej, activate the conda environment and run `napari`:
 
@@ -41,7 +43,7 @@ To start napari with napari-imagej, activate the conda environment and run `napa
 
 With napari-imagej installed, you can access it through napari's `Plugins` menu. Clicking `napari-imagej` will show the main napari-imagej widget.
 
-Once the napari-imagej widget has loaded, typing keywords into the searchbar will display reults in the list below.
+Once the napari-imagej widget has loaded, typing keywords into the searchbar will display results in the list below.
 
 Selecting a result will show buttons at the bottom of the widget for executing that functionality. Of importance are the `Run` and `Widget` buttons, *both used to run the selected algorithm*:
 * The `Run` button launches a *modal* dialog prompting the user for inputs. Clicking the `OK` button will run the functionality with the selected inputs.
@@ -54,9 +56,9 @@ Selecting a result will show buttons at the bottom of the widget for executing t
 
 ### Running your own [SciJava Scripts]
 
-napari-imagej is able to automatically detect and expose user-written SciJava scripts. To discover these scripts, they must be located in a *subdirectory* of a `scripts` directory relative to the location where napari is lauched.
+napari-imagej is able to automatically detect and expose user-written SciJava scripts. To discover these scripts, they must be located in a *subdirectory* of a `scripts` directory relative to the location where napari is launched.
 
-For example, we might write this SciJava script, named, `scripts/examples/Connected_Components_Analysis.py`, in Jython:
+For example, we might write this SciJava script, named `scripts/examples/Connected_Components_Analysis.py`, in Jython:
 ```jython
 #@ Img input
 #@ OpService ops
@@ -79,9 +81,10 @@ We can then run it in napari-imagej, **if napari is launched from the parent of 
 
 ### napari-imagej does not appear in the Plugins menu of napari!
 
-[npe2] is a useful tool for validating a napari plugin's setup. When running napari-imagej from a [conda] environment, it is easily installed through [conda-forge]:
+[npe2] is a useful tool for validating a napari plugin's setup. When running napari-imagej from a [conda] environment, you can install npe2 through [conda-forge]:
 
-    mamba install npe2 -n napari-imagej
+    mamba activate napari-imagej
+    mamba install npe2 -c conda-forge
     npe2 validate napari-imagej
 
 If `npe2 validate` returns an error, this indicates that napari-imagej was not installed correctly.
@@ -94,24 +97,25 @@ The first launch of napari-imagej can take significantly longer than subsequent 
 
 ## Contributing
 
-Contributions are welcome! When making changes to napari-imagej, please instead use a new conda environment derived from the file `dev-environment.yml`. This environment will provides developer tools on top of the libraries needed to run napari-imagej
+Contributions are welcome! When making changes to napari-imagej, please instead use a new conda environment derived from the file `dev-environment.yml`.
 
     mamba env create -f dev-environment.yml
+    mamba activate napari-imagej-dev
     pip install -e .
 
-The resulting environment, `napari-imagej-dev`, **must be activated** for napari-imagej to appear in the Plugins menu. You can start napari *with napari-imagej* using the following:
+The resulting environment `napari-imagej-dev` provides developer tools on top of the libraries needed to run napari-imagej. It **must be activated** for napari-imagej to appear in the Plugins menu. You can start napari *with napari-imagej* using the following:
 
     mamba activate napari-imagej-dev
     napari
 
-**Once you've made changes**, please lint your code with [black], flake your code with [flake8], and sort your imports with [isort].
+**Once you've made changes**, please lint your code by running `bin/lint.sh`.
 
-Finally, file a PR! 
+Finally, file a [pull request]!
 
 ## License
 
 Distributed under the terms of the [BSD-3] license,
-"napari-imagej" is free and open source software
+"napari-imagej" is free and open source software.
 
 ## Issues
 
@@ -138,8 +142,10 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [MIT]: https://opensource.org/licenses/MIT
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [napari]: https://github.com/napari/napari
+[napari hub]: https://www.napari-hub.org/
 [npe2]: https://github.com/napari/npe2
 [pip]: https://pypi.org/project/pip/
+[pull request]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests
 [PyImageJ]: https://github.com/imagej/pyimagej
 [PyPI]: https://pypi.org/
 [SciJava Scripts]: https://imagej.net/scripting
