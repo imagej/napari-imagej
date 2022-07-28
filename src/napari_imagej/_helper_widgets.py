@@ -6,7 +6,7 @@ from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
 
 from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc
@@ -274,9 +274,11 @@ class JLineEdit(QLineEdit):
     A QLineEdit that is disabled until the JVM is ready
     """
 
-    def __init__(self, on_key_down: Callable = lambda: None):
+    # Signal that identifies a down arrow pressed
+    floatBelow = Signal()
+
+    def __init__(self):
         super().__init__()
-        self._on_key_down = on_key_down
 
         # Set QtPy properties
         self.setText("Initializing ImageJ...Please Wait")
@@ -284,7 +286,7 @@ class JLineEdit(QLineEdit):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Down:
-            self._on_key_down()
+            self.floatBelow.emit()
         else:
             super().keyPressEvent(event)
 

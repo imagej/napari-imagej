@@ -86,14 +86,11 @@ class ImageJWidget(QWidget):
             if isinstance(treeItem, ResultTreeItem):
                 self.focuser.run(treeItem.result)
 
-        self.results.on_double_click = double_click
+        self.results.itemDoubleClicked.connect(double_click)
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
-        def key_up_from_results():
-            self.search.bar.setFocus()
-
-        self.results.key_above_results = key_up_from_results
+        self.results.floatAbove.connect(self.search.bar.setFocus)
 
         # When pressing the down arrow on the search bar,
         # go to the first result item
@@ -102,7 +99,7 @@ class ImageJWidget(QWidget):
             self.results.setFocus()
             self.results.setCurrentItem(self.results.topLevelItem(0))
 
-        self.search.on_key_down = key_down_from_search_bar
+        self.search.bar.floatBelow.connect(key_down_from_search_bar)
 
         # When pressing return on the search bar, focus the first result
         # in the results list and run it
@@ -135,10 +132,9 @@ class SearchbarWidget(QWidget):
         self,
     ):
         super().__init__()
-        self.on_key_down = property()
 
         # The main functionality is a search bar
-        self.bar: JLineEdit = JLineEdit(on_key_down=lambda: self.on_key_down())
+        self.bar: JLineEdit = JLineEdit()
         Thread(target=self.bar.enable).start()
 
         # Set GUI options
@@ -151,6 +147,7 @@ class SearchTree(QTreeWidget):
     # Signal used to update this widget with org.scijava.search.SearchResults.
     # Given a SearchEventWrapper w, process.emit(w) will update the widget.
     process = Signal(SearchEventWrapper)
+    floatAbove = Signal()
 
     def __init__(
         self,
@@ -161,13 +158,6 @@ class SearchTree(QTreeWidget):
         self.setColumnCount(1)
         self.setHeaderLabels(["Search"])
         self.setIndentation(self.indentation() // 2)
-
-        # Set up Double click behavior
-        self.on_double_click = property()
-        self.itemDoubleClicked.connect(lambda item: self.on_double_click(item))
-
-        # Set up behavior for pressing up at the top result
-        self.key_above_results = property()
 
         # Start up the SearchResult producer/consumer chain
         # The search
@@ -208,16 +198,16 @@ class SearchTree(QTreeWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
-            # Use the enter key to toggle non-leaves
+            # Use the enter key to toggle Searchers
             if self.currentItem().childCount() > 0:
                 self.currentItem().setExpanded(not self.currentItem().isExpanded())
-            # Use the enter key to run leaves (Plugins)
+            # use the enter key like double clicking for Results
             else:
-                self.on_double_click(self.currentItem())
+                self.itemDoubleClicked.emit(self.currentItem(), 0)
         # Pressing the up arrow while at the top should go back to the search bar
         elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
             self.clearSelection()
-            self.key_above_results()
+            self.floatAbove.emit()
         # Pressing right on a searcher should either expand it or go to its first child
         elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
             if self.currentItem().isExpanded():
