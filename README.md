@@ -20,17 +20,19 @@ See the [project roadmap](https://github.com/orgs/imagej/projects/2), still unde
 
 ## Installation
 
-Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda] to install the environment. We prefer using [mamba] over conda for drastically shorter setup times:
+Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda]/[mamba] to install the environment. First, [install mamba]. Then:
 
-    conda install mamba -n base -c conda-forge
-    mamba env create -f environment.yml
+    git clone https://github.com/imagej/napari-imagej
+    cd napari-imagej
+    mamba env create
+    mamba activate napari-imagej
     pip install -e .
 
-Once napari-imagej is ready for an initial release, it will be installable from [PyPI] and conda-forge.
+We will be publishing a release of napari-imagej to [PyPI] and [conda-forge] soon.
 
 To start napari with napari-imagej, activate the conda environment and run `napari`:
 
-    conda activate napari-imagej
+    mamba activate napari-imagej
     napari
 
 ## Usage
@@ -79,7 +81,7 @@ We can then run it in napari-imagej, **if napari is launched from the parent of 
 
 [npe2] is a useful tool for validating a napari plugin's setup. When running napari-imagej from a [conda] environment, it is easily installed through [conda-forge]:
 
-    mamba install npe2 -n napari-imagej -c conda-forge
+    mamba install npe2 -n napari-imagej
     npe2 validate napari-imagej
 
 If `npe2 validate` returns an error, this indicates that napari-imagej was not installed correctly.
@@ -94,13 +96,12 @@ The first launch of napari-imagej can take significantly longer than subsequent 
 
 Contributions are welcome! When making changes to napari-imagej, please instead use a new conda environment derived from the file `dev-environment.yml`. This environment will provides developer tools on top of the libraries needed to run napari-imagej
 
-    conda install mamba -n base -c conda-forge
     mamba env create -f dev-environment.yml
     pip install -e .
 
 The resulting environment, `napari-imagej-dev`, **must be activated** for napari-imagej to appear in the Plugins menu. You can start napari *with napari-imagej* using the following:
 
-    conda activate napari-imagej-dev
+    mamba activate napari-imagej-dev
     napari
 
 **Once you've made changes**, please lint your code with [black], flake your code with [flake8], and sort your imports with [isort].
@@ -131,6 +132,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [ImageJ2]: https://imagej.net/software/imagej2
 [ImageJ2 Commands]: https://github.com/imagej/imagej-plugins-commands
 [ImageJ Ops]: https://imagej.net/libs/imagej-ops
+[install mamba]: https://mamba.readthedocs.io/en/latest/installation.html
 [isort]: https://pycqa.github.io/isort/
 [mamba]: https://mamba.readthedocs.io/
 [MIT]: https://opensource.org/licenses/MIT
