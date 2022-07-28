@@ -132,7 +132,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [ImageJ2 Commands]: https://github.com/imagej/imagej-plugins-commands
 [ImageJ Ops]: https://imagej.net/libs/imagej-ops
 [isort]: https://pycqa.github.io/isort/
-[mamba]: https://mamba.readthedocs.io/en/latest/user_guide/mamba.html
+[mamba]: https://mamba.readthedocs.io/
 [MIT]: https://opensource.org/licenses/MIT
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [napari]: https://github.com/napari/napari
