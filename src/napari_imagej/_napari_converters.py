@@ -316,10 +316,10 @@ def _mesh_to_surface(mesh: "jc.Mesh") -> Surface:
     position = JArray(JDouble)(3)
     for i, vertex in enumerate(vertices):
         vertex.localize(position)
-        py_vertices[i, :] = vertex
+        py_vertices[i, :] = position
     # Triangles
     triangles = mesh.triangles()
-    py_triangles = np.zeros((triangles.size(), 3))
+    py_triangles = np.zeros((triangles.size(), 3), dtype=np.int64)
     for i, triangle in enumerate(triangles):
         py_triangles[i, 0] = triangle.vertex0()
         py_triangles[i, 1] = triangle.vertex1()
@@ -328,6 +328,8 @@ def _mesh_to_surface(mesh: "jc.Mesh") -> Surface:
 
 
 def _surface_to_mesh(surface: Surface) -> "jc.Mesh":
+    if surface.ndim != 3:
+        raise ValueError("Can only convert 3D Surfaces to Meshes!")
     # Surface data is vertices, triangles, colormap data
     py_vertices, py_triangles, _ = surface.data
 
