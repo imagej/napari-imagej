@@ -388,6 +388,10 @@ class JavaClasses(object):
         return "net.imagej.mesh.Mesh"
 
     @blocking_import
+    def NaiveDoubleMesh(self):
+        return "net.imagej.mesh.naive.NaiveDoubleMesh"
+
+    @blocking_import
     def ROITree(self):
         return "net.imagej.roi.ROITree"
 

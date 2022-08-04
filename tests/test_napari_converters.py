@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
-from napari.layers import Labels, Points, Shapes
+from napari.layers import Labels, Points, Shapes, Surface
 
 from napari_imagej._module_utils import python_type_of
 from napari_imagej._napari_converters import OutOfBoundsFactory, StructuringElement
@@ -628,6 +628,79 @@ def test_points_to_realpointcollection(ij, points):
     pts = [jc.RealPoint(p) for p in [p1, p2, p3]]
     for e, a in zip(pts, collection.points()):
         assert e == a
+
+
+# -- Surfaces/Meshes -- #
+
+
+@pytest.fixture
+def surface() -> Surface:
+    vertices = np.array([0, 0, 0, 10, 0, 0, 10, 20, 0, 0, 20, 0]).reshape((4, 3))
+    triangles = np.array([0, 1, 2, 2, 3, 0]).reshape(2, 3)
+    return Surface(data=(vertices, triangles))
+
+
+@pytest.fixture
+def mesh() -> "jc.Mesh":
+    mesh = jc.NaiveDoubleMesh()
+    mesh.vertices().add(0.0, 0.0, 0.0)
+    mesh.vertices().add(5.0, 5.0, 0.0)
+    mesh.vertices().add(5.0, 0.0, 0.0)
+    mesh.vertices().add(5.0, -5.0, 0.0)
+    mesh.triangles().add(3, 0, 2)
+    mesh.triangles().add(2, 0, 1)
+    return mesh
+
+
+def test_surface_to_mesh(ij, surface: Surface):
+    p_vertices, p_triangles, _ = surface.data
+    mesh = ij.py.to_java(surface)
+    assert isinstance(mesh, jc.Mesh)
+    position = JArray(JDouble)(3)
+    for j_vertex, p_vertex in zip(mesh.vertices(), p_vertices):
+        j_vertex.localize(position)
+        assert np.array_equal(p_vertex, position)
+    for j_triangle, p_triangle in zip(mesh.triangles(), p_triangles):
+        assert p_triangle[0] == j_triangle.vertex0()
+        assert p_triangle[1] == j_triangle.vertex1()
+        assert p_triangle[2] == j_triangle.vertex2()
+
+
+def test_mesh_to_surface(ij, mesh: "jc.Mesh"):
+    surface = ij.py.from_java(mesh)
+    p_vertices, p_triangles, _ = surface.data
+    assert isinstance(mesh, jc.Mesh)
+    position = JArray(JDouble)(3)
+    for j_vertex, p_vertex in zip(mesh.vertices(), p_vertices):
+        j_vertex.localize(position)
+        assert np.array_equal(p_vertex, position)
+    for j_triangle, p_triangle in zip(mesh.triangles(), p_triangles):
+        assert p_triangle[0] == j_triangle.vertex0()
+        assert p_triangle[1] == j_triangle.vertex1()
+        assert p_triangle[2] == j_triangle.vertex2()
+
+
+def test_surface_wrong_dimensions(ij, surface: Surface):
+    # Test 2D data
+    py_vertices, py_triangles, _ = surface.data
+    py_vertices_2D = py_vertices[:, :2]
+    surface2 = Surface(data=(py_vertices_2D, py_triangles))
+    try:
+        ij.py.to_java(surface2)
+        pytest.fail()
+    except ValueError as exc:
+        assert str(exc) == "Can only convert 3D Surfaces to Meshes!"
+
+    # Test 4D data
+    py_vertices, py_triangles, _ = surface.data
+    new_col = np.array([0, 0, 0, 0]).reshape((4, 1))
+    py_vertices_4D = np.concatenate((py_vertices, new_col), 1)
+    surface4 = Surface(data=(py_vertices_4D, py_triangles))
+    try:
+        ij.py.to_java(surface4)
+        pytest.fail()
+    except ValueError as exc:
+        assert str(exc) == "Can only convert 3D Surfaces to Meshes!"
 
 
 # -- Enum(like)s -- #

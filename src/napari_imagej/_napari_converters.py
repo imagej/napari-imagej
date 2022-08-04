@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
-from napari.layers import Image, Labels, Points, Shapes
+from napari.layers import Image, Labels, Points, Shapes, Surface
 from scyjava import Converter, Priority, add_java_converter, add_py_converter
 
 from napari_imagej import _ntypes
@@ -306,6 +306,42 @@ def _realpointcollection_to_points(collection):
     return Points(data=data)
 
 
+# -- Surfaces / Meshes -- #
+
+
+def _mesh_to_surface(mesh: "jc.Mesh") -> Surface:
+    # Vertices
+    vertices = mesh.vertices()
+    py_vertices = np.zeros((vertices.size(), 3))
+    position = JArray(JDouble)(3)
+    for i, vertex in enumerate(vertices):
+        vertex.localize(position)
+        py_vertices[i, :] = position
+    # Triangles
+    triangles = mesh.triangles()
+    py_triangles = np.zeros((triangles.size(), 3), dtype=np.int64)
+    for i, triangle in enumerate(triangles):
+        py_triangles[i, 0] = triangle.vertex0()
+        py_triangles[i, 1] = triangle.vertex1()
+        py_triangles[i, 2] = triangle.vertex2()
+    return Surface(data=(py_vertices, py_triangles))
+
+
+def _surface_to_mesh(surface: Surface) -> "jc.Mesh":
+    if surface.ndim != 3:
+        raise ValueError("Can only convert 3D Surfaces to Meshes!")
+    # Surface data is vertices, triangles, colormap data
+    py_vertices, py_triangles, _ = surface.data
+
+    mesh: "jc.Mesh" = jc.NaiveDoubleMesh()
+    # TODO: Determine the normals
+    for py_vertex in py_vertices:
+        mesh.vertices().add(*py_vertex)
+    for py_triangle in py_triangles:
+        mesh.triangles().add(*py_triangle)
+    return mesh
+
+
 # -- Enum(like)s -- #
 
 
@@ -354,6 +390,11 @@ def _napari_to_java_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, Points),
             converter=_points_to_realpointcollection,
+            priority=Priority.VERY_HIGH,
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, Surface),
+            converter=_surface_to_mesh,
             priority=Priority.VERY_HIGH,
         ),
         Converter(
@@ -407,6 +448,11 @@ def _java_to_napari_converters() -> List[Converter]:
         Converter(
             predicate=lambda obj: isinstance(obj, jc.RealPointCollection),
             converter=_realpointcollection_to_points,
+            priority=Priority.VERY_HIGH,
+        ),
+        Converter(
+            predicate=lambda obj: isinstance(obj, jc.Mesh),
+            converter=_mesh_to_surface,
             priority=Priority.VERY_HIGH,
         ),
     ]
