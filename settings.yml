@@ -1,0 +1,9 @@
+# napari-imagej Settings
+
+# USERS BEWARE:
+# This yml file will soon be replaced with napari's contribution configuration.
+
+# This can be replaced with an ABSOLUTE path to a local ImageJ2 or Fiji installation.
+# If left null, napari-imagej will instead launch a vanilla ImageJ2, downloading
+# the latest available ImageJ2 if necessary.
+imagej_installation: null

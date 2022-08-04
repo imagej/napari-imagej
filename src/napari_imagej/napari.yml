@@ -5,7 +5,13 @@ contributions:
     - id: napari-imagej.func
       python_name: napari_imagej.widget:ImageJWidget
       title: Run ImageJ2 commands
+    - id: napari-imagej.gui
+      python_name: napari_imagej.widget:GUIWidget
+      title: Display ImageJ2 GUI
   widgets:
     - command: napari-imagej.func
       # TODO: Remove (DEVELOPER PREVIEW) once we are farther along
       display_name: ImageJ2 (DEVELOPER PREVIEW)
+    - command: napari-imagej.gui
+      # TODO: Remove (DEVELOPER PREVIEW) once we are farther along
+      display_name: ImageJ2 User Interface (DEVELOPER PREVIEW)

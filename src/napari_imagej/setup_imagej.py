@@ -1,9 +1,11 @@
 import logging
 import os
+import sys
 from multiprocessing.pool import AsyncResult, ThreadPool
 from typing import Callable
 
 import imagej
+import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
@@ -23,6 +25,17 @@ def log_debug(msg: str):
     _logger.debug(debug_msg)
 
 
+def get_mode() -> str:
+    """
+    Returns the mode ImageJ will be run in
+    """
+    return "headless" if sys.platform == "Darwin" else "interactive"
+
+
+def running_headless() -> bool:
+    return get_mode() == "headless"
+
+
 def imagej_init():
     # Initialize ImageJ
     log_debug("Initializing ImageJ2")
@@ -36,10 +49,13 @@ def imagej_init():
     )
     config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
     config.endpoints.append("io.scif:scifio:0.43.1")
-
     log_debug("Completed JVM Configuration")
 
-    _ij = imagej.init(mode="headless")
+    # Parse imagej settings
+    settings: dict = yaml.safe_load(open("settings.yml", "r"))
+    ij_dir = settings.get("imagej_installation", None)
+
+    _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
     log_debug(f"Initialized at version {_ij.getVersion()}")
     return _ij
 
@@ -377,7 +393,7 @@ class JavaClasses(object):
     def SuperEllipsoid(self):
         return "net.imglib2.roi.geom.real.SuperEllipsoid"
 
-    # ImageJ Types
+    # ImageJ2 Types
 
     @blocking_import
     def DefaultROITree(self):
