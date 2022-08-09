@@ -29,7 +29,7 @@ def get_mode() -> str:
     """
     Returns the mode ImageJ will be run in
     """
-    return "headless" if sys.platform == "Darwin" else "interactive"
+    return "headless" if sys.platform == "darwin" else "interactive"
 
 
 def running_headless() -> bool:

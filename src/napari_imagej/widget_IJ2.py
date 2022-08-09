@@ -87,21 +87,28 @@ class FromIJButton(QPushButton):
 class GUIButton(QPushButton):
     def __init__(self):
         super().__init__()
-        # We also add a button to open Fiji
+        self._text = "Display ImageJ2 GUI"
+
         if running_headless():
-            path = "resources/16x16-flat-disabled.png"
+            self._setup_headless()
         else:
-            path = "resources/16x16-flat.png"
+            self._setup_headful()
+
+    def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
         self.setIcon(icon)
-        if running_headless():
-            self.setText("Display ImageJ2 GUI (disabled)")
-            self.setToolTip("Not available when running PyImageJ headlessly!")
-            self.clicked.connect(self.disable_popup)
-        else:
-            self.setText("Display ImageJ2 GUI")
-            self.setToolTip("Open ImageJ2 in a new window!")
-            self.clicked.connect(ij().ui().showUI)
+
+    def _setup_headful(self):
+        self._set_icon("resources/16x16-flat.png")
+        self.setText(self._text)
+        self.setToolTip("Open ImageJ2 in a new window!")
+        self.clicked.connect(ij().ui().showUI)
+
+    def _setup_headless(self):
+        self._set_icon("resources/16x16-flat-disabled.png")
+        self.setText(self._text + " (disabled)")
+        self.setToolTip("Not available when running PyImageJ headlessly!")
+        self.clicked.connect(self.disable_popup)
 
     def disable_popup(self):
         msg: QMessageBox = QMessageBox()

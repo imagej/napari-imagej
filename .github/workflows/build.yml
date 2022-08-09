@@ -69,8 +69,10 @@ jobs:
           python -m pip install -e '.[dev]'
 
       - name: Test napari-imagej
-        run: |
-          python -m pytest -p no:faulthandler --color=yes
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: |
+            python -m pytest -p no:faulthandler --color=yes
 
   ensure-clean-code:
     runs-on: ubuntu-latest
@@ -107,8 +109,8 @@ jobs:
           auto-update-conda: true
           python-version: 3.9
           environment-file: dev-environment.yml
-          # Activate imglyb-dev environment
-          activate-environment: imglyb-dev
+          # Activate napari-imagej-dev environment
+          activate-environment: napari-imagej-dev
           auto-activate-base: false
           # Use mamba for faster setup
           use-mamba: true
@@ -125,8 +127,10 @@ jobs:
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
       - name: Test napari-imagej
-        run: |
-          python -m pytest -p no:faulthandler --cov-report=xml --cov=.
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: |
+            conda run -n napari-imagej-dev python -m pytest -p no:faulthandler --cov-report=xml --cov=.
 
       # We could do this in its own action, but we'd have to setup the environment again.
       - name: Upload Coverage to Codecov

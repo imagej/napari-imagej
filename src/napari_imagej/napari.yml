@@ -6,7 +6,7 @@ contributions:
       python_name: napari_imagej.widget:ImageJWidget
       title: Run ImageJ2 commands
     - id: napari-imagej.gui
-      python_name: napari_imagej.widget:GUIWidget
+      python_name: napari_imagej.widget_IJ2:GUIWidget
       title: Display ImageJ2 GUI
   widgets:
     - command: napari-imagej.func
