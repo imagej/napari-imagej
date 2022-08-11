@@ -57,7 +57,24 @@ def imagej_init():
 
     _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
     log_debug(f"Initialized at version {_ij.getVersion()}")
+
+    # Final configuration
+    _disable_jvm_shutdown_on_gui_quit(_ij)
+
+    # Return the ImageJ gateway
     return _ij
+
+
+def _disable_jvm_shutdown_on_gui_quit(ij_instance):
+    # We can't quit the gui running headlessly!
+    if running_headless():
+        return
+    # Prevent quitting from the ImageJ Legacy GUI
+    if ij_instance.legacy and ij_instance.legacy.isActive():
+        ij_instance.IJ.getInstance().exitWhenQuitting(False)
+    # Prevent quitting from the ImageJ2 GUI
+    else:
+        raise NotImplementedError("Cannot yet block quitting of ImageJ2")
 
 
 # There is a good debate to be had whether to multithread or multiprocess.
