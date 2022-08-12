@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
 from typing import Callable
 
@@ -41,8 +42,7 @@ def imagej_init():
     log_debug("Completed JVM Configuration")
 
     # Parse imagej settings
-    settings: dict = yaml.safe_load(open("settings.yml", "r"))
-    ij_dir = settings.get("imagej_installation", None)
+    ij_dir = setting("imagej_installation")
 
     _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
     log_debug(f"Initialized at version {_ij.getVersion()}")
@@ -52,6 +52,15 @@ def imagej_init():
 
     # Return the ImageJ gateway
     return _ij
+
+
+def setting(value: str):
+    return settings().get(value, None)
+
+
+@lru_cache(maxsize=None)
+def settings():
+    return yaml.safe_load(open("settings.yml", "r"))
 
 
 def _disable_jvm_shutdown_on_gui_quit(ij_instance):

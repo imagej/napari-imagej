@@ -4,7 +4,7 @@ from napari.layers import Image
 from napari.viewer import current_viewer
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QApplication, QDialog, QMessageBox, QPushButton, QHBoxLayout
+from qtpy.QtWidgets import QApplication, QDialog, QHBoxLayout, QMessageBox, QPushButton
 
 from napari_imagej.setup_imagej import JavaClasses, running_headless
 from napari_imagej.widget_IJ2 import FromIJButton, GUIButton, GUIWidget, ToIJButton
@@ -63,8 +63,13 @@ def test_widget_layout(gui_widget: GUIWidget):
     subwidgets = gui_widget.children()
     assert len(subwidgets) == 4
     assert isinstance(subwidgets[0], QHBoxLayout)
+
     assert isinstance(subwidgets[1], FromIJButton)
+    assert not subwidgets[1].isEnabled()
+
     assert isinstance(subwidgets[2], ToIJButton)
+    assert not subwidgets[2].isEnabled()
+
     assert isinstance(subwidgets[3], GUIButton)
 
 
@@ -72,7 +77,7 @@ def test_widget_layout(gui_widget: GUIWidget):
     running_headless(), reason="Only applies when not running headlessly"
 )
 def test_GUIButton_layout_headful(qtbot, ij, gui_widget: GUIWidget):
-    """Tests headless-specific settings of GUIButton"""
+    """Tests headful-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
     expected: QPixmap = QPixmap("resources/16x16-flat.png")
@@ -81,13 +86,27 @@ def test_GUIButton_layout_headful(qtbot, ij, gui_widget: GUIWidget):
 
     assert "" == button.text()
 
+    # Sometimes ImageJ2 can take a little while to be ready
     expected_toolTip = "Display ImageJ2 GUI"
-    assert expected_toolTip == button.toolTip()
+    qtbot.waitUntil(lambda: expected_toolTip == button.toolTip())
 
     # Test showing UI
     assert not ij.ui().isVisible()
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
     qtbot.waitUntil(ij.ui().isVisible)
+
+
+class _HandleChecker:
+    """Class used to wrap a boolean"""
+
+    def __init__(self):
+        self.handled = False
+
+    def done_handling(self) -> None:
+        self.handled = True
+
+    def has_been_handled(self) -> bool:
+        return self.handled
 
 
 @pytest.mark.skipif(
@@ -106,8 +125,11 @@ def test_GUIButton_layout_headless(qtbot, gui_widget: GUIWidget):
     expected_text = "ImageJ2 GUI unavailable!"
     assert expected_text == button.toolTip()
 
+    handled = _HandleChecker()
+
     # Test popup when running headlessly
-    def handle_dialog():
+    def handle_dialog(handled: _HandleChecker):
+        qtbot.waitUntil(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
         msg = QApplication.activeWindow()
         expected_text = (
             "The ImageJ2 user interface cannot be opened "
@@ -120,20 +142,22 @@ def test_GUIButton_layout_headless(qtbot, gui_widget: GUIWidget):
         assert Qt.RichText == msg.textFormat()
         assert Qt.TextBrowserInteraction == msg.textInteractionFlags()
 
-        assert isinstance(msg, QMessageBox)
         ok_button = msg.button(QMessageBox.Ok)
         qtbot.mouseClick(ok_button, Qt.LeftButton, delay=1)
+        handled.done_handling()
 
-    original = QApplication.activeWindow()
-    QTimer.singleShot(100, handle_dialog)
+    # Start the handler in a new thread
+    QTimer.singleShot(100, lambda: handle_dialog(handled))
+    # Click the button
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
-    qtbot.waitUntil(lambda: QApplication.activeWindow() == original)
+    # Assert that we are back to the original window i.e. that the popup was handled
+    qtbot.waitUntil(handled.has_been_handled)
 
 
 @pytest.mark.skipif(
     running_headless(), reason="Only applies when not running headlessly"
 )
-def test_data_to_ImageJ(qtbot, ij, gui_widget: GUIWidget):
+def test_active_data_send(qtbot, ij, gui_widget: GUIWidget):
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
 
@@ -146,19 +170,7 @@ def test_data_to_ImageJ(qtbot, ij, gui_widget: GUIWidget):
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
 
-    def handle_dialog():
-        qtbot.waitUntil(lambda: isinstance(QApplication.activeWindow(), QDialog))
-        dialog = QApplication.activeWindow()
-        buttons = dialog.findChildren(QPushButton)
-        assert 2 == len(buttons)
-        for button in buttons:
-            if "ok" in button.text().lower():
-                qtbot.mouseClick(button, Qt.LeftButton, delay=1)
-                return
-        pytest.fail("Could not find the Ok button!")
-
     # Press the button, handle the Dialog
-    QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
 
     # Assert that the data is now in Fiji
@@ -170,7 +182,7 @@ def test_data_to_ImageJ(qtbot, ij, gui_widget: GUIWidget):
 @pytest.mark.skipif(
     running_headless(), reason="Only applies when not running headlessly"
 )
-def test_data_from_ImageJ(qtbot, ij, gui_widget: GUIWidget):
+def test_active_data_receive(qtbot, ij, gui_widget: GUIWidget):
     button: FromIJButton = gui_widget.from_ij
     assert not button.isEnabled()
 
@@ -182,7 +194,36 @@ def test_data_from_ImageJ(qtbot, ij, gui_widget: GUIWidget):
     sample_data = jc.ArrayImgs.bytes(10, 10, 10)
     ij.ui().show("test_from", sample_data)
 
-    def handle_dialog():
+    # Press the button, handle the Dialog
+    assert 0 == len(button.viewer.layers)
+    qtbot.mouseClick(button, Qt.LeftButton, delay=1)
+
+    # Assert that the data is now in napari
+    assert 1 == len(button.viewer.layers)
+    layer = button.viewer.layers[0]
+    assert isinstance(layer, Image)
+    assert (10, 10, 10) == layer.data.shape
+
+
+@pytest.mark.skipif(
+    running_headless(), reason="Only applies when not running headlessly"
+)
+def test_chosen_data_send(qtbot, ij, gui_widget_chooser):
+    button: ToIJButton = gui_widget_chooser.to_ij
+    assert not button.isEnabled()
+
+    # Show the button
+    qtbot.mouseClick(gui_widget_chooser.gui_button, Qt.LeftButton, delay=1)
+    qtbot.waitUntil(lambda: button.isEnabled())
+
+    # Add some data to the viewer
+    sample_data = numpy.ones((100, 100, 3))
+    image: Image = Image(data=sample_data, name="test_to")
+    current_viewer().add_layer(image)
+
+    handler = _HandleChecker()
+
+    def handle_dialog(handler: _HandleChecker):
         qtbot.waitUntil(lambda: isinstance(QApplication.activeWindow(), QDialog))
         dialog = QApplication.activeWindow()
         buttons = dialog.findChildren(QPushButton)
@@ -190,13 +231,60 @@ def test_data_from_ImageJ(qtbot, ij, gui_widget: GUIWidget):
         for button in buttons:
             if "ok" in button.text().lower():
                 qtbot.mouseClick(button, Qt.LeftButton, delay=1)
+                handler.done_handling()
+                return
+        pytest.fail("Could not find the Ok button!")
+
+    # Start the handler in a new thread
+    QTimer.singleShot(100, lambda: handle_dialog(handler))
+    # Click the button
+    qtbot.mouseClick(button, Qt.LeftButton, delay=1)
+    # Assert that we are back to the original window i.e. that the popup was handled
+    qtbot.waitUntil(handler.has_been_handled)
+
+    # Assert that the data is now in Fiji
+    active_display = ij.display().getActiveDisplay()
+    assert isinstance(active_display, jc.ImageDisplay)
+    assert "test_to" == active_display.getName()
+
+
+@pytest.mark.skipif(
+    running_headless(), reason="Only applies when not running headlessly"
+)
+def test_chosen_data_receive(qtbot, ij, gui_widget: GUIWidget):
+    button: FromIJButton = gui_widget.from_ij
+    assert not button.isEnabled()
+
+    # Show the button
+    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+    qtbot.waitUntil(lambda: button.isEnabled())
+
+    # Add some data to ImageJ
+    sample_data = jc.ArrayImgs.bytes(10, 10, 10)
+    ij.ui().show("test_from", sample_data)
+
+    handler = _HandleChecker()
+
+    def handle_dialog(handler: _HandleChecker):
+        qtbot.waitUntil(lambda: isinstance(QApplication.activeWindow(), QDialog))
+        dialog = QApplication.activeWindow()
+        buttons = dialog.findChildren(QPushButton)
+        assert 2 == len(buttons)
+        for button in buttons:
+            if "ok" in button.text().lower():
+                qtbot.mouseClick(button, Qt.LeftButton, delay=1)
+                handler.done_handling()
                 return
         pytest.fail("Could not find the Ok button!")
 
     # Press the button, handle the Dialog
     assert 0 == len(button.viewer.layers)
-    QTimer.singleShot(100, handle_dialog)
+    # Start the handler in a new thread
+    QTimer.singleShot(100, lambda: handle_dialog(handler))
+    # Click the button
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
+    # Assert that we are back to the original window i.e. that the popup was handled
+    qtbot.waitUntil(handler.has_been_handled)
 
     # Assert that the data is now in napari
     assert 1 == len(button.viewer.layers)

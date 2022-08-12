@@ -1,6 +1,6 @@
 from enum import Enum
 from threading import Thread
-from typing import List
+from typing import Optional
 
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -11,7 +11,14 @@ from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
 from napari_imagej._module_utils import _get_layers_hack
-from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, running_headless
+from napari_imagej.setup_imagej import (
+    ensure_jvm_started,
+    ij,
+    jc,
+    log_debug,
+    running_headless,
+    setting,
+)
 
 
 class GUIWidget(QWidget):
@@ -44,19 +51,33 @@ class GUIWidget(QWidget):
 
 
 class ToIJButton(QPushButton):
-    def __init__(self, viewer):
+    def __init__(self, viewer: Viewer):
         super().__init__()
+        self.viewer = viewer
+
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Send layers to ImageJ2")
-        self.clicked.connect(self.send_layers)
+        self.setToolTip("Export active napari layer to ImageJ2")
+        if setting("choose_active_layer"):
+            self.clicked.connect(self.send_active_layer)
+        else:
+            self.clicked.connect(self.send_chosen_layer)
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
         self.setIcon(icon)
 
-    def send_layers(self):
+    def send_active_layer(self):
+        active_layer: Optional[Layer] = self.viewer.layers.selection.active
+        if active_layer:
+            name = active_layer.name
+            data = ij().py.to_java(active_layer.data)
+            ij().ui().show(name, data)
+        else:
+            log_debug("There is no active layer to export to ImageJ2")
+
+    def send_chosen_layer(self):
         layers: dict = request_values(
             title="Send layers to ImageJ2",
             layers={"annotation": Layer, "options": {"choices": _get_layers_hack}},
@@ -77,8 +98,11 @@ class FromIJButton(QPushButton):
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Get layers from ImageJ2")
-        self.clicked.connect(self.get_layers)
+        self.setToolTip("Import active ImageJ2 Dataset to napari")
+        if setting("choose_active_layer"):
+            self.clicked.connect(self.get_active_layer)
+        else:
+            self.clicked.connect(self.get_chosen_layer)
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
@@ -89,13 +113,15 @@ class FromIJButton(QPushButton):
         compatibleInputs.addAll(ij().object().getObjects(t))
         return list(compatibleInputs)
 
-    def get_layers(self) -> List[Layer]:
+    def get_chosen_layer(self) -> None:
         images = self._get_objects(jc.RandomAccessibleInterval)
         names = [ij().object().getName(i) for i in images]
+        # Ask the user to pick a layer
         choices: dict = request_values(
-            title="Send layers to ImageJ2",
+            title="Send layers to napari",
             dataset={"annotation": Enum, "options": {"choices": names}},
         )
+        # Parse the returned dict for the Layer selection
         if choices is not None:
             for _, name in choices.items():
                 i = names.index(name)
@@ -107,6 +133,24 @@ class FromIJButton(QPushButton):
                     self.viewer.add_image(data=image, name=name)
                 else:
                     raise ValueError(f"{image} cannot be displayed in napari!")
+
+    def get_active_layer(self) -> None:
+        # Choose the active Dataset
+        image = ij().get("net.imagej.display.ImageDisplayService").getActiveDataset()
+        if image is None:
+            log_debug("There is no active window to export to napari")
+            return
+        # Get the stuff needed for a new layer
+        py_image = ij().py.from_java(image)
+        name = ij().object().getName(image)
+        # Create and add the layer
+        if isinstance(py_image, Layer):
+            py_image.name = name
+            self.viewer.add_layer(py_image)
+        elif ij().py._is_arraylike(py_image):
+            self.viewer.add_image(data=py_image, name=name)
+        else:
+            raise ValueError(f"{image} cannot be displayed in napari!")
 
 
 class GUIButton(QPushButton):
@@ -123,14 +167,22 @@ class GUIButton(QPushButton):
         icon: QIcon = QIcon(QPixmap(path))
         self.setIcon(icon)
 
+        def post_setup():
+            ensure_jvm_started()
+            self.setEnabled(True)
+
+        Thread(target=post_setup).start()
+
     def _setup_headful(self):
         self._set_icon("resources/16x16-flat-disabled.png")
         self.setToolTip("Display ImageJ2 GUI (loading)")
+
         def post_setup():
             ensure_jvm_started()
             self._set_icon("resources/16x16-flat.png")
             self.setEnabled(True)
             self.setToolTip("Display ImageJ2 GUI")
+
         Thread(target=post_setup).start()
 
     def _setup_headless(self):

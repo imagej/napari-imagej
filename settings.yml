@@ -7,3 +7,9 @@
 # If left null, napari-imagej will instead launch a vanilla ImageJ2, downloading
 # the latest available ImageJ2 if necessary.
 imagej_installation: null
+
+# This can be used to identify whether transferred data between ImageJ2 and napari
+# should be selected via activation or by user selection via a dialog.
+# By default, the active layer/window is chosen for transfer between applications.
+# By setting this value to false, a popup will be shown instead.
+choose_active_layer: true
