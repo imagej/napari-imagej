@@ -4,7 +4,7 @@ from napari.layers import Image
 from napari.viewer import current_viewer
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QApplication, QDialog, QMessageBox, QPushButton, QVBoxLayout
+from qtpy.QtWidgets import QApplication, QDialog, QMessageBox, QPushButton, QHBoxLayout
 
 from napari_imagej.setup_imagej import JavaClasses, running_headless
 from napari_imagej.widget_IJ2 import FromIJButton, GUIButton, GUIWidget, ToIJButton
@@ -62,10 +62,10 @@ def test_widget_layout(gui_widget: GUIWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
     assert len(subwidgets) == 4
-    assert isinstance(subwidgets[0], QVBoxLayout)
-    assert isinstance(subwidgets[1], GUIButton)
+    assert isinstance(subwidgets[0], QHBoxLayout)
+    assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
-    assert isinstance(subwidgets[3], FromIJButton)
+    assert isinstance(subwidgets[3], GUIButton)
 
 
 @pytest.mark.skipif(
@@ -79,10 +79,9 @@ def test_GUIButton_layout_headful(qtbot, ij, gui_widget: GUIWidget):
     actual: QPixmap = button.icon().pixmap(expected.size())
     assert expected.toImage() == actual.toImage()
 
-    expected_text = "Display ImageJ2 GUI"
-    assert expected_text == button.text()
+    assert "" == button.text()
 
-    expected_toolTip = "Open ImageJ2 in a new window!"
+    expected_toolTip = "Display ImageJ2 GUI"
     assert expected_toolTip == button.toolTip()
 
     # Test showing UI
@@ -102,11 +101,10 @@ def test_GUIButton_layout_headless(qtbot, gui_widget: GUIWidget):
     actual: QPixmap = button.icon().pixmap(expected.size())
     assert expected.toImage() == actual.toImage()
 
-    expected_text = "Display ImageJ2 GUI (disabled)"
-    assert expected_text == button.text()
+    assert "" == button.text()
 
-    expected_toolTip = "Not available when running PyImageJ headlessly!"
-    assert expected_toolTip == button.toolTip()
+    expected_text = "ImageJ2 GUI unavailable!"
+    assert expected_text == button.toolTip()
 
     # Test popup when running headlessly
     def handle_dialog():
@@ -137,11 +135,11 @@ def test_GUIButton_layout_headless(qtbot, gui_widget: GUIWidget):
 )
 def test_data_to_ImageJ(qtbot, ij, gui_widget: GUIWidget):
     button: ToIJButton = gui_widget.to_ij
-    assert button.isHidden()
+    assert not button.isEnabled()
 
     # Show the button
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    qtbot.waitUntil(lambda: not button.isHidden())
+    qtbot.waitUntil(lambda: button.isEnabled())
 
     # Add some data to the viewer
     sample_data = numpy.ones((100, 100, 3))
@@ -174,11 +172,11 @@ def test_data_to_ImageJ(qtbot, ij, gui_widget: GUIWidget):
 )
 def test_data_from_ImageJ(qtbot, ij, gui_widget: GUIWidget):
     button: FromIJButton = gui_widget.from_ij
-    assert button.isHidden()
+    assert not button.isEnabled()
 
     # Show the button
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    qtbot.waitUntil(lambda: not button.isHidden())
+    qtbot.waitUntil(lambda: button.isEnabled())
 
     # Add some data to ImageJ
     sample_data = jc.ArrayImgs.bytes(10, 10, 10)
