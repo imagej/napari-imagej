@@ -25,17 +25,6 @@ def log_debug(msg: str):
     _logger.debug(debug_msg)
 
 
-def get_mode() -> str:
-    """
-    Returns the mode ImageJ will be run in
-    """
-    return "headless" if sys.platform == "darwin" else "interactive"
-
-
-def running_headless() -> bool:
-    return get_mode() == "headless"
-
-
 def imagej_init():
     # Initialize ImageJ
     log_debug("Initializing ImageJ2")
@@ -75,6 +64,17 @@ def _disable_jvm_shutdown_on_gui_quit(ij_instance):
     # Prevent quitting from the ImageJ2 GUI
     else:
         raise NotImplementedError("Cannot yet block quitting of ImageJ2")
+
+
+def get_mode() -> str:
+    """
+    Returns the mode ImageJ will be run in
+    """
+    return "headless" if sys.platform == "darwin" else "interactive"
+
+
+def running_headless() -> bool:
+    return get_mode() == "headless"
 
 
 # There is a good debate to be had whether to multithread or multiprocess.
