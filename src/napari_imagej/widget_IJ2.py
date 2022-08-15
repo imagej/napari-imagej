@@ -78,16 +78,21 @@ class ToIJButton(QPushButton):
             log_debug("There is no active layer to export to ImageJ2")
 
     def send_chosen_layer(self):
-        layers: dict = request_values(
+        # Get Layer choice
+        # TODO: Once napari > 0.4.16 is released, replace _get_layers_hack with
+        # napari.util._magicgui.get_layers
+        choices: dict = request_values(
             title="Send layers to ImageJ2",
-            layers={"annotation": Layer, "options": {"choices": _get_layers_hack}},
+            layer={"annotation": Layer, "options": {"choices": _get_layers_hack}},
         )
-        if layers is not None:
-            for _, layer in layers.items():
-                if isinstance(layer, Layer):
-                    name = layer.name
-                    data = ij().py.to_java(layer.data)
-                    ij().ui().show(name, data)
+        # Parse choices for the layer
+        if choices is not None:
+            layer = choices["layer"]
+            if isinstance(layer, Layer):
+                # Pass the relevant data to ImageJ2
+                name = layer.name
+                data = ij().py.to_java(layer.data)
+                ij().ui().show(name, data)
 
 
 class FromIJButton(QPushButton):
@@ -114,25 +119,30 @@ class FromIJButton(QPushButton):
         return list(compatibleInputs)
 
     def get_chosen_layer(self) -> None:
+        # Find all images convertible to a napari layer
         images = self._get_objects(jc.RandomAccessibleInterval)
         names = [ij().object().getName(i) for i in images]
-        # Ask the user to pick a layer
+        # Ask the user to pick one of these images by name
         choices: dict = request_values(
             title="Send layers to napari",
-            dataset={"annotation": Enum, "options": {"choices": names}},
+            data={"annotation": Enum, "options": {"choices": names}},
         )
-        # Parse the returned dict for the Layer selection
         if choices is not None:
-            for _, name in choices.items():
-                i = names.index(name)
-                image = ij().py.from_java(images[i])
-                if isinstance(image, Layer):
-                    image.name = name
-                    self.viewer.add_layer(image)
-                elif ij().py._is_arraylike(image):
-                    self.viewer.add_image(data=image, name=name)
-                else:
-                    raise ValueError(f"{image} cannot be displayed in napari!")
+            # grab the chosen name
+            name = choices["data"]
+            # grab the chosen image
+            i = names.index(name)
+            image = ij().py.from_java(images[i])
+            # if the conversion is already a layer, add it directly
+            if isinstance(image, Layer):
+                image.name = name
+                self.viewer.add_layer(image)
+            # otherwise, try to coerce it into an Image layer
+            elif ij().py._is_arraylike(image):
+                self.viewer.add_image(data=image, name=name)
+            # if we can't coerce it, give up
+            else:
+                raise ValueError(f"{image} cannot be displayed in napari!")
 
     def get_active_layer(self) -> None:
         # Choose the active Dataset
