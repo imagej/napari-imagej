@@ -14,6 +14,7 @@ from napari_imagej.widget import (
     SearcherTreeItem,
     SearchTree,
 )
+from napari_imagej.widget_IJ2 import GUIWidget
 
 
 def test_widget_layout(imagej_widget: ImageJWidget):
@@ -24,11 +25,12 @@ def test_widget_layout(imagej_widget: ImageJWidget):
 def test_widget_subwidget_layout(imagej_widget: ImageJWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = imagej_widget.children()
-    assert len(subwidgets) == 4
+    assert len(subwidgets) == 5
     assert isinstance(subwidgets[0], QVBoxLayout)
-    assert isinstance(subwidgets[1], SearchbarWidget)
-    assert isinstance(subwidgets[2], SearchTree)
-    assert isinstance(subwidgets[3], FocusWidget)
+    assert isinstance(subwidgets[1], GUIWidget)
+    assert isinstance(subwidgets[2], SearchbarWidget)
+    assert isinstance(subwidgets[3], SearchTree)
+    assert isinstance(subwidgets[4], FocusWidget)
 
 
 def test_searchbar_widget_layout(imagej_widget: ImageJWidget):

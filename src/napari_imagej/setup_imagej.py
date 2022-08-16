@@ -1,9 +1,12 @@
 import logging
 import os
+import sys
+from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
 from typing import Callable
 
 import imagej
+import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
@@ -36,12 +39,51 @@ def imagej_init():
     )
     config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
     config.endpoints.append("io.scif:scifio:0.43.1")
-
     log_debug("Completed JVM Configuration")
 
-    _ij = imagej.init(mode="headless")
+    # Parse imagej settings
+    ij_dir = setting("imagej_installation")
+
+    _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
     log_debug(f"Initialized at version {_ij.getVersion()}")
+
+    # Final configuration
+    _disable_jvm_shutdown_on_gui_quit(_ij)
+
+    # Return the ImageJ gateway
     return _ij
+
+
+def setting(value: str):
+    return settings().get(value, None)
+
+
+@lru_cache(maxsize=None)
+def settings():
+    return yaml.safe_load(open("settings.yml", "r"))
+
+
+def _disable_jvm_shutdown_on_gui_quit(ij_instance):
+    # We can't quit the gui running headlessly!
+    if running_headless():
+        return
+    # Prevent quitting from the ImageJ Legacy GUI
+    if ij_instance.legacy and ij_instance.legacy.isActive():
+        ij_instance.IJ.getInstance().exitWhenQuitting(False)
+    # Prevent quitting from the ImageJ2 GUI
+    else:
+        raise NotImplementedError("Cannot yet block quitting of ImageJ2")
+
+
+def get_mode() -> str:
+    """
+    Returns the mode ImageJ will be run in
+    """
+    return "headless" if sys.platform == "darwin" else "interactive"
+
+
+def running_headless() -> bool:
+    return get_mode() == "headless"
 
 
 # There is a good debate to be had whether to multithread or multiprocess.
@@ -377,7 +419,7 @@ class JavaClasses(object):
     def SuperEllipsoid(self):
         return "net.imglib2.roi.geom.real.SuperEllipsoid"
 
-    # ImageJ Types
+    # ImageJ2 Types
 
     @blocking_import
     def DefaultROITree(self):

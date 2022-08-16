@@ -77,6 +77,23 @@ We can then run it in napari-imagej, **if napari is launched from the parent of 
 
 ![Running a SciJava script within napari-imagej](resources/napari_imagej_SciJava_script.gif)
 
+### Launching the ImageJ User Interface
+
+napari-imagej provides the ability to interact with the ImageJ2 User Interface directly.
+
+**This feature is only available when PyImageJ can be run [interactively](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode).**
+
+Once napari-imagej has successfully started ImageJ, the ImageJ2 button at the top of the widget will become enabled. Pressing the button will launch the ImageJ2 GUI and will enable the other buttons in the menu.
+
+* Clicking the right arrow button causes the *active* napari `Layer` to be transferred into ImageJ2.
+* Clicking the left arrow button causes the *active* ImageJ2 `Dataset` to be transferred into napari. 
+
+*If the user instead wishes to select the transferred layer from a list of available data, set `choose_active_layer` to `false` in the plugin settings.*
+
+![Launching the ImageJ2 GUI and transferring data between interfaces](resources/napari_imagej_gui_and_data_transfer.gif)
+
+**Users beware**: Closing the ImageJ2 GUI will dispose the ImageJ2 instance used by PyImageJ. Therefore, *closing the ImageJ2 GUI currently blocks any further usage of **all** napari-imagej functionality.* Once the ImageJ2 GUI has been closed, napari must be restarted to restore napari-imagej functionality.
+
 ## Troubleshooting
 
 ### napari-imagej does not appear in the Plugins menu of napari!
@@ -94,6 +111,18 @@ If `npe2 validate` returns an error, this indicates that napari-imagej was not i
 Since napari-imagej is calling Java code under the hood, it must launch a Java Virtual Machine (JVM). The JVM is not launched until the user starts napari-imagej. As we cannot search Java functionality *until the JVM is running*, the search bar is not enabled until the JVM is ready.
 
 The first launch of napari-imagej can take significantly longer than subsequent launches while the underlying framework downloads the Java artifacts needed to run ImageJ2. **Downloading these libraries can take minutes**. These libraries are cached, however, so subsequent launches should not take more than a couple of seconds.
+
+### The ImageJ2 GUI button is greyed out!
+
+There are two common cases for a disabled ImageJ2 GUI button:
+
+1. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see [here](#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...")
+
+2. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see [here](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode) for more information.
+
+### napari-imagej is not responding to my function calls, searches, ...
+
+The most common cause of such behavior is opening *and then closing* the ImageJ2 GUI. This disposes the ImageJ2 Gateway and prevents any further calls to ImageJ2 functionality. This functionality can only be recovered by restarting napari and napari-imagej. Please see [this issue](https://github.com/imagej/napari-imagej/issues/93) for more discussion.
 
 ## Contributing
 

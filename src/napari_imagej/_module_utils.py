@@ -813,10 +813,14 @@ def _execute_function_with_params(viewer: Viewer, params: Dict, func: Callable):
 def execute_function_modally(
     viewer: Viewer, name: str, func: Callable, param_options: Dict[str, Dict]
 ) -> None:
-
+    # Determine which arguments are needed
     args: dict = _request_values_args(func, param_options)
-    # Request values
-    params = request_values(title=name, **args)
+    # Get any needed arguments
+    if len(args) > 0:
+        params = request_values(title=name, **args)
+    else:
+        params = dict()
+    # Execute the function with the arguments
     _execute_function_with_params(viewer, params, func)
 
 

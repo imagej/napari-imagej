@@ -30,7 +30,6 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-qt
-  - pytest-xvfb
   - qtpy
   # Project from source
   - pip

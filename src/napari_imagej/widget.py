@@ -36,6 +36,7 @@ from napari_imagej._module_utils import (
     functionify_module_execution,
 )
 from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc, log_debug
+from napari_imagej.widget_IJ2 import GUIWidget
 
 
 class SearchAction(NamedTuple):
@@ -53,6 +54,8 @@ class ImageJWidget(QWidget):
         # as the top widgets will want to control the ones below.
         self.setLayout(QVBoxLayout())
 
+        # GUI Buttons
+        self.buttons: GUIWidget = GUIWidget(napari_viewer)
         # Module highlighter
         self.focuser: FocusWidget = FocusWidget(napari_viewer)
         # Results List
@@ -61,6 +64,7 @@ class ImageJWidget(QWidget):
         self.search: SearchbarWidget = SearchbarWidget()
 
         # Add each in the preferred order
+        self.layout().addWidget(self.buttons)
         self.layout().addWidget(self.search)
         self.layout().addWidget(self.results)
         self.layout().addWidget(self.focuser)
