@@ -25,6 +25,7 @@ class GUIWidget(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.setLayout(QHBoxLayout())
+        self.layout().addStretch(0)
 
         self.from_ij: FromIJButton = FromIJButton(viewer)
         self.layout().addWidget(self.from_ij)
