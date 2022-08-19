@@ -72,7 +72,7 @@ jobs:
         uses: GabrielBB/xvfb-action@v1
         with:
           run: |
-            python -m pytest -p no:faulthandler --color=yes
+            python -m pytest -s -p no:faulthandler --color=yes
 
   ensure-clean-code:
     runs-on: ubuntu-latest
@@ -130,7 +130,7 @@ jobs:
         uses: GabrielBB/xvfb-action@v1
         with:
           run: |
-            conda run -n napari-imagej-dev python -m pytest -p no:faulthandler --cov-report=xml --cov=.
+            conda run -n napari-imagej-dev --no-capture-output python -m pytest -s -p no:faulthandler --color=yes --cov-report=xml --cov=.
 
       # We could do this in its own action, but we'd have to setup the environment again.
       - name: Upload Coverage to Codecov

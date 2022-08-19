@@ -15,10 +15,18 @@ def ij():
     return ij()
 
 
+@pytest.fixture()
+def viewer(make_napari_viewer) -> Generator[Viewer, None, None]:
+    yield make_napari_viewer()
+
+
+# HACK: Something about the ImageJ2 GUI causes these unit tests to hang.
+# Let's force it to close, for now.
+
+
 @pytest.fixture
-def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:
+def imagej_widget(viewer) -> Generator[ImageJWidget, None, None]:
     # Create widget
-    viewer: Viewer = make_napari_viewer()
     ij_widget: ImageJWidget = ImageJWidget(viewer)
 
     yield ij_widget
@@ -28,9 +36,13 @@ def imagej_widget(make_napari_viewer) -> Generator[ImageJWidget, None, None]:
 
 
 @pytest.fixture
-def gui_widget(make_napari_viewer) -> Generator[GUIWidget, None, None]:
+def gui_widget(viewer) -> Generator[GUIWidget, None, None]:
+    def mock_setting(value: str):
+        return {"imagej_installation": None, "choose_active_layer": True}[value]
+
+    napari_imagej.widget_IJ2.setting = mock_setting
+
     # Create widget
-    viewer: Viewer = make_napari_viewer()
     widget: GUIWidget = GUIWidget(viewer)
 
     yield widget
@@ -40,7 +52,8 @@ def gui_widget(make_napari_viewer) -> Generator[GUIWidget, None, None]:
 
 
 @pytest.fixture
-def gui_widget_chooser(make_napari_viewer) -> Generator[GUIWidget, None, None]:
+def gui_widget_chooser(viewer) -> Generator[GUIWidget, None, None]:
+
     # monkeypatch settings
     def mock_setting(value: str):
         return {"imagej_installation": None, "choose_active_layer": False}[value]
@@ -48,7 +61,6 @@ def gui_widget_chooser(make_napari_viewer) -> Generator[GUIWidget, None, None]:
     napari_imagej.widget_IJ2.setting = mock_setting
 
     # Create widget
-    viewer: Viewer = make_napari_viewer()
     widget: GUIWidget = GUIWidget(viewer)
 
     yield widget
