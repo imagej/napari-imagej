@@ -48,7 +48,8 @@ class GUIWidget(QWidget):
         NB: This must be its own function to prevent premature calling of ij()
         """
         ensure_jvm_started()
-        ij().ui().showUI()
+        if not ij().ui().isVisible():
+            ij().ui().showUI()
 
 
 class ToIJButton(QPushButton):

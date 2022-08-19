@@ -74,7 +74,7 @@ def _disable_jvm_shutdown_on_gui_quit(ij_instance):
         ij_instance.IJ.getInstance().exitWhenQuitting(False)
     # Prevent quitting from the ImageJ2 GUI
     else:
-        raise NotImplementedError("Cannot yet block quitting of ImageJ2")
+        log_debug("Cannot yet block quitting of ImageJ2!")
 
 
 def get_mode() -> str:
