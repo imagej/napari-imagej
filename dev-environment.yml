@@ -27,6 +27,7 @@ dependencies:
   - build
   - flake8
   - isort
+  - pre-commit
   - pyqt5-sip
   - pytest
   - pytest-cov
