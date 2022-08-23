@@ -693,10 +693,6 @@ def run_module_from_script(ij, tmp_path, script):
     return _module_utils._pure_module_outputs(module, unresolved_inputs)
 
 
-#     module = ij.py.run_script(language="Groovy", script=script, args=[])
-#     return _module_utils._module_outputs(module)
-
-
 script_zero_layer_zero_widget: str = """
 c = 1
 """

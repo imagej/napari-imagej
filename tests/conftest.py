@@ -20,10 +20,6 @@ def viewer(make_napari_viewer) -> Generator[Viewer, None, None]:
     yield make_napari_viewer()
 
 
-# HACK: Something about the ImageJ2 GUI causes these unit tests to hang.
-# Let's force it to close, for now.
-
-
 @pytest.fixture
 def imagej_widget(viewer) -> Generator[ImageJWidget, None, None]:
     # Create widget
