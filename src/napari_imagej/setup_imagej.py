@@ -42,12 +42,15 @@ def imagej_init():
     config.endpoints.append("org.scijava:scijava-common:2.89.0")  # TEMP
     log_debug("Completed JVM Configuration")
 
-    # Parse imagej settings
-    ij_dir = setting("imagej_installation")
+    # Configure PyImageJ settings
+    settings = {
+        "ij_dir_or_version_or_endpoint": setting("imagej_installation"),
+        "mode": get_mode(),
+        "add_legacy": False,
+    }
 
-    _ij = imagej.init(
-        ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode(), add_legacy=False
-    )
+    # Launch PyImageJ
+    _ij = imagej.init(**settings)
     log_debug(f"Initialized at version {_ij.getVersion()}")
 
     # Return the ImageJ gateway
