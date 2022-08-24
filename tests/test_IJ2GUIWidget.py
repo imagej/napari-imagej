@@ -1,5 +1,3 @@
-from typing import Callable
-
 import numpy
 import pytest
 from napari import Viewer
@@ -87,28 +85,6 @@ def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
             imp.close()
 
 
-class DialogHandler(QRunnable):
-    def __init__(self, handler: Callable[[], None]):
-        super().__init__()
-        self.handler = handler
-        self._passed = None
-        self._done_handling = False
-
-    # Test popup when running headlessly
-    def run(self) -> None:
-        try:
-            self._passed = self.handler()
-            self._done_handling = True
-        except Exception:
-            self._passed = False
-
-    def is_done(self) -> bool:
-        return self._done_handling
-
-    def passed(self) -> bool:
-        return self._passed
-
-
 def test_widget_layout(gui_widget: GUIWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
@@ -150,7 +126,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: GUIWidget):
 @pytest.mark.skipif(
     not running_headless(), reason="Only applies when running headlessly"
 )
-def test_GUIButton_layout_headless(asserter, qtbot, gui_widget: GUIWidget):
+def test_GUIButton_layout_headless(asserter, gui_widget: GUIWidget):
     """Tests headless-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
@@ -163,32 +139,46 @@ def test_GUIButton_layout_headless(asserter, qtbot, gui_widget: GUIWidget):
     expected_text = "ImageJ2 GUI unavailable!"
     assert expected_text == button.toolTip()
 
-    # Test popup when running headlessly
-    def handle_dialog():
-        asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
-        msg = QApplication.activeWindow()
-        expected_text = (
-            "The ImageJ2 user interface cannot be opened "
-            "when running PyImageJ headlessly. Visit "
-            '<a href="https://pyimagej.readthedocs.io/en/latest/'
-            'Initialization.html#interactive-mode">this site</a> '
-            "for more information."
-        )
-        assert expected_text == msg.text()
-        assert Qt.RichText == msg.textFormat()
-        assert Qt.TextBrowserInteraction == msg.textInteractionFlags()
-
-        ok_button = msg.button(QMessageBox.Ok)
-        ok_button.clicked.emit()
-
     # # Start the handler in a new thread
-    runnable = DialogHandler(handler=handle_dialog)
+    class Handler(QRunnable):
+
+        # Test popup when running headlessly
+        def run(self) -> None:
+            asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
+            msg = QApplication.activeWindow()
+            expected_text = (
+                "The ImageJ2 user interface cannot be opened "
+                "when running PyImageJ headlessly. Visit "
+                '<a href="https://pyimagej.readthedocs.io/en/latest/'
+                'Initialization.html#interactive-mode">this site</a> '
+                "for more information."
+            )
+            if expected_text != msg.text():
+                self._passed = False
+                return
+            if Qt.RichText != msg.textFormat():
+                self._passed = False
+                return
+            if Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                self._passed = False
+                return
+
+            ok_button = msg.button(QMessageBox.Ok)
+            ok_button.clicked.emit()
+            asserter(lambda: QApplication.activeModalWidget() is not msg)
+            self._passed = True
+
+        def passed(self) -> bool:
+            return self._passed
+
+    runnable = Handler()
     QThreadPool.globalInstance().start(runnable)
 
     # Click the button
     button.clicked.emit()
-    # Assert that we are back to the original window i.e. that the popup was handled
-    asserter(runnable.is_done)
+    # Wait for the popup to be handled
+    asserter(QThreadPool.globalInstance().waitForDone)
+    assert runnable.passed()
 
 
 @pytest.mark.skipif(
