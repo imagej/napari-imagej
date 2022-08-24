@@ -46,6 +46,7 @@ class GUIWidget(QWidget):
 
     @property
     def gui(self) -> "jc.UserInterface":
+        """Convenience function for obtaining the default UserInterface"""
         ensure_jvm_started()
         return ij().ui().getDefaultUI()
 
@@ -68,9 +69,11 @@ class GUIWidget(QWidget):
             self.gui.getApplicationFrame().setVisible(True)
 
     def _ij1_UI_setup(self):
+        """Configures the ImageJ Legacy GUI"""
         ij().IJ.getInstance().exitWhenQuitting(False)
 
     def _ij2_UI_setup(self):
+        """Configures the ImageJ2 Swing GUI"""
         appFrame = self.gui.getApplicationFrame()
         # Overwrite the WindowListeners so we control closing behavior
         if isinstance(appFrame, jc.Window):
@@ -79,6 +82,7 @@ class GUIWidget(QWidget):
             self._kill_window_listeners(appFrame.getComponent())
 
     def _kill_window_listeners(self, window):
+        """Replaces the WindowListeners present on window with our own"""
         # Remove all preset WindowListeners
         for listener in window.getWindowListeners():
             window.removeWindowListener(listener)
@@ -92,6 +96,7 @@ class GUIWidget(QWidget):
 
             @JOverride
             def windowClosing(self, event):
+                # We don't want to shut down anything, we just want to hide the window.
                 window.setVisible(False)
 
             @JOverride
