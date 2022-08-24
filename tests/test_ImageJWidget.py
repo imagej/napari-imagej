@@ -2,10 +2,10 @@ import pytest
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
-from scyjava import jimport
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej.setup_imagej import jc
+from napari_imagej._helper_widgets import SearchEventWrapper
+from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
@@ -15,6 +15,15 @@ from napari_imagej.widget import (
     SearchTree,
 )
 from napari_imagej.widget_IJ2 import GUIWidget
+
+
+class JavaClassesTest(JavaClasses):
+    @JavaClasses.blocking_import
+    def ClassSearchResult(self):
+        return "org.scijava.search.classes.ClassSearchResult"
+
+
+jc = JavaClassesTest()
 
 
 def test_widget_layout(imagej_widget: ImageJWidget):
@@ -135,44 +144,47 @@ def test_result_single_click(make_napari_viewer, qtbot, asserter):
     asserter(lambda: len(buttons) == 0 or all(button.isHidden() for button in buttons))
 
 
+class DummySearcher:
+    def __init__(self, title: str):
+        self._title = title
+
+    def search(self, text: str, fuzzy: bool):
+        pass
+
+    def title(self):
+        return self._title
+
+
 def test_searchers_disappear(imagej_widget: ImageJWidget, asserter):
     # Wait for the searchers to be ready
-    imagej_widget.results.wait_for_setup()
-    # Search something
-    imagej_widget.results.search("Frangi")
     tree = imagej_widget.results
-    asserter(lambda: tree.topLevelItemCount() > 0)
-    asserter(lambda: tree.topLevelItem(0).childCount() > 0)
-    # Search something for which there will surely be zero results
-    imagej_widget.results.search("Frangiabcdefghi")
+    tree.wait_for_setup()
+    # Update the Tree with some search results
+    searcher = DummySearcher("foo")
+    results = [jc.ClassSearchResult(c, "") for c in (jc.Float, jc.Double)]
+    tree.process.emit(SearchEventWrapper(searcher, results))
+    asserter(lambda: tree.topLevelItemCount() == 1)
+    asserter(lambda: tree.topLevelItem(0).childCount() == 2)
+
+    # Update the tree with no search results, ensure that the searcher disappears
+    tree.process.emit(SearchEventWrapper(searcher, []))
     asserter(lambda: tree.topLevelItemCount() == 0)
 
 
 def _populate_tree(tree: SearchTree, asserter):
-    class DummySearcher:
-        def __init__(self, title: str):
-            self._title = title
-
-        def search(self, text: str, fuzzy: bool):
-            pass
-
-        def title(self):
-            return self._title
-
     tree.wait_for_setup()
-    ClassSearchResult = jimport("org.scijava.search.classes.ClassSearchResult")
     assert tree.topLevelItemCount() == 0
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))
     searcher1.update(
         [
-            ResultTreeItem(ClassSearchResult(c, ""))
+            ResultTreeItem(jc.ClassSearchResult(c, ""))
             for c in (jc.Short, jc.Integer, jc.Long)
         ]
     )
     tree.addTopLevelItem(searcher1)
     searcher2 = SearcherTreeItem(DummySearcher("Ops"))
     searcher2.update(
-        [ResultTreeItem(ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
+        [ResultTreeItem(jc.ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
     )
     tree.addTopLevelItem(searcher2)
 
