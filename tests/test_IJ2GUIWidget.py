@@ -31,11 +31,14 @@ jc = JavaClassesTest()
 
 @pytest.fixture(autouse=True)
 def napari_mocker(viewer: Viewer):
+    """Fixture allowing the mocking of napari utilities"""
+
+    # REQUEST_VALUES MOCK
     oldfunc = widget_IJ2.request_values
 
-    # A HACK-y mock for widgets.request_values
     def newfunc(values=(), title="", **kwargs):
         results = {}
+        # Solve each parameter
         for name, options in kwargs.items():
             if "choices" in options["options"]:
                 if options["annotation"] == Layer:
@@ -46,8 +49,8 @@ def napari_mocker(viewer: Viewer):
 
                 continue
 
+            # Otherwise, we don't know how to solve that parameter
             raise NotImplementedError()
-
         return results
 
     widget_IJ2.request_values = newfunc
@@ -59,6 +62,7 @@ def napari_mocker(viewer: Viewer):
 
 @pytest.fixture(autouse=True)
 def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
+    """Fixture to remove image data from napari and ImageJ2"""
 
     # Test pre-processing
 
