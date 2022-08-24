@@ -3,23 +3,15 @@ from typing import Callable
 import numpy
 import pytest
 from napari import Viewer
-from napari.layers import Image
+from napari.layers import Image, Layer
 from napari.viewer import current_viewer
 from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QApplication, QDialog, QHBoxLayout, QMessageBox, QPushButton
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
+from napari_imagej import widget_IJ2
 from napari_imagej.setup_imagej import JavaClasses, running_headless
 from napari_imagej.widget_IJ2 import FromIJButton, GUIButton, GUIWidget, ToIJButton
-
-
-@pytest.fixture()
-def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
-    def assertFunc(func: Callable[[], bool]):
-        # Let things run for up to a minute
-        qtbot.waitUntil(func, timeout=60000)
-
-    return assertFunc
 
 
 class JavaClassesTest(JavaClasses):
@@ -37,6 +29,34 @@ class JavaClassesTest(JavaClasses):
 
 
 jc = JavaClassesTest()
+
+
+@pytest.fixture(autouse=True)
+def napari_mocker(viewer: Viewer):
+    oldfunc = widget_IJ2.request_values
+
+    # A HACK-y mock for widgets.request_values
+    def newfunc(values=(), title="", **kwargs):
+        results = {}
+        for name, options in kwargs.items():
+            if "choices" in options["options"]:
+                if options["annotation"] == Layer:
+                    results[name] = viewer.layers[0]
+                else:
+                    choices = options["options"]["choices"]
+                    results[name] = choices[0]
+
+                continue
+
+            raise NotImplementedError()
+
+        return results
+
+    widget_IJ2.request_values = newfunc
+
+    yield
+
+    widget_IJ2.request_values = oldfunc
 
 
 @pytest.fixture(autouse=True)
@@ -205,11 +225,11 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: GUIWidget):
     assert not button.isEnabled()
 
     # Show the button
-    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+    gui_widget.gui_button.clicked.emit()
     asserter(lambda: button.isEnabled())
 
     # Add some data to ImageJ
-    sample_data = jc.ArrayImgs.longs(10, 10, 10)
+    sample_data = jc.ArrayImgs.bytes(10, 10, 10)
     ij.ui().show("test_from", sample_data)
     asserter(lambda: ij.display().getActiveDisplay() is not None)
 
@@ -222,29 +242,6 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: GUIWidget):
     layer = button.viewer.layers[0]
     assert isinstance(layer, Image)
     assert (10, 10, 10) == layer.data.shape
-
-
-def _handle_button_dialog(asserter, qtbot, button):
-    def handle_dialog():
-        asserter(lambda: isinstance(QApplication.activeWindow(), QDialog))
-        dialog = QApplication.activeWindow()
-        buttons = dialog.findChildren(QPushButton)
-        assert 2 == len(buttons)
-        for button in buttons:
-            if "ok" in button.text().lower():
-                button.clicked.emit()
-                return
-        pytest.fail("Could not find the Ok button!")
-
-    # Start the handler in a new thread
-    runnable = DialogHandler(handler=handle_dialog)
-    QThreadPool.globalInstance().start(runnable)
-
-    # Click the button
-    qtbot.mouseClick(button, Qt.LeftButton, delay=1)
-    # Assert that we are back to the original window i.e. that the popup was handled
-    asserter(runnable.is_done)
-    asserter(runnable.passed)
 
 
 @pytest.mark.skipif(
@@ -267,16 +264,14 @@ def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
     current_viewer().add_layer(image)
 
     # Use the chooser to transfer data to ImageJ2
-    _handle_button_dialog(asserter, qtbot, button_to)
+    button_to.clicked.emit()
 
     # Assert that the data is now in ImageJ2
-    asserter(lambda: ij.display().getActiveDisplay() is not None)
-    active_display = ij.display().getActiveDisplay()
-    assert isinstance(active_display, jc.ImageDisplay)
-    assert "test_to" == active_display.getName()
+    asserter(lambda: isinstance(ij.display().getActiveDisplay(), jc.ImageDisplay))
+    assert "test_to" == ij.display().getActiveDisplay().getName()
 
     # Use the chooser to transfer that data back
-    _handle_button_dialog(asserter, qtbot, button_from)
+    button_from.clicked.emit()
 
     # Assert that the data is now in napari
-    assert 2 == len(button_to.viewer.layers)
+    asserter(lambda: 2 == len(button_to.viewer.layers))
