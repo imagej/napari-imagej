@@ -14,10 +14,11 @@ channels:
   - defaults
 dependencies:
   # Project dependencies
-  - napari
-  - magicgui >= 0.5.1
-  - pyimagej >= 1.2.0
   - labeling >= 0.1.12
+  - magicgui >= 0.5.1
+  - napari
+  - openjdk=8
+  - pyimagej >= 1.2.0
   # Test dependencies
   - numpy
   # Developer tools
@@ -26,6 +27,7 @@ dependencies:
   - build
   - flake8
   - isort
+  - pre-commit
   - pyqt5-sip
   - pytest
   - pytest-cov

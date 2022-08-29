@@ -41,14 +41,16 @@ def imagej_init():
     config.endpoints.append("io.scif:scifio:0.43.1")
     log_debug("Completed JVM Configuration")
 
-    # Parse imagej settings
-    ij_dir = setting("imagej_installation")
+    # Configure PyImageJ settings
+    settings = {
+        "ij_dir_or_version_or_endpoint": setting("imagej_installation"),
+        "mode": get_mode(),
+        "add_legacy": False,
+    }
 
-    _ij = imagej.init(ij_dir_or_version_or_endpoint=ij_dir, mode=get_mode())
+    # Launch PyImageJ
+    _ij = imagej.init(**settings)
     log_debug(f"Initialized at version {_ij.getVersion()}")
-
-    # Final configuration
-    _disable_jvm_shutdown_on_gui_quit(_ij)
 
     # Return the ImageJ gateway
     return _ij
@@ -61,18 +63,6 @@ def setting(value: str):
 @lru_cache(maxsize=None)
 def settings():
     return yaml.safe_load(open("settings.yml", "r"))
-
-
-def _disable_jvm_shutdown_on_gui_quit(ij_instance):
-    # We can't quit the gui running headlessly!
-    if running_headless():
-        return
-    # Prevent quitting from the ImageJ Legacy GUI
-    if ij_instance.legacy and ij_instance.legacy.isActive():
-        ij_instance.IJ.getInstance().exitWhenQuitting(False)
-    # Prevent quitting from the ImageJ2 GUI
-    else:
-        raise NotImplementedError("Cannot yet block quitting of ImageJ2")
 
 
 def get_mode() -> str:
@@ -235,6 +225,10 @@ class JavaClasses(object):
     def Path(self):
         return "java.nio.file.Path"
 
+    @blocking_import
+    def Window(self):
+        return "java.awt.Window"
+
     # SciJava Types
 
     @blocking_import
@@ -292,6 +286,14 @@ class JavaClasses(object):
     @blocking_import
     def Types(self):
         return "org.scijava.util.Types"
+
+    @blocking_import
+    def UIComponent(self):
+        return "org.scijava.widget.UIComponent"
+
+    @blocking_import
+    def UserInterface(self):
+        return "org.scijava.ui.UserInterface"
 
     # ImgLib2 Types
 

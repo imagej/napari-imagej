@@ -2,10 +2,10 @@ import pytest
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
-from scyjava import jimport
 
 from napari_imagej._flow_layout import FlowLayout
-from napari_imagej.setup_imagej import jc
+from napari_imagej._helper_widgets import SearchEventWrapper
+from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widget import (
     FocusWidget,
     ImageJWidget,
@@ -15,6 +15,15 @@ from napari_imagej.widget import (
     SearchTree,
 )
 from napari_imagej.widget_IJ2 import GUIWidget
+
+
+class JavaClassesTest(JavaClasses):
+    @JavaClasses.blocking_import
+    def ClassSearchResult(self):
+        return "org.scijava.search.classes.ClassSearchResult"
+
+
+jc = JavaClassesTest()
 
 
 def test_widget_layout(imagej_widget: ImageJWidget):
@@ -90,18 +99,8 @@ def test_button_param_regression(ij, imagej_widget: ImageJWidget):
         imagej_widget.focuser.tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
-    assert py_actions[2].name == "Help"
-    assert (
-        imagej_widget.focuser.tooltips[py_actions[2][0]]
-        == "Opens the functionality's ImageJ.net wiki page"
-    )
-    assert py_actions[3].name == "Source"
-    assert (
-        imagej_widget.focuser.tooltips[py_actions[3][0]]
-        == "Opens the source code on GitHub"
-    )
-    assert py_actions[4].name == "Batch"
-    assert py_actions[4].name not in imagej_widget.focuser.tooltips
+    assert py_actions[2].name == "Batch"
+    assert py_actions[2].name not in imagej_widget.focuser.tooltips
 
 
 def test_keymaps(make_napari_viewer, qtbot):
@@ -115,7 +114,7 @@ def test_keymaps(make_napari_viewer, qtbot):
     # Typing viewer.keymap['L'](viewer) does nothing. :(
 
 
-def test_result_single_click(make_napari_viewer, qtbot):
+def test_result_single_click(make_napari_viewer, qtbot, asserter):
     # Assert that there are initially no buttons
     viewer: Viewer = make_napari_viewer()
     imagej_widget: ImageJWidget = ImageJWidget(viewer)
@@ -124,84 +123,85 @@ def test_result_single_click(make_napari_viewer, qtbot):
     # Search something, then wait for the results to populate
     imagej_widget.results.search("Frangi")
     tree = imagej_widget.results
-    qtbot.waitUntil(lambda: tree.topLevelItemCount() > 0)
-    qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() > 0)
+    asserter(lambda: tree.topLevelItemCount() > 0)
+    asserter(lambda: tree.topLevelItem(0).childCount() > 0)
     buttons = imagej_widget.focuser.focused_action_buttons
     # Test single click spawns buttons
     item = tree.topLevelItem(0).child(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    qtbot.waitUntil(lambda: len(buttons) > 0)
+    asserter(lambda: len(buttons) > 0)
     # Test single click on searcher hides buttons
     item = tree.topLevelItem(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
     # Ensure we don't see any text in the focuser
-    qtbot.waitUntil(
+    asserter(
         lambda: imagej_widget.focuser.focused_module_label.isHidden()
         or imagej_widget.focuser.focused_module_label.text() == ""
     )
     # Ensure we don't see any buttons in the focuser
-    qtbot.waitUntil(
-        lambda: len(buttons) == 0 or all(button.isHidden() for button in buttons)
-    )
+    asserter(lambda: len(buttons) == 0 or all(button.isHidden() for button in buttons))
 
 
-def test_searchers_disappear(imagej_widget: ImageJWidget, qtbot):
+class DummySearcher:
+    def __init__(self, title: str):
+        self._title = title
+
+    def search(self, text: str, fuzzy: bool):
+        pass
+
+    def title(self):
+        return self._title
+
+
+def test_searchers_disappear(imagej_widget: ImageJWidget, asserter):
     # Wait for the searchers to be ready
-    imagej_widget.results.wait_for_setup()
-    # Search something
-    imagej_widget.results.search("Frangi")
     tree = imagej_widget.results
-    qtbot.waitUntil(lambda: tree.topLevelItemCount() > 0)
-    qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() > 0)
-    # Search something for which there will surely be zero results
-    imagej_widget.results.search("Frangiabcdefghi")
-    qtbot.waitUntil(lambda: tree.topLevelItemCount() == 0)
-
-
-def _populate_tree(tree: SearchTree, qtbot):
-    class DummySearcher:
-        def __init__(self, title: str):
-            self._title = title
-
-        def search(self, text: str, fuzzy: bool):
-            pass
-
-        def title(self):
-            return self._title
-
     tree.wait_for_setup()
-    ClassSearchResult = jimport("org.scijava.search.classes.ClassSearchResult")
+    # Update the Tree with some search results
+    searcher = DummySearcher("foo")
+    results = [jc.ClassSearchResult(c, "") for c in (jc.Float, jc.Double)]
+    tree.process.emit(SearchEventWrapper(searcher, results))
+    asserter(lambda: tree.topLevelItemCount() == 1)
+    asserter(lambda: tree.topLevelItem(0).childCount() == 2)
+
+    # Update the tree with no search results, ensure that the searcher disappears
+    tree.process.emit(SearchEventWrapper(searcher, []))
+    asserter(lambda: tree.topLevelItemCount() == 0)
+
+
+def _populate_tree(tree: SearchTree, asserter):
+    tree.wait_for_setup()
     assert tree.topLevelItemCount() == 0
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))
     searcher1.update(
         [
-            ResultTreeItem(ClassSearchResult(c, ""))
+            ResultTreeItem(jc.ClassSearchResult(c, ""))
             for c in (jc.Short, jc.Integer, jc.Long)
         ]
     )
     tree.addTopLevelItem(searcher1)
     searcher2 = SearcherTreeItem(DummySearcher("Ops"))
     searcher2.update(
-        [ResultTreeItem(ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
+        [ResultTreeItem(jc.ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
     )
     tree.addTopLevelItem(searcher2)
 
     # Wait for the tree to populate
-    qtbot.waitUntil(lambda: tree.topLevelItemCount() == 2)
-    qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() == 3)
-    qtbot.waitUntil(lambda: tree.topLevelItem(1).childCount() == 2)
+    asserter(lambda: tree.topLevelItemCount() == 2)
+    asserter(lambda: tree.topLevelItem(0).childCount() == 3)
+    asserter(lambda: tree.topLevelItem(1).childCount() == 2)
 
 
-def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
+def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot, asserter):
     # Wait for the searchers to be ready
     imagej_widget.results.wait_for_setup()
     # Search something
     imagej_widget.results.search("Frangi")
     tree = imagej_widget.results
-    qtbot.waitUntil(lambda: tree.topLevelItemCount() > 0)
-    qtbot.waitUntil(lambda: tree.topLevelItem(0).childCount() > 0)
+    asserter(lambda: tree.topLevelItemCount() > 0)
+    asserter(lambda: tree.topLevelItem(0).childCount() > 0)
     tree.setCurrentItem(tree.topLevelItem(0))
     expanded = tree.currentItem().isExpanded()
     # Part 1: toggle with Enter
@@ -220,33 +220,33 @@ def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot):
     # Part 2.3: Expanded + Right selects first child
     parent = tree.currentItem()
     qtbot.keyPress(tree, Qt.Key_Right)
-    qtbot.waitUntil(lambda: tree.currentItem() is parent.child(0))
+    asserter(lambda: tree.currentItem() is parent.child(0))
     # Part 2.4: Child + Left returns to parent
     qtbot.keyPress(tree, Qt.Key_Left)
-    qtbot.waitUntil(lambda: tree.currentItem() is parent)
+    asserter(lambda: tree.currentItem() is parent)
 
 
-def test_arrow_key_selection(imagej_widget: ImageJWidget, qtbot):
+def test_arrow_key_selection(imagej_widget: ImageJWidget, qtbot, asserter):
     # Set up the tree
     tree = imagej_widget.results
-    _populate_tree(tree, qtbot)
+    _populate_tree(tree, asserter)
 
     # Ensure no row is selected
     assert tree.currentItem() is None
     # Go down, ensure that the first row gets highlighted
     qtbot.keyPress(imagej_widget.search.bar, Qt.Key_Down)
-    qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(0))
+    asserter(lambda: tree.currentItem() is tree.topLevelItem(0))
     # HACK: For some reason, they are not expanded in the tests!
     tree.topLevelItem(0).setExpanded(True)
     for i in range(3):
         qtbot.keyPress(tree, Qt.Key_Down)
-        qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(0).child(i))
+        asserter(lambda: tree.currentItem() is tree.topLevelItem(0).child(i))
     qtbot.keyPress(tree, Qt.Key_Down)
-    qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(1))
+    asserter(lambda: tree.currentItem() is tree.topLevelItem(1))
     # HACK: For some reason, they are not expanded in the tests!
     tree.topLevelItem(1).setExpanded(True)
     for i in range(2):
         qtbot.keyPress(tree, Qt.Key_Down)
-        qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(1).child(i))
+        asserter(lambda: tree.currentItem() is tree.topLevelItem(1).child(i))
     qtbot.keyPress(tree, Qt.Key_Down)
-    qtbot.waitUntil(lambda: tree.currentItem() is tree.topLevelItem(1).child(1))
+    asserter(lambda: tree.currentItem() is tree.topLevelItem(1).child(1))

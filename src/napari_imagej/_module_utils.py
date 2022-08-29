@@ -258,6 +258,11 @@ def _preprocess_remaining_inputs(
     for module_item, input in zip(unresolved_inputs, resolved_java_args):
         _resolve_user_input(module, module_item, input)
 
+    # Deliberately ignore optional inputs
+    for input in inputs:
+        if not input.isRequired() and not module.isInputResolved(input.getName()):
+            module.resolveInput(input.getName())
+
     for processor in remaining_preprocessors:
         processor.process(module)
 

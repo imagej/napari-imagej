@@ -92,8 +92,6 @@ Once napari-imagej has successfully started ImageJ, the ImageJ2 button at the to
 
 ![Launching the ImageJ2 GUI and transferring data between interfaces](resources/napari_imagej_gui_and_data_transfer.gif)
 
-**Users beware**: Closing the ImageJ2 GUI will dispose the ImageJ2 instance used by PyImageJ. Therefore, *closing the ImageJ2 GUI currently blocks any further usage of **all** napari-imagej functionality.* Once the ImageJ2 GUI has been closed, napari must be restarted to restore napari-imagej functionality.
-
 ## Troubleshooting
 
 ### napari-imagej does not appear in the Plugins menu of napari!
@@ -119,10 +117,6 @@ There are two common cases for a disabled ImageJ2 GUI button:
 1. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see [here](#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...")
 
 2. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see [here](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode) for more information.
-
-### napari-imagej is not responding to my function calls, searches, ...
-
-The most common cause of such behavior is opening *and then closing* the ImageJ2 GUI. This disposes the ImageJ2 Gateway and prevents any further calls to ImageJ2 functionality. This functionality can only be recovered by restarting napari and napari-imagej. Please see [this issue](https://github.com/imagej/napari-imagej/issues/93) for more discussion.
 
 ## Contributing
 
