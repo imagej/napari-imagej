@@ -21,7 +21,7 @@ from napari.layers import Image, Layer
 from napari_imagej import _module_utils
 from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
 from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej.widget import ImageJWidget
+from napari_imagej.widgets.napari_imagej import NapariImageJ
 
 
 class JavaClassesTest(JavaClasses):
@@ -967,7 +967,7 @@ def test_execute_function_with_params(make_napari_viewer, ij):
     assert len(viewer.layers) == 1
 
 
-def test_convert_searchResult_to_info(imagej_widget: ImageJWidget, ij):
+def test_convert_searchResult_to_info(imagej_widget: NapariImageJ, ij):
     for i in range(imagej_widget.results.topLevelItemCount()):
         searcher = imagej_widget.results.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]

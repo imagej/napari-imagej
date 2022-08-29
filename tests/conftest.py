@@ -4,9 +4,9 @@ from typing import Callable, Generator
 import pytest
 from napari import Viewer
 
-from napari_imagej import widget_IJ2
-from napari_imagej.widget import ImageJWidget
-from napari_imagej.widget_IJ2 import GUIWidget
+from napari_imagej.widgets import menu
+from napari_imagej.widgets.menu import NapariImageJMenu
+from napari_imagej.widgets.napari_imagej import NapariImageJ
 
 
 @pytest.fixture(scope="module")
@@ -24,10 +24,10 @@ def viewer(make_napari_viewer) -> Generator[Viewer, None, None]:
 
 
 @pytest.fixture
-def imagej_widget(viewer) -> Generator[ImageJWidget, None, None]:
+def imagej_widget(viewer) -> Generator[NapariImageJ, None, None]:
     """Fixture providing an ImageJWidget"""
     # Create widget
-    ij_widget: ImageJWidget = ImageJWidget(viewer)
+    ij_widget: NapariImageJ = NapariImageJ(viewer)
 
     yield ij_widget
 
@@ -36,7 +36,7 @@ def imagej_widget(viewer) -> Generator[ImageJWidget, None, None]:
 
 
 @pytest.fixture
-def gui_widget(viewer) -> Generator[GUIWidget, None, None]:
+def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
     """
     Fixture providing a GUIWidget. The returned widget will use active layer selection
     """
@@ -46,10 +46,10 @@ def gui_widget(viewer) -> Generator[GUIWidget, None, None]:
     def mock_setting(value: str):
         return {"imagej_installation": None, "choose_active_layer": True}[value]
 
-    widget_IJ2.setting = mock_setting
+    menu.setting = mock_setting
 
     # Create widget
-    widget: GUIWidget = GUIWidget(viewer)
+    widget: NapariImageJMenu = NapariImageJMenu(viewer)
 
     yield widget
 
@@ -58,7 +58,7 @@ def gui_widget(viewer) -> Generator[GUIWidget, None, None]:
 
 
 @pytest.fixture
-def gui_widget_chooser(viewer) -> Generator[GUIWidget, None, None]:
+def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
     """
     Fixture providing a GUIWidget. The returned widget will use user layer selection
     """
@@ -68,10 +68,10 @@ def gui_widget_chooser(viewer) -> Generator[GUIWidget, None, None]:
     def mock_setting(value: str):
         return {"imagej_installation": None, "choose_active_layer": False}[value]
 
-    widget_IJ2.setting = mock_setting
+    menu.setting = mock_setting
 
     # Create widget
-    widget: GUIWidget = GUIWidget(viewer)
+    widget: NapariImageJMenu = NapariImageJMenu(viewer)
 
     yield widget
 

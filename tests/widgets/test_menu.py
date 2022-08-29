@@ -7,9 +7,14 @@ from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
-from napari_imagej import widget_IJ2
 from napari_imagej.setup_imagej import JavaClasses, running_headless
-from napari_imagej.widget_IJ2 import FromIJButton, GUIButton, GUIWidget, ToIJButton
+from napari_imagej.widgets import menu
+from napari_imagej.widgets.menu import (
+    FromIJButton,
+    GUIButton,
+    NapariImageJMenu,
+    ToIJButton,
+)
 
 
 class JavaClassesTest(JavaClasses):
@@ -34,7 +39,7 @@ def napari_mocker(viewer: Viewer):
     """Fixture allowing the mocking of napari utilities"""
 
     # REQUEST_VALUES MOCK
-    oldfunc = widget_IJ2.request_values
+    oldfunc = menu.request_values
 
     def newfunc(values=(), title="", **kwargs):
         results = {}
@@ -53,11 +58,11 @@ def napari_mocker(viewer: Viewer):
             raise NotImplementedError()
         return results
 
-    widget_IJ2.request_values = newfunc
+    menu.request_values = newfunc
 
     yield
 
-    widget_IJ2.request_values = oldfunc
+    menu.request_values = oldfunc
 
 
 @pytest.fixture(autouse=True)
@@ -89,7 +94,7 @@ def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
             imp.close()
 
 
-def test_widget_layout(gui_widget: GUIWidget):
+def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
     assert len(subwidgets) == 4
@@ -107,7 +112,7 @@ def test_widget_layout(gui_widget: GUIWidget):
 @pytest.mark.skipif(
     running_headless(), reason="Only applies when not running headlessly"
 )
-def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: GUIWidget):
+def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
     """Tests headful-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
@@ -130,7 +135,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: GUIWidget):
 @pytest.mark.skipif(
     not running_headless(), reason="Only applies when running headlessly"
 )
-def test_GUIButton_layout_headless(asserter, gui_widget: GUIWidget):
+def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
@@ -188,7 +193,7 @@ def test_GUIButton_layout_headless(asserter, gui_widget: GUIWidget):
 @pytest.mark.skipif(
     running_headless(), reason="Only applies when not running headlessly"
 )
-def test_active_data_send(asserter, qtbot, ij, gui_widget: GUIWidget):
+def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
 
@@ -214,7 +219,7 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: GUIWidget):
 @pytest.mark.skipif(
     running_headless(), reason="Only applies when not running headlessly"
 )
-def test_active_data_receive(asserter, qtbot, ij, gui_widget: GUIWidget):
+def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: FromIJButton = gui_widget.from_ij
     assert not button.isEnabled()
 

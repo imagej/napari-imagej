@@ -6,15 +6,15 @@ from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 from napari_imagej._flow_layout import FlowLayout
 from napari_imagej._helper_widgets import SearchEventWrapper
 from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej.widget import (
+from napari_imagej.widgets.menu import NapariImageJMenu
+from napari_imagej.widgets.napari_imagej import (
     FocusWidget,
-    ImageJWidget,
+    NapariImageJ,
     ResultTreeItem,
     SearchbarWidget,
     SearcherTreeItem,
     SearchTree,
 )
-from napari_imagej.widget_IJ2 import GUIWidget
 
 
 class JavaClassesTest(JavaClasses):
@@ -26,23 +26,23 @@ class JavaClassesTest(JavaClasses):
 jc = JavaClassesTest()
 
 
-def test_widget_layout(imagej_widget: ImageJWidget):
+def test_widget_layout(imagej_widget: NapariImageJ):
     """Ensures a vertical widget layout."""
     assert isinstance(imagej_widget.layout(), QVBoxLayout)
 
 
-def test_widget_subwidget_layout(imagej_widget: ImageJWidget):
+def test_widget_subwidget_layout(imagej_widget: NapariImageJ):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = imagej_widget.children()
     assert len(subwidgets) == 5
     assert isinstance(subwidgets[0], QVBoxLayout)
-    assert isinstance(subwidgets[1], GUIWidget)
+    assert isinstance(subwidgets[1], NapariImageJMenu)
     assert isinstance(subwidgets[2], SearchbarWidget)
     assert isinstance(subwidgets[3], SearchTree)
     assert isinstance(subwidgets[4], FocusWidget)
 
 
-def test_searchbar_widget_layout(imagej_widget: ImageJWidget):
+def test_searchbar_widget_layout(imagej_widget: NapariImageJ):
     """Tests the number and expected order of search widget children"""
     searchbar: SearchbarWidget = imagej_widget.findChild(SearchbarWidget)
     subwidgets = searchbar.children()
@@ -51,14 +51,14 @@ def test_searchbar_widget_layout(imagej_widget: ImageJWidget):
     assert isinstance(subwidgets[1], QLineEdit)
 
 
-def test_results_widget_layout(imagej_widget: ImageJWidget):
+def test_results_widget_layout(imagej_widget: NapariImageJ):
     """Tests the number and expected order of results widget children"""
     results: SearchTree = imagej_widget.findChild(SearchTree)
     assert results.columnCount() == 1
     assert results.headerItem().text(0) == "Search"
 
 
-def test_focus_widget_layout(imagej_widget: ImageJWidget):
+def test_focus_widget_layout(imagej_widget: NapariImageJ):
     """Tests the number and expected order of focus widget children"""
     focuser: FocusWidget = imagej_widget.findChild(FocusWidget)
     subwidgets = focuser.children()
@@ -80,7 +80,7 @@ def example_info(ij):
     )
 
 
-def test_button_param_regression(ij, imagej_widget: ImageJWidget):
+def test_button_param_regression(ij, imagej_widget: NapariImageJ):
     plugins = ij.get("org.scijava.plugin.PluginService")
     searcher = plugins.getPlugin(jc.ModuleSearcher, jc.Searcher).createInstance()
     ij.context().inject(searcher)
@@ -107,7 +107,7 @@ def test_keymaps(make_napari_viewer, qtbot):
     """Tests that 'Ctrl+L' is added to the keymap by ImageJWidget"""
     viewer: Viewer = make_napari_viewer()
     assert "Control-L" not in viewer.keymap
-    ImageJWidget(viewer)
+    NapariImageJ(viewer)
     assert "Control-L" in viewer.keymap
     # TODO: I can't seem to figure out how to assert that pressing 'L'
     # sets the focus of the search bar.
@@ -117,7 +117,7 @@ def test_keymaps(make_napari_viewer, qtbot):
 def test_result_single_click(make_napari_viewer, qtbot, asserter):
     # Assert that there are initially no buttons
     viewer: Viewer = make_napari_viewer()
-    imagej_widget: ImageJWidget = ImageJWidget(viewer)
+    imagej_widget: NapariImageJ = NapariImageJ(viewer)
     imagej_widget.results.wait_for_setup()
     assert len(imagej_widget.focuser.focused_action_buttons) == 0
     # Search something, then wait for the results to populate
@@ -155,7 +155,7 @@ class DummySearcher:
         return self._title
 
 
-def test_searchers_disappear(imagej_widget: ImageJWidget, asserter):
+def test_searchers_disappear(imagej_widget: NapariImageJ, asserter):
     # Wait for the searchers to be ready
     tree = imagej_widget.results
     tree.wait_for_setup()
@@ -194,7 +194,7 @@ def _populate_tree(tree: SearchTree, asserter):
     asserter(lambda: tree.topLevelItem(1).childCount() == 2)
 
 
-def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot, asserter):
+def test_arrow_key_expansion(imagej_widget: NapariImageJ, qtbot, asserter):
     # Wait for the searchers to be ready
     imagej_widget.results.wait_for_setup()
     # Search something
@@ -226,7 +226,7 @@ def test_arrow_key_expansion(imagej_widget: ImageJWidget, qtbot, asserter):
     asserter(lambda: tree.currentItem() is parent)
 
 
-def test_arrow_key_selection(imagej_widget: ImageJWidget, qtbot, asserter):
+def test_arrow_key_selection(imagej_widget: NapariImageJ, qtbot, asserter):
     # Set up the tree
     tree = imagej_widget.results
     _populate_tree(tree, asserter)

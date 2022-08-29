@@ -22,7 +22,7 @@ from napari_imagej.setup_imagej import (
 )
 
 
-class GUIWidget(QWidget):
+class NapariImageJMenu(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.setLayout(QHBoxLayout())
