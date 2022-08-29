@@ -6,9 +6,8 @@ from labeling.Labeling import Labeling
 from napari.layers import Image, Labels, Points, Shapes, Surface
 from scyjava import Converter, Priority, add_java_converter, add_py_converter
 
-from napari_imagej import _ntypes
-from napari_imagej._ptypes import OutOfBoundsFactory, StructuringElement
 from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.types.placeholders import OutOfBoundsFactory, StructuringElement
 
 # -- Image / Img -- #
 
@@ -21,6 +20,26 @@ def _image_to_img(image: Image) -> "jc.Img":
 # -- Labels / ImgLabelings -- #
 
 
+def _labeling_to_layer(labeling: Labeling):
+    """Converts a Labeling to a Labels layer"""
+    img, data = labeling.get_result()
+    layer = Labels(img, metadata={"pyLabelingData": data})
+    return layer
+
+
+def _layer_to_labeling(layer: Labels):
+    """Converts a Labels layer to a Labeling"""
+    if "pyLabelingData" in layer.metadata:
+        metadata = vars(layer.metadata["pyLabelingData"])
+        labeling = Labeling(shape=layer.data.shape)
+        labeling.result_image = layer.data
+        labeling.label_sets = metadata["labelSets"]
+        labeling.metadata = metadata["metadata"]
+        return labeling
+    else:
+        return Labeling.fromValues(layer.data)
+
+
 def _imglabeling_to_layer(imgLabeling) -> Labels:
     """
     Converts a Java ImgLabeling to a napari Labels layer
@@ -28,7 +47,7 @@ def _imglabeling_to_layer(imgLabeling) -> Labels:
     :return: a Labels layer
     """
     labeling: Labeling = ij().py._imglabeling_to_labeling(imgLabeling)
-    return _ntypes._labeling_to_layer(labeling)
+    return _labeling_to_layer(labeling)
 
 
 def _layer_to_imglabeling(layer: Labels):
@@ -37,7 +56,7 @@ def _layer_to_imglabeling(layer: Labels):
     :param layer: a Labels layer
     :return: the Java ImgLabeling
     """
-    labeling: Labeling = _ntypes._layer_to_labeling(layer)
+    labeling: Labeling = _layer_to_labeling(layer)
     return ij().py.to_java(labeling)
 
 

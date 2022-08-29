@@ -6,10 +6,6 @@ from magicgui.widgets import ComboBox, Container, PushButton, request_values
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
-from qtpy.QtCore import Qt, Signal
-from qtpy.QtWidgets import QLineEdit, QTreeWidgetItem
-
-from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc
 
 
 class MutableOutputWidget(Container):
@@ -216,82 +212,3 @@ class MutableOutputWidget(Container):
     @choices.setter
     def choices(self, choices: ChoicesType):
         self.layer_select.choices = choices
-
-
-class ResultTreeItem(QTreeWidgetItem):
-    """
-    A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
-    """
-
-    def __init__(self, result: "jc.SearchResult"):
-        super().__init__()
-        self.name = ij().py.from_java(result.name())
-        self.result = result
-
-        # Set QtPy properties
-        self.setText(0, self.name)
-
-
-class SearchEventWrapper:
-    """
-    Python Class wrapping org.scijava.search.SearchEvent.
-    Needed for SearchTree.process, as signal types must be Python types.
-    """
-
-    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
-        self.searcher = searcher
-        self.results = [ResultTreeItem(r) for r in results]
-
-
-class SearcherTreeItem(QTreeWidgetItem):
-    """
-    A QTreeWidgetItem wrapping a org.scijava.search.Searcher
-    with a set of org.scijava.search.SearchResults
-    """
-
-    def __init__(self, searcher: "jc.Searcher"):
-        super().__init__()
-        self.title = ij().py.from_java(searcher.title())
-        self._searcher = searcher
-
-        # Set QtPy properties
-        self.setText(0, self.title)
-        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
-
-    def update(self, results: List[SearchEventWrapper]):
-        """
-        Update children with the results stored in the SearchEventWrapper
-        """
-        self.takeChildren()
-        if results and len(results):
-            self.addChildren(results)
-        self.setText(0, f"{self.title} ({len(results)})")
-        self.setExpanded(len(results) < 10)
-
-
-class JLineEdit(QLineEdit):
-    """
-    A QLineEdit that is disabled until the JVM is ready
-    """
-
-    # Signal that identifies a down arrow pressed
-    floatBelow = Signal()
-
-    def __init__(self):
-        super().__init__()
-
-        # Set QtPy properties
-        self.setText("Initializing ImageJ...Please Wait")
-        self.setEnabled(False)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Down:
-            self.floatBelow.emit()
-        else:
-            super().keyPressEvent(event)
-
-    def enable(self):
-        # Once the JVM is ready, allow editing
-        ensure_jvm_started()
-        self.setText("")
-        self.setEnabled(True)

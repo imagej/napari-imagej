@@ -1,8 +1,9 @@
 from threading import Thread
 
-from qtpy.QtWidgets import QHBoxLayout, QWidget
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej._helper_widgets import JLineEdit
+from napari_imagej.setup_imagej import ensure_jvm_started
 
 
 class ImageJSearchbar(QWidget):
@@ -22,3 +23,31 @@ class ImageJSearchbar(QWidget):
         # Set GUI options
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(self.bar)
+
+
+class JLineEdit(QLineEdit):
+    """
+    A QLineEdit that is disabled until the JVM is ready
+    """
+
+    # Signal that identifies a down arrow pressed
+    floatBelow = Signal()
+
+    def __init__(self):
+        super().__init__()
+
+        # Set QtPy properties
+        self.setText("Initializing ImageJ...Please Wait")
+        self.setEnabled(False)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Down:
+            self.floatBelow.emit()
+        else:
+            super().keyPressEvent(event)
+
+    def enable(self):
+        # Once the JVM is ready, allow editing
+        ensure_jvm_started()
+        self.setText("")
+        self.setEnabled(True)

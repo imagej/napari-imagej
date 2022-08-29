@@ -3,7 +3,7 @@ display_name: napari-imagej
 contributions:
   commands:
     - id: napari-imagej.func
-      python_name: napari_imagej.widget:ImageJWidget
+      python_name: napari_imagej.widgets.napari_imagej:NapariImageJ
       title: Run ImageJ2 commands
   widgets:
     - command: napari-imagej.func
