@@ -39,8 +39,6 @@ def imagej_init():
     )
     config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
     config.endpoints.append("io.scif:scifio:0.43.1")
-    # TODO: Remove this once net.imagej:imagej:2.6.0 and sc.fiji:fiji:2.6.0 released
-    config.endpoints.append("org.scijava:scijava-common:2.89.0")
     log_debug("Completed JVM Configuration")
 
     # Configure PyImageJ settings
