@@ -7,7 +7,7 @@ from magicgui.widgets import ComboBox, PushButton
 from napari import current_viewer
 from napari.layers import Image
 
-from napari_imagej._helper_widgets import MutableOutputWidget
+from napari_imagej.widgets.parameter_widgets import MutableOutputWidget
 
 
 @pytest.fixture
@@ -22,7 +22,9 @@ def mutable_output_widget(make_napari_viewer):
     widget = magicgui.magicgui(
         function=func,
         call_button=False,
-        output={"widget_type": "napari_imagej._helper_widgets.MutableOutputWidget"},
+        output={
+            "widget_type": "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
+        },
     )
     current_viewer().window.add_dock_widget(widget)
 

@@ -28,7 +28,7 @@ def widget_for_item_and_type(
     :return: The best widget type, if it is known
     """
     if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
-        return "napari_imagej._helper_widgets.MutableOutputWidget"
+        return "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
 
     style: str = item.getWidgetStyle()
     if style not in supported_styles:

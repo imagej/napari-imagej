@@ -477,9 +477,9 @@ def _java_to_napari_converters() -> List[Converter]:
     ]
 
 
-def init_napari_converters():
+def init_converters():
     """
-    Adds all converters to the ScyJava converter framework.
+    Adds all napari-imagej converters to the ScyJava converter framework.
     :param ij: An ImageJ gateway
     """
     # Add napari -> Java converters

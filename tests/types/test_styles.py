@@ -10,6 +10,7 @@ from magicgui.widgets import (
 )
 
 from napari_imagej.types.styles import supported_styles, widget_for_item_and_type
+from napari_imagej.widgets.parameter_widgets import MutableOutputWidget
 from tests.utils import DummyModuleItem, jc
 
 parameterizations = [
@@ -54,7 +55,6 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
 
 
 def test_helper_widgets_for_item_and_type():
-    from napari_imagej._helper_widgets import MutableOutputWidget
 
     # MutableOutputWidget
     item: DummyModuleItem = DummyModuleItem(
@@ -62,7 +62,7 @@ def test_helper_widgets_for_item_and_type():
     )
     type_hint = "napari.layers.Image"
     actual = widget_for_item_and_type(item, type_hint)
-    assert "napari_imagej._helper_widgets.MutableOutputWidget" == actual
+    assert "napari_imagej.widgets.parameter_widgets.MutableOutputWidget" == actual
 
     def func(foo):
         print(foo, "bar")

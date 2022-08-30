@@ -5,13 +5,13 @@ from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from napari_imagej._flow_layout import FlowLayout
 from napari_imagej._module_utils import (
     convert_searchResult_to_info,
     execute_function_modally,
     functionify_module_execution,
 )
 from napari_imagej.setup_imagej import ij, jc, log_debug
+from napari_imagej.widgets.layouts import FlowLayout
 
 
 class SearchAction(NamedTuple):

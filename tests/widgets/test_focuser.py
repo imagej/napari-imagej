@@ -1,9 +1,9 @@
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from napari_imagej._flow_layout import FlowLayout
 from napari_imagej.setup_imagej import JavaClasses
 from napari_imagej.widgets.focuser import FocusWidget
+from napari_imagej.widgets.layouts import FlowLayout
 
 
 class JavaClassesTest(JavaClasses):
