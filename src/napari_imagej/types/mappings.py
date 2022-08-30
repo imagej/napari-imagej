@@ -1,156 +1,151 @@
-from collections import OrderedDict
-from typing import List
+from functools import lru_cache
+from typing import Any, Callable, Dict, List
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 
 from napari_imagej.setup_imagej import jc
 
+MAP_GENERATORS = []
 
-class TypeMappings:
-    """
-    The definitive set of "equal" Java and Python types.
-    This map allows us to determine the "best" Python type for the conversion
-    of any Java object, or the "best" Java type for the conversion of any
-    Python object.
-    """
 
-    def __init__(self):
+def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, Any]]:
+    MAP_GENERATORS.append(func)
+    return func
 
-        # Strings
-        self._strings = {
-            JChar: str,
-            jc.Character_Arr: str,
-            jc.Character: str,
-            jc.String: str,
-        }
 
-        # Booleans
-        self._booleans = {
-            JBoolean: bool,
-            jc.Boolean_Arr: List[bool],
-            jc.Boolean: bool,
-            jc.BooleanType: bool,
-        }
+@lru_cache(maxsize=None)
+def ptypes():
+    types = {}
+    for generator in MAP_GENERATORS:
+        types.update(generator())
+    return types
 
-        # Numbers
-        self._numbers = {
-            JByte: int,
-            jc.Byte: int,
-            jc.Byte_Arr: List[int],
-            JShort: int,
-            jc.Short: int,
-            jc.Short_Arr: List[int],
-            JInt: int,
-            jc.Integer: int,
-            jc.Integer_Arr: List[int],
-            JLong: int,
-            jc.Long: int,
-            jc.Long_Arr: List[int],
-            JFloat: float,
-            jc.Float: float,
-            jc.Float_Arr: List[float],
-            JDouble: float,
-            jc.Double: float,
-            jc.Double_Arr: List[float],
-            jc.BigInteger: int,
-            jc.IntegerType: int,
-            jc.RealType: float,
-            jc.ComplexType: complex,
-        }
 
-        # Images
-        self._images = {
-            jc.RandomAccessibleInterval: "napari.layers.Image",
-            jc.RandomAccessible: "napari.layers.Image",
-            jc.IterableInterval: "napari.layers.Image",
-            # TODO: remove 'add_legacy=False' -> struggles with LegacyService
-            # This change is waiting on a new pyimagej release
-            # java_import('ij.ImagePlus'):
-            # 'napari.types.ImageData'
-        }
+@map_category
+def booleans() -> Dict[Any, Any]:
+    return {
+        JBoolean: bool,
+        jc.Boolean_Arr: List[bool],
+        jc.Boolean: bool,
+        jc.BooleanType: bool,
+    }
 
-        # Points
-        self._points = {
-            jc.PointMask: "napari.types.PointsData",
-            jc.RealPointCollection: "napari.types.PointsData",
-        }
 
-        # Shapes
-        self._shapes = {
-            jc.Line: "napari.layers.Shapes",
-            jc.Box: "napari.layers.Shapes",
-            jc.SuperEllipsoid: "napari.layers.Shapes",
-            jc.Polygon2D: "napari.layers.Shapes",
-            jc.Polyline: "napari.layers.Shapes",
-            jc.ROITree: "napari.layers.Shapes",
-        }
+@map_category
+def numbers() -> Dict[Any, Any]:
+    return {
+        JByte: int,
+        jc.Byte: int,
+        jc.Byte_Arr: List[int],
+        JShort: int,
+        jc.Short: int,
+        jc.Short_Arr: List[int],
+        JInt: int,
+        jc.Integer: int,
+        jc.Integer_Arr: List[int],
+        JLong: int,
+        jc.Long: int,
+        jc.Long_Arr: List[int],
+        JFloat: float,
+        jc.Float: float,
+        jc.Float_Arr: List[float],
+        JDouble: float,
+        jc.Double: float,
+        jc.Double_Arr: List[float],
+        jc.BigInteger: int,
+        jc.IntegerType: int,
+        jc.RealType: float,
+        jc.ComplexType: complex,
+    }
 
-        # Surfaces
-        self._surfaces = {jc.Mesh: "napari.types.SurfaceData"}
 
-        # Labels
-        self._labels = {jc.ImgLabeling: "napari.layers.Labels"}
+@map_category
+def strings() -> Dict[Any, Any]:
+    return {
+        JChar: str,
+        jc.Character_Arr: str,
+        jc.Character: str,
+        jc.String: str,
+    }
 
-        # Color tables
-        self._color_tables = {
-            jc.ColorTable: "vispy.color.Colormap",
-        }
 
-        # Pandas dataframe
-        self._pd = {
-            jc.Table: "pandas.DataFrame",
-        }
+@map_category
+def labels() -> Dict[Any, Any]:
+    return {jc.ImgLabeling: "napari.layers.Labels"}
 
-        # Paths
-        self._paths = {
-            jc.Character_Arr: str,
-            jc.Character: str,
-            jc.String: str,
-            jc.File: "pathlib.PosixPath",
-            jc.Path: "pathlib.PosixPath",
-        }
 
-        # Enums
-        self._enums = {
-            jc.Enum: "enum.Enum",
-        }
+@map_category
+def images() -> Dict[Any, Any]:
+    return {
+        jc.RandomAccessibleInterval: "napari.layers.Image",
+        jc.RandomAccessible: "napari.layers.Image",
+        jc.IterableInterval: "napari.layers.Image",
+        # TODO: remove 'add_legacy=False' -> struggles with LegacyService
+        # This change is waiting on a new pyimagej release
+        # java_import('ij.ImagePlus'):
+        # 'napari.types.ImageData'
+    }
 
-        # Dates
-        self._dates = {
-            jc.Date: "datetime.datetime",
-        }
 
-        # NB we put booleans over numbers because otherwise some of the
-        # boolean types will satisfy a numbers type.
-        # TODO: Consider adding priorities
-        self.ptypes = OrderedDict(
-            {
-                **self._booleans,
-                **self._numbers,
-                **self._strings,
-                **self._labels,
-                **self._images,
-                **self._points,
-                **self._shapes,
-                **self._surfaces,
-                **self._color_tables,
-                **self._pd,
-                **self._paths,
-                **self._enums,
-                **self._dates,
-            }
-        )
+@map_category
+def points() -> Dict[Any, Any]:
+    return {
+        jc.PointMask: "napari.types.PointsData",
+        jc.RealPointCollection: "napari.types.PointsData",
+    }
 
-        self._napari_layer_types = {
-            **self._images,
-            **self._points,
-            **self._shapes,
-            **self._surfaces,
-            **self._labels,
-        }.keys()
 
-    def displayable_in_napari(self, data):
-        return any(filter(lambda x: isinstance(data, x), self._napari_layer_types))
+@map_category
+def shapes() -> Dict[Any, Any]:
+    return {
+        jc.Line: "napari.layers.Shapes",
+        jc.Box: "napari.layers.Shapes",
+        jc.SuperEllipsoid: "napari.layers.Shapes",
+        jc.Polygon2D: "napari.layers.Shapes",
+        jc.Polyline: "napari.layers.Shapes",
+        jc.ROITree: "napari.layers.Shapes",
+    }
 
-    def type_displayable_in_napari(self, type):
-        return any(filter(lambda x: issubclass(type, x), self._napari_layer_types))
+
+@map_category
+def surfaces() -> Dict[Any, Any]:
+    return {jc.Mesh: "napari.types.SurfaceData"}
+
+
+@map_category
+def color_tables() -> Dict[Any, Any]:
+    return {
+        jc.ColorTable: "vispy.color.Colormap",
+    }
+
+
+@map_category
+def pd() -> Dict[Any, Any]:
+    return {
+        jc.Table: "pandas.DataFrame",
+    }
+
+
+@map_category
+def paths() -> Dict[Any, Any]:
+    return {
+        jc.Character_Arr: str,
+        jc.Character: str,
+        jc.String: str,
+        jc.File: "pathlib.PosixPath",
+        jc.Path: "pathlib.PosixPath",
+    }
+
+
+@map_category
+def enums() -> Dict[Any, Any]:
+    return {
+        jc.Enum: "enum.Enum",
+    }
+
+
+@map_category
+def dates() -> Dict[Any, Any]:
+    return {
+        jc.Date: "datetime.datetime",
+    }

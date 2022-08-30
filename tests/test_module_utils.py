@@ -8,12 +8,13 @@ from napari import Viewer
 from napari.layers import Image, Layer
 
 from napari_imagej import _module_utils
-from napari_imagej.types.mappings import TypeMappings
+from napari_imagej.types.mappings import ptypes
 from napari_imagej.types.placeholders import OutOfBoundsFactory
+from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.widgets.napari_imagej import NapariImageJ
 from tests.utils import DummyModuleItem, jc
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in ptypes().items()]
 assignable_match_pairs = [
     (jc.ArrayImg, "napari.layers.Image")  # ArrayImg -> RAI -> ImageData
 ]
@@ -38,7 +39,7 @@ def test_python_type_of_input_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in ptypes().items()]
 assignable_match_pairs = [
     # ImageData -> RAI -> EuclideanSpace
     (jc.EuclideanSpace, "napari.types.ImageData")
@@ -64,7 +65,7 @@ def test_python_type_of_output_only(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
+direct_match_pairs = [(jtype, ptype) for jtype, ptype in ptypes().items()]
 convertible_match_pairs = [(jc.DoubleArray, List[float])]
 type_pairs = direct_match_pairs + convertible_match_pairs
 
@@ -236,14 +237,12 @@ def assert_new_window_checkbox_for_type(type, expected):
 
 
 def test_napari_param_new_window_checkbox():
-    ptypes = TypeMappings()
-
-    types_absent = ptypes._napari_layer_types
+    types_absent = _napari_layer_types()
 
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(ptypes.ptypes.keys()) - set(ptypes._napari_layer_types))
+    types_present = list(set(ptypes().keys()) - set(_napari_layer_types()))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 
