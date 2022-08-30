@@ -1,31 +1,10 @@
-from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Callable, List, Optional, Tuple, Type
 
 from scyjava import Priority
 
 from napari_imagej.setup_imagej import ij, jc
 from napari_imagej.types.mappings import ptypes
-from napari_imagej.types.placeholders import TypePlaceholders
-
-
-@lru_cache(maxsize=None)
-def type_placeholders() -> Dict[Any, Any]:
-    """
-    Lazily creates a map of type placeholders.
-    This object is then cached upon function return,
-    effectively making this function a lazily initialized field.
-
-    This object should be lazily initialized as it will import java classes.
-    Those Java classes should not be imported until ImageJ has been able to set
-    up the JVM, adding its required JARs to the classpath. For that reason,
-    java class importing is done with java_import, which blocks UNTIL the imagej
-    gateway has been created (in a separate thread). Thus, prematurely calling this
-    function would block the calling thread.
-
-    By lazily initializing this function, we minimize the time this thread is blocked.
-    """
-    return TypePlaceholders()
-
+from napari_imagej.types.placeholders import get_placeholder
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
@@ -75,8 +54,7 @@ def placeholder_converter(item: "jc.ModuleItem"):
     This is because the python type has no functionality, as it is just an Enum choice.
     """
     if item.isInput() and not item.isOutput():
-        java_type = item.getType()
-        return type_placeholders().get(java_type, None)
+        return get_placeholder(item.getType(), None)
 
 
 def _checkerUsingFunc(
