@@ -19,10 +19,3 @@ add napari-imagej as a plugin. Please see (https://www.napari-hub.org/) for a li
 of available plugins, including napari-imagej.
 """
 __version__ = "0.0.1.dev0"
-
-from scyjava import when_jvm_starts
-
-from napari_imagej.types.converters import init_converters
-
-# Install napari <-> java converters
-when_jvm_starts(init_converters)

@@ -7,7 +7,7 @@ from labeling.Labeling import Labeling
 from napari.layers import Labels, Points, Shapes, Surface
 
 from napari_imagej.setup_imagej import jc
-from napari_imagej.types.converters import _labeling_to_layer, _layer_to_labeling
+from napari_imagej.types.converters.labels import _labeling_to_layer, _layer_to_labeling
 from napari_imagej.types.placeholders import OutOfBoundsFactory, StructuringElement
 from napari_imagej.types.type_conversions import python_type_of
 from tests.utils import DummyModuleItem
