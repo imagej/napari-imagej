@@ -1,3 +1,9 @@
+"""
+A QWidget designed to highlight SciJava Modules.
+
+Calls to FocusWidget.run() will generate a list of actions that can be performed using
+the provided SciJava SearchResult. These actions will appear as QPushButtons.
+"""
 from typing import Callable, Dict, List, NamedTuple
 
 from magicgui import magicgui

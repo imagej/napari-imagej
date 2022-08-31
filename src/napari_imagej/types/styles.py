@@ -1,3 +1,6 @@
+"""
+The definitive mapping of scyjava widget styles to magicgui widget types
+"""
 from typing import Dict, Optional, Union
 
 from napari_imagej.setup_imagej import jc

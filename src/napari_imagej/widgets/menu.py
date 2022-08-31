@@ -1,3 +1,6 @@
+"""
+The top-level menu for the napari-imagej widget.
+"""
 from enum import Enum
 from threading import Thread
 from typing import Optional

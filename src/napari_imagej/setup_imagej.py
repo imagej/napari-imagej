@@ -1,32 +1,88 @@
+"""
+A module designed to encapsulate all Java setup.
+
+Notable functions included in the module:
+    * ij()
+        - used to access the ImageJ instance
+    * ensure_jvm_started()
+        - used to block execution until the ImageJ instance is ready.
+"""
 import logging
 import os
 import sys
 from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import imagej
 import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
-# -- LOGGER CONFIG -- #
+# -- LOGGER API -- #
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)  # TEMP
 
-# -- PUBLIC API -- #
+
+def logger() -> logging.Logger:
+    """
+    Gets the Logger instance
+    :return: the Logger instance used by this application
+    """
+    return _logger
 
 
 def log_debug(msg: str):
     """
     Provides a debug message to the logger, prefaced by 'napari-imagej: '
+    :param msg: The message to output
     """
     debug_msg = "napari-imagej: " + msg
     _logger.debug(debug_msg)
 
 
-def imagej_init():
+# -- ImageJ API -- #
+
+
+def ij():
+    """
+    Returns the ImageJ instance.
+    If it isn't ready yet, blocks until it is ready.
+    """
+    return ij_instance.get()
+
+
+def ensure_jvm_started() -> None:
+    """
+    Blocks until the ImageJ instance is ready.
+    """
+    ij_instance.wait()
+
+
+def setting(name: str):
+    """Gets the value of setting name"""
+    return settings().get(name, None)
+
+
+@lru_cache(maxsize=None)
+def settings() -> Dict[Any, Any]:
+    """Gets all plugin settings as a dictionary"""
+    return yaml.safe_load(open("settings.yml", "r"))
+
+
+def get_mode() -> str:
+    """
+    Returns the mode ImageJ will be run in
+    """
+    return "headless" if sys.platform == "darwin" else "interactive"
+
+
+def running_headless() -> bool:
+    return get_mode() == "headless"
+
+
+def _imagej_init():
     # Initialize ImageJ
     log_debug("Initializing ImageJ2")
 
@@ -56,26 +112,6 @@ def imagej_init():
     return _ij
 
 
-def setting(value: str):
-    return settings().get(value, None)
-
-
-@lru_cache(maxsize=None)
-def settings():
-    return yaml.safe_load(open("settings.yml", "r"))
-
-
-def get_mode() -> str:
-    """
-    Returns the mode ImageJ will be run in
-    """
-    return "headless" if sys.platform == "darwin" else "interactive"
-
-
-def running_headless() -> bool:
-    return get_mode() == "headless"
-
-
 # There is a good debate to be had whether to multithread or multiprocess.
 # From what I (Gabe) have read, it seems that threading is preferrable for
 # network / IO bottlenecking, while multiprocessing is preferrable for CPU
@@ -88,23 +124,7 @@ def running_headless() -> bool:
 # issue with pickling. See
 # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
 threadpool: ThreadPool = ThreadPool(processes=1)
-ij_instance: AsyncResult = threadpool.apply_async(func=imagej_init)
-
-
-def ensure_jvm_started() -> None:
-    ij_instance.wait()
-
-
-def ij():
-    """
-    Returns the ImageJ instance.
-    If it isn't ready yet, blocks until it is ready.
-    """
-    return ij_instance.get()
-
-
-def logger():
-    return _logger
+ij_instance: AsyncResult = threadpool.apply_async(func=_imagej_init)
 
 
 class JavaClasses(object):

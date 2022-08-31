@@ -1,3 +1,6 @@
+"""
+A module containing utilities on python types.
+"""
 from napari_imagej.types import mappings
 
 

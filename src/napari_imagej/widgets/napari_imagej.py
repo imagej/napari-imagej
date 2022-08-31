@@ -1,5 +1,5 @@
 """
-This module contains ImageJWidget, a QWidget enabling
+This module contains ImageJWidget, the top-level QWidget enabling
 graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml

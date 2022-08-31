@@ -1,3 +1,17 @@
+"""
+A module containing TYPE conversion utilities.
+
+When wrapping Java functionality, we must perform data conversion in two phases.
+
+The first phase of conversion involves noting the required JAVA type of a parameter
+and determining the corresponding PYTHON type to use in harvesting input.
+
+The second phase of conversion involves transforming accepted PYTHON inputs into
+their "equivalent" JAVA objects.
+
+This module concerns itself with the first phase of conversion, while the second phase
+is left to PyImageJ's to_java function.
+"""
 from typing import Callable, List, Optional, Tuple, Type
 
 from scyjava import Priority

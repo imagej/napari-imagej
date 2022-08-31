@@ -1,3 +1,6 @@
+"""
+Module containing QLayouts used by various napari-imagej widgets
+"""
 from qtpy.QtCore import QMargins, QPoint, QRect, QSize, Qt
 from qtpy.QtWidgets import QLayout, QSizePolicy
 

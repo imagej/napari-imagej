@@ -1,3 +1,9 @@
+"""
+A QWidget used to provide input to SciJava Searchers.
+
+The bar is disabled until ImageJ is ready. This ensures the SciJava Searchers
+are ready to accept queries.
+"""
 from threading import Thread
 
 from qtpy.QtCore import Qt, Signal

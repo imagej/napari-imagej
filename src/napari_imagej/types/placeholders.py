@@ -1,9 +1,19 @@
 """
 The definitive set of "placeholder"s for Java types.
-This map allows us to determine the best placeholder for
-Enum-like Java types. We define an Enum-like Java type as either:
+A placeholder can be created for any Enum-like Java types.
+
+We define an Enum-like Java type as either:
 1. An enum constant
-2. An object with a no-args constant
+2. An object with a no-args constructor
+
+The placeholders are designed for a rather narrow use case, described as follows:
+
+Some Java functionality requires an Object implementing a particular interface.
+That Object is usually chosen from a set of established implementations,
+each created without variation (giving rise to the above constraints).
+
+In such cases, we can abstract the interface to a Placeholder and the implementations
+to enumerations of that Placeholder, as done below.
 """
 from enum import Enum, auto
 from typing import List

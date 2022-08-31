@@ -1,3 +1,8 @@
+"""
+The definitive set of equivalent Java and Python types.
+
+The mappings are broken up into sub-maps for convenience and utility.
+"""
 from functools import lru_cache
 from typing import Any, Callable, Dict, List
 

@@ -1,3 +1,8 @@
+"""
+A QWidget designed to list SciJava SearchResults.
+
+SearchResults are grouped by the SciJava Searcher that created them.
+"""
 import atexit
 from threading import Thread
 from typing import List, Optional
