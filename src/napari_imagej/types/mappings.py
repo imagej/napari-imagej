@@ -3,6 +3,7 @@ The definitive set of equivalent Java and Python types.
 
 The mappings are broken up into sub-maps for convenience and utility.
 """
+from collections import OrderedDict
 from functools import lru_cache
 from typing import Any, Callable, Dict, List
 
@@ -10,7 +11,7 @@ from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 
 from napari_imagej.setup_imagej import jc
 
-MAP_GENERATORS = []
+MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
 
 
 def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, Any]]:
@@ -19,10 +20,11 @@ def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, A
 
 
 @lru_cache(maxsize=None)
-def ptypes():
-    types = {}
+def ptypes() -> OrderedDict:
+    types = OrderedDict()
     for generator in MAP_GENERATORS:
-        types.update(generator())
+        for k, v in generator().items():
+            types[k] = v
     return types
 
 
