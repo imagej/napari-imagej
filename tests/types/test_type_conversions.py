@@ -2,9 +2,9 @@ from typing import List
 
 import pytest
 
-from napari_imagej import _module_utils
 from napari_imagej.types.mappings import ptypes
 from napari_imagej.types.placeholders import OutOfBoundsFactory
+from napari_imagej.utilities import _module_utils
 from tests.utils import DummyModuleItem, jc
 
 direct_match_pairs = [(jtype, ptype) for jtype, ptype in ptypes().items()]

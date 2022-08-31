@@ -1,3 +1,15 @@
+"""
+This module contains various utilities for interacting with SciJava Modules.
+Most of these functions are designed for INTERNAL USE ONLY.
+
+There are a few functions that are designed for use by graphical widgets, namely:
+    * functionify_module_execution(viewer, module, module_info)
+        - converts a SciJava module into a Python function
+    * execute_function_modally(viewer, name, function, param_options)
+        - executes a Python function, obtaining inputs through a modal dialog
+    * convert_searchResult_to_info(searchResult)
+        - converts a SciJava SearchResult to a ModuleInfo
+"""
 from inspect import Parameter, Signature, _empty, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 

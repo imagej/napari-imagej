@@ -11,7 +11,6 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
-from napari_imagej._module_utils import _get_layers_hack
 from napari_imagej.setup_imagej import (
     ensure_jvm_started,
     ij,
@@ -20,6 +19,7 @@ from napari_imagej.setup_imagej import (
     running_headless,
     setting,
 )
+from napari_imagej.utilities._module_utils import _get_layers_hack
 
 
 class NapariImageJMenu(QWidget):
