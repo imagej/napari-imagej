@@ -1,5 +1,5 @@
 """
-A module used to identify widget preferences for given Java parameters.
+A module used to identify Python widget mappings for given Java parameters.
 
 Notable functions included in the module:
     * preferred_widget_for()

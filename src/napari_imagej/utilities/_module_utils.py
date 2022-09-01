@@ -24,7 +24,7 @@ from scyjava import JavaIterable, JavaMap, JavaSet, jstacktrace
 from napari_imagej.java import ij, jc
 from napari_imagej.types.type_conversions import python_type_of
 from napari_imagej.types.type_utils import type_displayable_in_napari
-from napari_imagej.types.widget_preferences import preferred_widget_for
+from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
 
 

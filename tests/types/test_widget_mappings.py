@@ -1,3 +1,6 @@
+"""
+A module for testing napari_imagej.types.widget_mappings
+"""
 import magicgui
 import pytest
 from magicgui.widgets import (
@@ -9,7 +12,7 @@ from magicgui.widgets import (
     SpinBox,
 )
 
-from napari_imagej.types.widget_preferences import (
+from napari_imagej.types.widget_mappings import (
     _supported_scijava_styles,
     preferred_widget_for,
 )
