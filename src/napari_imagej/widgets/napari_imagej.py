@@ -20,19 +20,19 @@ class NapariImageJ(QWidget):
         super().__init__()
         self.setLayout(QVBoxLayout())
 
-        # GUI Buttons
-        self.buttons: NapariImageJMenu = NapariImageJMenu(napari_viewer)
-        # Module highlighter
-        self.focuser: FocusWidget = FocusWidget(napari_viewer)
-        # Results List
-        self.results: ResultsTree = ResultsTree()
-        # Search Bar
-        self.search: ImageJSearchbar = ImageJSearchbar()
+        # -- NapariImageJ widget construction -- #
 
-        # Add each in the preferred order
-        self.layout().addWidget(self.buttons)
+        # At the top: the napari-imagej menu
+        self.menu: NapariImageJMenu = NapariImageJMenu(napari_viewer)
+        self.layout().addWidget(self.menu)
+        # Next: the search bar
+        self.search: ImageJSearchbar = ImageJSearchbar()
         self.layout().addWidget(self.search)
+        # Then: The results tree
+        self.results: ResultsTree = ResultsTree()
         self.layout().addWidget(self.results)
+        # Finally: The SearchAction display widget
+        self.focuser: FocusWidget = FocusWidget(napari_viewer)
         self.layout().addWidget(self.focuser)
 
         # -- Interwidget connections -- #
