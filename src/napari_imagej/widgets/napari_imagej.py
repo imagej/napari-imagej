@@ -45,7 +45,7 @@ class NapariImageJ(QWidget):
             if isinstance(treeItem, ResultTreeItem):
                 self.action_display.select(treeItem.result)
             else:
-                self.action_display.clear_selection()
+                self.action_display.clear()
 
         # self.results.onClick = clickFunc
         self.result_tree.itemClicked.connect(click)

@@ -41,14 +41,59 @@ class SearchActionDisplay(QWidget):
 
         self.selection_action_buttons = []  # type: ignore
 
-    def setText(self, text: str):
-        if text:
-            self.selected_module_label.show()
-            self.selected_module_label.setText(text)
-        else:
-            self.selected_module_label.hide()
+    def select(self, result: "jc.SearchResult"):
+        """Selects result, displaying its name and its SearchActions as buttons"""
+        name = ij().py.from_java(result.name())  # type: ignore
+        self._setText(name)
+
+        # Create buttons for each action
+        python_actions: List[SearchAction] = self._actions_from_result(result)
+        buttons_needed = len(python_actions)
+        activated_actions = len(self.selection_action_buttons)
+        # Hide buttons if we have more than needed
+        while activated_actions > buttons_needed:
+            activated_actions = activated_actions - 1
+            self.selection_action_buttons[activated_actions].hide()
+        # Create buttons if we need more than we have
+        while len(self.selection_action_buttons) < buttons_needed:
+            button = QPushButton()
+            self.selection_action_buttons.append(button)
+            self.button_pane.layout().addWidget(button)
+        # Rename buttons to reflect selected module's actions
+        # TODO: Can we use zip on the buttons and the actions?
+        for i, action in enumerate(python_actions):
+            # Clean old actions from button
+            # HACK: disconnect() throws an exception if there are no connections.
+            # Thus we use button name as a proxy for when there is a connected action.
+            if self.selection_action_buttons[i].text() != "":
+                self.selection_action_buttons[i].disconnect()
+                self.selection_action_buttons[i].setText("")
+            # Set button name
+            self.selection_action_buttons[i].setText(action.name)
+            # Set button on-click actions
+            self.selection_action_buttons[i].clicked.connect(action.action)
+            # Set tooltip
+            if name in self._tooltips:
+                tooltip = self._tooltips[name]
+                self.selection_action_buttons[i].setToolTip(tooltip)
+            # Show button
+            self.selection_action_buttons[i].show()
+
+    def clear(self):
+        """Clears the current selection"""
+        self._setText("")
+        # Hide buttons
+        for button in self.selection_action_buttons:
+            button.hide()
 
     def run(self, result: "jc.SearchResult"):
+        """
+        Runs a SearchAction of the provided SearchResult.
+        The SearchAction chosen depends on keyboard modifiers.
+        By default, the highest-priority action is run.
+        Using SHIFT, the second-highest action is run.
+        :param result: The selected SearchResult
+        """
         actions: List[SearchAction] = self._actions_from_result(result)
         # Run the first action UNLESS Shift is also pressed.
         # If so, run the second action
@@ -57,6 +102,18 @@ class SearchActionDisplay(QWidget):
                 actions[1].action()
             else:
                 actions[0].action()
+
+    # -- HELPER FUNCTIONALITY -- #
+
+    def _setText(self, text: str):
+        """
+        Sets the text of this widget's QLabel.
+        """
+        if text:
+            self.selected_module_label.show()
+            self.selected_module_label.setText(text)
+        else:
+            self.selected_module_label.hide()
 
     def _python_actions_for(
         self, result: "jc.SearchResult"
@@ -89,7 +146,7 @@ class SearchActionDisplay(QWidget):
             ],
         }
 
-    tooltips: Dict[str, str] = {
+    _tooltips: Dict[str, str] = {
         "Widget": "Runs functionality from a napari widget. "
         "Useful for parameter sweeping",
         "Run": "Runs functionality from a modal widget. Best for single executions",
@@ -116,52 +173,10 @@ class SearchActionDisplay(QWidget):
                 button_params.append(params)
         return button_params
 
-    def clear_selection(self):
-        self.setText("")
-        # Hide buttons
-        for button in self.selection_action_buttons:
-            button.hide()
-
-    def select(self, result: "jc.SearchResult"):
-        name = ij().py.from_java(result.name())  # type: ignore
-        self.setText(name)
-
-        # Create buttons for each action
-        python_actions: List[SearchAction] = self._actions_from_result(result)
-        buttons_needed = len(python_actions)
-        activated_actions = len(self.selection_action_buttons)
-        # Hide buttons if we have more than needed
-        while activated_actions > buttons_needed:
-            activated_actions = activated_actions - 1
-            self.selection_action_buttons[activated_actions].hide()
-        # Create buttons if we need more than we have
-        while len(self.selection_action_buttons) < buttons_needed:
-            button = QPushButton()
-            self.selection_action_buttons.append(button)
-            self.button_pane.layout().addWidget(button)
-        # Rename buttons to reflect selected module's actions
-        # TODO: Can we use zip on the buttons and the actions?
-        for i, action in enumerate(python_actions):
-            # Clean old actions from button
-            # HACK: disconnect() throws an exception if there are no connections.
-            # Thus we use button name as a proxy for when there is a connected action.
-            if self.selection_action_buttons[i].text() != "":
-                self.selection_action_buttons[i].disconnect()
-                self.selection_action_buttons[i].setText("")
-            # Set button name
-            self.selection_action_buttons[i].setText(action.name)
-            # Set button on-click actions
-            self.selection_action_buttons[i].clicked.connect(action.action)
-            # Set tooltip
-            if name in self.tooltips:
-                tooltip = self.tooltips[name]
-                self.selection_action_buttons[i].setToolTip(tooltip)
-            # Show button
-            self.selection_action_buttons[i].show()
-
     def _execute_module(
         self, name: str, moduleInfo: "jc.ModuleInfo", modal: bool = False
     ) -> None:
+        """Helper function to perform module execution."""
         log_debug("Creating module...")
         module = ij().module().createModule(moduleInfo)
 
