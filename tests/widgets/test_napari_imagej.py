@@ -6,9 +6,9 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QVBoxLayout
 
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.napari_imagej import FocusWidget, NapariImageJ
-from napari_imagej.widgets.results import ResultsTree
-from napari_imagej.widgets.searchbar import ImageJSearchbar
+from napari_imagej.widgets.napari_imagej import NapariImageJ, SearchActionDisplay
+from napari_imagej.widgets.result_tree import SearchResultTree
+from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from tests.widgets.widget_utils import _populate_tree
 
 
@@ -20,9 +20,9 @@ def test_widget_subwidget_layout(imagej_widget: NapariImageJ):
     assert isinstance(subwidgets[0], QVBoxLayout)
 
     assert isinstance(subwidgets[1], NapariImageJMenu)
-    assert isinstance(subwidgets[2], ImageJSearchbar)
-    assert isinstance(subwidgets[3], ResultsTree)
-    assert isinstance(subwidgets[4], FocusWidget)
+    assert isinstance(subwidgets[2], JVMEnabledSearchbar)
+    assert isinstance(subwidgets[3], SearchResultTree)
+    assert isinstance(subwidgets[4], SearchActionDisplay)
 
 
 def test_keymaps(make_napari_viewer, qtbot):
@@ -69,7 +69,7 @@ def test_searchbar_results_transitions(imagej_widget: NapariImageJ, asserter, qt
     Ensures that the arrow keys can be used to transfer focus between
     the searchbar and the results table
     """
-    tree: ResultsTree = imagej_widget.results
+    tree: SearchResultTree = imagej_widget.results
     _populate_tree(tree, asserter)
 
     # Ensure that no element is highlighted to start out

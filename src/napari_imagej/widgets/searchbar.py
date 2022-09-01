@@ -12,7 +12,7 @@ from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 from napari_imagej.java import ensure_jvm_started
 
 
-class ImageJSearchbar(QWidget):
+class JVMEnabledSearchbar(QWidget):
     """
     A QWidget for streamlining ImageJ functionality searching
     """

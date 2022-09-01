@@ -1,11 +1,15 @@
 """
 A module containing functionality useful for widget testing
 """
-from napari_imagej.widgets.results import ResultsTree, ResultTreeItem, SearcherTreeItem
+from napari_imagej.widgets.result_tree import (
+    ResultTreeItem,
+    SearcherTreeItem,
+    SearchResultTree,
+)
 from tests.utils import DummySearcher, jc
 
 
-def _populate_tree(tree: ResultsTree, asserter):
+def _populate_tree(tree: SearchResultTree, asserter):
     tree.wait_for_setup()
     assert tree.topLevelItemCount() == 0
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))

@@ -5,7 +5,7 @@ import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from napari_imagej.java import JavaClasses
-from napari_imagej.widgets.focuser import FocusWidget
+from napari_imagej.widgets.action_display import SearchActionDisplay
 from napari_imagej.widgets.layouts import FlowLayout
 
 
@@ -20,7 +20,7 @@ jc = JavaClassesTest()
 
 @pytest.fixture
 def focuser(viewer):
-    return FocusWidget(viewer)
+    return SearchActionDisplay(viewer)
 
 
 def test_focus_widget_layout(focuser):
@@ -44,7 +44,9 @@ def example_info(ij):
     )
 
 
-def test_button_param_regression(focuser: FocusWidget, example_info: "jc.ModuleInfo"):
+def test_button_param_regression(
+    focuser: SearchActionDisplay, example_info: "jc.ModuleInfo"
+):
     """Simple regression test ensuring search action button population"""
 
     result = jc.ModuleSearchResult(example_info, "")

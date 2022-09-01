@@ -65,7 +65,7 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setExpanded(len(results) < 10)
 
 
-class ResultsTree(QTreeWidget):
+class SearchResultTree(QTreeWidget):
 
     # Signal used to update this widget with org.scijava.search.SearchResults.
     # Given a SearchEventWrapper w, process.emit(w) will update the widget.

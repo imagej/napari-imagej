@@ -26,7 +26,7 @@ class SearchAction(NamedTuple):
     action: Callable[[], None]
 
 
-class FocusWidget(QWidget):
+class SearchActionDisplay(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer

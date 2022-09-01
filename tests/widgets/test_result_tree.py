@@ -4,11 +4,11 @@ A module testing napari_imagej.widgets.results
 import pytest
 from qtpy.QtCore import Qt
 
-from napari_imagej.widgets.results import (
-    ResultsTree,
+from napari_imagej.widgets.result_tree import (
     ResultTreeItem,
     SearcherTreeItem,
     SearchEventWrapper,
+    SearchResultTree,
 )
 from tests.utils import DummySearcher, jc
 from tests.widgets.widget_utils import _populate_tree
@@ -16,16 +16,16 @@ from tests.widgets.widget_utils import _populate_tree
 
 @pytest.fixture
 def results_tree():
-    return ResultsTree()
+    return SearchResultTree()
 
 
-def test_results_widget_layout(results_tree: ResultsTree):
+def test_results_widget_layout(results_tree: SearchResultTree):
     """Tests the number and expected order of results widget children"""
     assert results_tree.columnCount() == 1
     assert results_tree.headerItem().text(0) == "Search"
 
 
-def test_arrow_key_selection(results_tree: ResultsTree, qtbot, asserter):
+def test_arrow_key_selection(results_tree: SearchResultTree, qtbot, asserter):
     # Set up the tree
     _populate_tree(results_tree, asserter)
     # Start by selecting the first item in the tree
@@ -53,7 +53,7 @@ def test_arrow_key_selection(results_tree: ResultsTree, qtbot, asserter):
     )
 
 
-def test_searchers_disappear(results_tree: ResultsTree, asserter):
+def test_searchers_disappear(results_tree: SearchResultTree, asserter):
     # Wait for the searchers to be ready
     results_tree.wait_for_setup()
     # Update the Tree with some search results
@@ -97,7 +97,7 @@ def test_searcherTreeItem_regression():
     assert item.text(0) == dummy.title()
 
 
-def test_arrow_key_expansion(results_tree: ResultsTree, qtbot, asserter):
+def test_arrow_key_expansion(results_tree: SearchResultTree, qtbot, asserter):
     # Wait for the searchers to be ready
     results_tree.wait_for_setup()
     _populate_tree(results_tree, asserter)

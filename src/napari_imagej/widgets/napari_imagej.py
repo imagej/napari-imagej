@@ -7,10 +7,10 @@ This Widget is made accessible to napari through napari.yml
 from napari import Viewer
 from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 
-from napari_imagej.widgets.focuser import FocusWidget
+from napari_imagej.widgets.action_display import SearchActionDisplay
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.results import ResultsTree, ResultTreeItem
-from napari_imagej.widgets.searchbar import ImageJSearchbar
+from napari_imagej.widgets.result_tree import ResultTreeItem, SearchResultTree
+from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
 
 class NapariImageJ(QWidget):
@@ -26,13 +26,13 @@ class NapariImageJ(QWidget):
         self.menu: NapariImageJMenu = NapariImageJMenu(napari_viewer)
         self.layout().addWidget(self.menu)
         # Next: the search bar
-        self.search: ImageJSearchbar = ImageJSearchbar()
+        self.search: JVMEnabledSearchbar = JVMEnabledSearchbar()
         self.layout().addWidget(self.search)
         # Then: The results tree
-        self.results: ResultsTree = ResultsTree()
+        self.results: SearchResultTree = SearchResultTree()
         self.layout().addWidget(self.results)
         # Finally: The SearchAction display widget
-        self.focuser: FocusWidget = FocusWidget(napari_viewer)
+        self.focuser: SearchActionDisplay = SearchActionDisplay(napari_viewer)
         self.layout().addWidget(self.focuser)
 
         # -- Interwidget connections -- #
