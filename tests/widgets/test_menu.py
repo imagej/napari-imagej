@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.widgets.menu
+"""
 import numpy
 import pytest
 from napari import Viewer

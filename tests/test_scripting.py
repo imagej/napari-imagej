@@ -1,3 +1,6 @@
+"""
+A module testing script discovery and wrapping
+"""
 from magicgui import magicgui
 
 from napari_imagej.java import JavaClasses

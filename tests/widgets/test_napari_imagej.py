@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.widgets.napari_imagej
+"""
 from napari import Viewer
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QVBoxLayout

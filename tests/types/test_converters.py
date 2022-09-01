@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.types.converters
+"""
 from typing import Any, Dict, List
 
 import numpy as np

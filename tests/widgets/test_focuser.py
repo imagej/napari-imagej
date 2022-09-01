@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.widgets.focuser
+"""
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 

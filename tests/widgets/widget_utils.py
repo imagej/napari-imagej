@@ -1,3 +1,6 @@
+"""
+A module containing functionality useful for widget testing
+"""
 from napari_imagej.widgets.results import ResultsTree, ResultTreeItem, SearcherTreeItem
 from tests.utils import DummySearcher, jc
 

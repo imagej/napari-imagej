@@ -1,3 +1,6 @@
+"""
+A module containing testing utilities
+"""
 from napari_imagej.java import JavaClasses
 
 

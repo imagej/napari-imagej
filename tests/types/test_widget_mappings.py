@@ -1,5 +1,5 @@
 """
-A module for testing napari_imagej.types.widget_mappings
+A module testing napari_imagej.types.widget_mappings
 """
 import magicgui
 import pytest

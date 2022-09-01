@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.widgets.searchbar
+"""
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit
 
 from napari_imagej.widgets.napari_imagej import NapariImageJ

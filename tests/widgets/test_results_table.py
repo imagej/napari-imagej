@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.widgets.results
+"""
 import pytest
 from qtpy.QtCore import Qt
 

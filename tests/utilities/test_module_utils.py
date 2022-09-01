@@ -1,3 +1,6 @@
+"""
+A module testing napari_imagej.utilities._module_utils
+"""
 from inspect import Parameter, _empty
 from typing import Any, Dict, List, Optional
 
