@@ -4,11 +4,14 @@ Module containing QLayouts used by various napari-imagej widgets
 from qtpy.QtCore import QMargins, QPoint, QRect, QSize, Qt
 from qtpy.QtWidgets import QLayout, QSizePolicy
 
-# Copied from Qt for Python's Example:
-# https://doc.qt.io/qtforpython/examples/example_widgets_layouts_flowlayout.html
 
+class QFlowLayout(QLayout):
+    """
+    A QLayout that mimics a traditional Flow layout
+    Copied from Qt for Python's Example:
+    https://doc.qt.io/qtforpython/examples/example_widgets_layouts_flowlayout.html
+    """
 
-class FlowLayout(QLayout):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -51,7 +54,7 @@ class FlowLayout(QLayout):
         return height
 
     def setGeometry(self, rect):
-        super(FlowLayout, self).setGeometry(rect)
+        super(QFlowLayout, self).setGeometry(rect)
         self._do_layout(rect, False)
 
     def sizeHint(self):

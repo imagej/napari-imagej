@@ -19,7 +19,7 @@ from napari_imagej.utilities._module_utils import (
     functionify_module_execution,
 )
 from napari_imagej.utilities.logging import log_debug
-from napari_imagej.widgets.layouts import FlowLayout
+from napari_imagej.widgets.layouts import QFlowLayout
 
 
 class SearchAction(NamedTuple):
@@ -37,7 +37,7 @@ class SearchActionDisplay(QWidget):
         self.selected_module_label = QLabel()
         self.layout().addWidget(self.selected_module_label)
         self.button_pane = QWidget()
-        self.button_pane.setLayout(FlowLayout())
+        self.button_pane.setLayout(QFlowLayout())
         self.layout().addWidget(self.button_pane)
 
     def select(self, result: "jc.SearchResult"):

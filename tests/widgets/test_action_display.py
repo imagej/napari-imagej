@@ -6,7 +6,7 @@ from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from napari_imagej.java import JavaClasses
 from napari_imagej.widgets.action_display import SearchActionDisplay, _tooltips
-from napari_imagej.widgets.layouts import FlowLayout
+from napari_imagej.widgets.layouts import QFlowLayout
 
 
 class JavaClassesTest(JavaClasses):
@@ -34,7 +34,7 @@ def test_action_display_widget_layout(action_display):
     assert isinstance(subwidgets[1], QLabel)
     # The button Container
     assert isinstance(subwidgets[2], QWidget)
-    assert isinstance(subwidgets[2].layout(), FlowLayout)
+    assert isinstance(subwidgets[2].layout(), QFlowLayout)
 
 
 @pytest.fixture
