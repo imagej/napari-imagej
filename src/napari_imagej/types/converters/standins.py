@@ -3,7 +3,7 @@ scyjava Converters for converting PythonStandins into their java equivalents.
 """
 from napari_imagej.setup_imagej import jc
 from napari_imagej.types.converters import py_to_java_converter
-from napari_imagej.types.placeholders import OutOfBoundsFactory, StructuringElement
+from napari_imagej.types.standins import OutOfBoundsFactory, StructuringElement
 
 
 @py_to_java_converter(predicate=lambda obj: isinstance(obj, StructuringElement))

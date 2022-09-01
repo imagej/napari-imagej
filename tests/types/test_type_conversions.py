@@ -3,7 +3,7 @@ from typing import List
 import pytest
 
 from napari_imagej.types.mappings import ptypes
-from napari_imagej.types.placeholders import OutOfBoundsFactory
+from napari_imagej.types.standins import OutOfBoundsFactory
 from napari_imagej.utilities import _module_utils
 from tests.utils import DummyModuleItem, jc
 
@@ -69,7 +69,7 @@ def test_python_type_of_IO(jtype, ptype):
     assert _module_utils.python_type_of(module_item) == ptype
 
 
-def test_python_type_of_placeholder_IO():
+def test_python_type_of_standin_IO():
     # Test that a pure input matches
     module_item = DummyModuleItem(
         jtype=jc.OutOfBoundsFactory, isInput=True, isOutput=False

@@ -18,7 +18,7 @@ from scyjava import Priority
 
 from napari_imagej.setup_imagej import ij, jc
 from napari_imagej.types.mappings import ptypes
-from napari_imagej.types.placeholders import get_placeholder
+from napari_imagej.types.standins import standin_for
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
@@ -61,14 +61,14 @@ def python_type_of(module_item: "jc.ModuleItem"):
 
 
 @module_item_converter(priority=Priority.HIGH)
-def placeholder_converter(item: "jc.ModuleItem"):
+def standin_converter(item: "jc.ModuleItem"):
     """
-    Checks to see if this type can be satisfied by a placeholder.
-    For a placeholder to work, it MUST be a pure input.
+    Checks to see if this type can be satisfied by a PythonStandin.
+    For a PythonStandin to work, it MUST be a pure input.
     This is because the python type has no functionality, as it is just an Enum choice.
     """
     if item.isInput() and not item.isOutput():
-        return get_placeholder(item.getType(), None)
+        return standin_for(item.getType(), None)
 
 
 def _checkerUsingFunc(
