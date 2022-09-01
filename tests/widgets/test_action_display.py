@@ -50,16 +50,16 @@ def test_button_param_regression(
     """Simple regression test ensuring search action button population"""
 
     result = jc.ModuleSearchResult(example_info, "")
-    py_actions = action_display._actions_from_result(result)
-    assert py_actions[0].name == "Run"
+    buttons = action_display._buttons_for(result)
+    assert buttons[0].text() == "Run"
     assert (
-        _tooltips[py_actions[0][0]]
+        _tooltips[buttons[0].text()]
         == "Runs functionality from a modal widget. Best for single executions"
     )
-    assert py_actions[1].name == "Widget"
+    assert buttons[1].text() == "Widget"
     assert (
-        _tooltips[py_actions[1][0]]
+        _tooltips[buttons[1].text()]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
-    assert py_actions[2].name == "Batch"
-    assert py_actions[2].name not in _tooltips
+    assert buttons[2].text() == "Batch"
+    assert buttons[2].text() not in _tooltips
