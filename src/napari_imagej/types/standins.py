@@ -31,7 +31,7 @@ class PythonStandin(Enum):
             STANDINS.append(enum_type)
 
     @staticmethod
-    def backing_type():
+    def java_type():
         """Obtains the backing Java type this enum is mocking"""
 
 
@@ -50,7 +50,7 @@ def standin_for(java_type, default=None) -> type:
     :return: a standin for java_type, or default if we can't find one.
     """
     for standin in STANDINS:
-        if java_type == standin.backing_type():
+        if java_type == standin.java_type():
             return standin
     return default
 
@@ -60,7 +60,7 @@ class StructuringElement(PythonStandin):
     EIGHT_CONNECTED = auto()
 
     @staticmethod
-    def backing_type():
+    def java_type():
         return jc.StructuringElement
 
 
@@ -72,5 +72,5 @@ class OutOfBoundsFactory(PythonStandin):
     PERIODIC = auto()
 
     @staticmethod
-    def backing_type():
+    def java_type():
         return jc.OutOfBoundsFactory
