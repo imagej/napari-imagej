@@ -53,9 +53,6 @@ class JavaClassesTest(JavaClasses):
 jc = JavaClassesTest()
 
 
-jc = JavaClassesTest()
-
-
 class DummySearcher:
     def __init__(self, title: str):
         self._title = title
