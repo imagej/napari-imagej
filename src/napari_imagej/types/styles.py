@@ -1,5 +1,9 @@
 """
 The definitive mapping of scyjava widget styles to magicgui widget types
+
+Notable functions included in the module:
+    * widget_for_item_and_type()
+        - finds the best widget (as a str) for a ModuleItem and python type
 """
 from typing import Dict, Optional, Union
 
