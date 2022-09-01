@@ -38,14 +38,14 @@ def test_keymaps(make_napari_viewer, qtbot):
 
 def test_result_single_click(imagej_widget: NapariImageJ, qtbot, asserter):
     # Assert that there are initially no buttons
-    imagej_widget.results.wait_for_setup()
-    assert len(imagej_widget.focuser.focused_action_buttons) == 0
+    imagej_widget.result_tree.wait_for_setup()
+    assert len(imagej_widget.action_display.selection_action_buttons) == 0
     # Search something, then wait for the results to populate
-    imagej_widget.results.search("Frangi")
-    tree = imagej_widget.results
+    imagej_widget.result_tree.search("Frangi")
+    tree = imagej_widget.result_tree
     asserter(lambda: tree.topLevelItemCount() > 0)
     asserter(lambda: tree.topLevelItem(0).childCount() > 0)
-    buttons = imagej_widget.focuser.focused_action_buttons
+    buttons = imagej_widget.action_display.selection_action_buttons
     # Test single click spawns buttons
     item = tree.topLevelItem(0).child(0)
     rect = tree.visualItemRect(item)
@@ -55,12 +55,12 @@ def test_result_single_click(imagej_widget: NapariImageJ, qtbot, asserter):
     item = tree.topLevelItem(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    # Ensure we don't see any text in the focuser
+    # Ensure we don't see any text in the action display widget
     asserter(
-        lambda: imagej_widget.focuser.focused_module_label.isHidden()
-        or imagej_widget.focuser.focused_module_label.text() == ""
+        lambda: imagej_widget.action_display.selected_module_label.isHidden()
+        or imagej_widget.action_display.selected_module_label.text() == ""
     )
-    # Ensure we don't see any buttons in the focuser
+    # Ensure we don't see any buttons in the action display widget
     asserter(lambda: len(buttons) == 0 or all(button.isHidden() for button in buttons))
 
 
@@ -69,7 +69,7 @@ def test_searchbar_results_transitions(imagej_widget: NapariImageJ, asserter, qt
     Ensures that the arrow keys can be used to transfer focus between
     the searchbar and the results table
     """
-    tree: SearchResultTree = imagej_widget.results
+    tree: SearchResultTree = imagej_widget.result_tree
     _populate_tree(tree, asserter)
 
     # Ensure that no element is highlighted to start out

@@ -29,55 +29,55 @@ class NapariImageJ(QWidget):
         self.search: JVMEnabledSearchbar = JVMEnabledSearchbar()
         self.layout().addWidget(self.search)
         # Then: The results tree
-        self.results: SearchResultTree = SearchResultTree()
-        self.layout().addWidget(self.results)
+        self.result_tree: SearchResultTree = SearchResultTree()
+        self.layout().addWidget(self.result_tree)
         # Finally: The SearchAction display widget
-        self.focuser: SearchActionDisplay = SearchActionDisplay(napari_viewer)
-        self.layout().addWidget(self.focuser)
+        self.action_display: SearchActionDisplay = SearchActionDisplay(napari_viewer)
+        self.layout().addWidget(self.action_display)
 
         # -- Interwidget connections -- #
 
         # When the text bar changes, update the search results.
-        self.search.bar.textEdited.connect(self.results.search)
+        self.search.bar.textEdited.connect(self.result_tree.search)
 
-        # When clicking a result, focus it in the focus widget
+        # When clicking a result, select it with the SearchActionDisplay
         def click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
-                self.focuser.focus(treeItem.result)
+                self.action_display.select(treeItem.result)
             else:
-                self.focuser.clear_focus()
+                self.action_display.clear_selection()
 
         # self.results.onClick = clickFunc
-        self.results.itemClicked.connect(click)
+        self.result_tree.itemClicked.connect(click)
 
         # When double clicking a result,
-        # focus it in the focus widget and run the first action
+        # select it with the SearchActionDisplay and run the first action
         def double_click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
-                self.focuser.run(treeItem.result)
+                self.action_display.run(treeItem.result)
 
-        self.results.itemDoubleClicked.connect(double_click)
+        self.result_tree.itemDoubleClicked.connect(double_click)
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
-        self.results.floatAbove.connect(self.search.bar.setFocus)
+        self.result_tree.floatAbove.connect(self.search.bar.setFocus)
 
         # When pressing the down arrow on the search bar,
         # go to the first result item
         def key_down_from_search_bar():
             self.search.bar.clearFocus()
-            self.results.setFocus()
-            self.results.setCurrentItem(self.results.topLevelItem(0))
+            self.result_tree.setFocus()
+            self.result_tree.setCurrentItem(self.result_tree.topLevelItem(0))
 
         self.search.bar.floatBelow.connect(key_down_from_search_bar)
 
-        # When pressing return on the search bar, focus the first result
+        # When pressing return on the search bar, select the first result
         # in the results list and run it
         def return_search_bar():
             """Define the return behavior for this widget"""
-            result = self.results._first_result()
+            result = self.result_tree._first_result()
             if result is not None:
-                self.focuser.run(result)
+                self.action_display.run(result)
 
         self.search.bar.returnPressed.connect(return_search_bar)
 

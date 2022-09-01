@@ -1,8 +1,8 @@
 """
 A QWidget designed to highlight SciJava Modules.
 
-Calls to FocusWidget.run() will generate a list of actions that can be performed using
-the provided SciJava SearchResult. These actions will appear as QPushButtons.
+Calls to SearchActionDisplay.run() will generate a list of actions that can be performed
+using the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
 from typing import Callable, Dict, List, NamedTuple
 
@@ -33,20 +33,20 @@ class SearchActionDisplay(QWidget):
 
         self.setLayout(QVBoxLayout())
 
-        self.focused_module_label = QLabel()
-        self.layout().addWidget(self.focused_module_label)
+        self.selected_module_label = QLabel()
+        self.layout().addWidget(self.selected_module_label)
         self.button_pane = QWidget()
         self.button_pane.setLayout(FlowLayout())
         self.layout().addWidget(self.button_pane)
 
-        self.focused_action_buttons = []  # type: ignore
+        self.selection_action_buttons = []  # type: ignore
 
     def setText(self, text: str):
         if text:
-            self.focused_module_label.show()
-            self.focused_module_label.setText(text)
+            self.selected_module_label.show()
+            self.selected_module_label.setText(text)
         else:
-            self.focused_module_label.hide()
+            self.selected_module_label.hide()
 
     def run(self, result: "jc.SearchResult"):
         actions: List[SearchAction] = self._actions_from_result(result)
@@ -116,50 +116,48 @@ class SearchActionDisplay(QWidget):
                 button_params.append(params)
         return button_params
 
-    def clear_focus(self):
+    def clear_selection(self):
         self.setText("")
         # Hide buttons
-        for button in self.focused_action_buttons:
+        for button in self.selection_action_buttons:
             button.hide()
 
-    def focus(self, result: "jc.SearchResult"):
+    def select(self, result: "jc.SearchResult"):
         name = ij().py.from_java(result.name())  # type: ignore
         self.setText(name)
 
         # Create buttons for each action
-        # searchService = ij().get("org.scijava.search.SearchService")
-        # self.focused_actions = searchService.actions(module)
         python_actions: List[SearchAction] = self._actions_from_result(result)
         buttons_needed = len(python_actions)
-        activated_actions = len(self.focused_action_buttons)
+        activated_actions = len(self.selection_action_buttons)
         # Hide buttons if we have more than needed
         while activated_actions > buttons_needed:
             activated_actions = activated_actions - 1
-            self.focused_action_buttons[activated_actions].hide()
+            self.selection_action_buttons[activated_actions].hide()
         # Create buttons if we need more than we have
-        while len(self.focused_action_buttons) < buttons_needed:
+        while len(self.selection_action_buttons) < buttons_needed:
             button = QPushButton()
-            self.focused_action_buttons.append(button)
+            self.selection_action_buttons.append(button)
             self.button_pane.layout().addWidget(button)
-        # Rename buttons to reflect focused module's actions
+        # Rename buttons to reflect selected module's actions
         # TODO: Can we use zip on the buttons and the actions?
         for i, action in enumerate(python_actions):
             # Clean old actions from button
             # HACK: disconnect() throws an exception if there are no connections.
             # Thus we use button name as a proxy for when there is a connected action.
-            if self.focused_action_buttons[i].text() != "":
-                self.focused_action_buttons[i].disconnect()
-                self.focused_action_buttons[i].setText("")
+            if self.selection_action_buttons[i].text() != "":
+                self.selection_action_buttons[i].disconnect()
+                self.selection_action_buttons[i].setText("")
             # Set button name
-            self.focused_action_buttons[i].setText(action.name)
+            self.selection_action_buttons[i].setText(action.name)
             # Set button on-click actions
-            self.focused_action_buttons[i].clicked.connect(action.action)
+            self.selection_action_buttons[i].clicked.connect(action.action)
             # Set tooltip
             if name in self.tooltips:
                 tooltip = self.tooltips[name]
-                self.focused_action_buttons[i].setToolTip(tooltip)
+                self.selection_action_buttons[i].setToolTip(tooltip)
             # Show button
-            self.focused_action_buttons[i].show()
+            self.selection_action_buttons[i].show()
 
     def _execute_module(
         self, name: str, moduleInfo: "jc.ModuleInfo", modal: bool = False

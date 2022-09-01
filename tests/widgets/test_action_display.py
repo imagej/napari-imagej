@@ -1,5 +1,5 @@
 """
-A module testing napari_imagej.widgets.focuser
+A module testing napari_imagej.widgets.action_display
 """
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
@@ -19,18 +19,18 @@ jc = JavaClassesTest()
 
 
 @pytest.fixture
-def focuser(viewer):
+def action_display(viewer):
     return SearchActionDisplay(viewer)
 
 
-def test_focus_widget_layout(focuser):
-    """Tests the number and expected order of focus widget children"""
-    subwidgets = focuser.children()
-    # Note: This is BEFORE any module is focused.
+def test_action_display_widget_layout(action_display):
+    """Tests the number and expected order of SearchActionDisplay widget children"""
+    subwidgets = action_display.children()
+    # Note: This is BEFORE any module is selected.
     assert len(subwidgets) == 3
     # The layout
     assert isinstance(subwidgets[0], QVBoxLayout)
-    # The label describing the focused module
+    # The label describing the selected module
     assert isinstance(subwidgets[1], QLabel)
     # The button Container
     assert isinstance(subwidgets[2], QWidget)
@@ -45,21 +45,21 @@ def example_info(ij):
 
 
 def test_button_param_regression(
-    focuser: SearchActionDisplay, example_info: "jc.ModuleInfo"
+    action_display: SearchActionDisplay, example_info: "jc.ModuleInfo"
 ):
     """Simple regression test ensuring search action button population"""
 
     result = jc.ModuleSearchResult(example_info, "")
-    py_actions = focuser._actions_from_result(result)
+    py_actions = action_display._actions_from_result(result)
     assert py_actions[0].name == "Run"
     assert (
-        focuser.tooltips[py_actions[0][0]]
+        action_display.tooltips[py_actions[0][0]]
         == "Runs functionality from a modal widget. Best for single executions"
     )
     assert py_actions[1].name == "Widget"
     assert (
-        focuser.tooltips[py_actions[1][0]]
+        action_display.tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
     assert py_actions[2].name == "Batch"
-    assert py_actions[2].name not in focuser.tooltips
+    assert py_actions[2].name not in action_display.tooltips
