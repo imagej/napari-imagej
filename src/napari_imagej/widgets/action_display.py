@@ -4,7 +4,8 @@ A QWidget designed to highlight SciJava Modules.
 Calls to SearchActionDisplay.run() will generate a list of actions that can be performed
 using the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
-from typing import Callable, Dict, List, NamedTuple
+from functools import lru_cache
+from typing import Callable, Dict, List, NamedTuple, Union
 
 from magicgui import magicgui
 from napari import Viewer
@@ -39,52 +40,27 @@ class SearchActionDisplay(QWidget):
         self.button_pane.setLayout(FlowLayout())
         self.layout().addWidget(self.button_pane)
 
-        self.selection_action_buttons = []  # type: ignore
-
     def select(self, result: "jc.SearchResult"):
         """Selects result, displaying its name and its SearchActions as buttons"""
-        name = ij().py.from_java(result.name())  # type: ignore
-        self._setText(name)
+        # First, remove the old information
+        self.clear()
 
-        # Create buttons for each action
-        python_actions: List[SearchAction] = self._actions_from_result(result)
-        buttons_needed = len(python_actions)
-        activated_actions = len(self.selection_action_buttons)
-        # Hide buttons if we have more than needed
-        while activated_actions > buttons_needed:
-            activated_actions = activated_actions - 1
-            self.selection_action_buttons[activated_actions].hide()
-        # Create buttons if we need more than we have
-        while len(self.selection_action_buttons) < buttons_needed:
-            button = QPushButton()
-            self.selection_action_buttons.append(button)
-            self.button_pane.layout().addWidget(button)
-        # Rename buttons to reflect selected module's actions
-        # TODO: Can we use zip on the buttons and the actions?
-        for i, action in enumerate(python_actions):
-            # Clean old actions from button
-            # HACK: disconnect() throws an exception if there are no connections.
-            # Thus we use button name as a proxy for when there is a connected action.
-            if self.selection_action_buttons[i].text() != "":
-                self.selection_action_buttons[i].disconnect()
-                self.selection_action_buttons[i].setText("")
-            # Set button name
-            self.selection_action_buttons[i].setText(action.name)
-            # Set button on-click actions
-            self.selection_action_buttons[i].clicked.connect(action.action)
-            # Set tooltip
-            if name in self._tooltips:
-                tooltip = self._tooltips[name]
-                self.selection_action_buttons[i].setToolTip(tooltip)
-            # Show button
-            self.selection_action_buttons[i].show()
+        # Then, set the label
+        self._setText(result.name())
+
+        # Finally, create buttons for each action
+        for action in self._actions_from_result(result):
+            self.button_pane.layout().addWidget(
+                SearchActionButton(action.name, action.action)
+            )
 
     def clear(self):
         """Clears the current selection"""
         self._setText("")
-        # Hide buttons
-        for button in self.selection_action_buttons:
-            button.hide()
+        # Remove all old buttons
+        for child in self.button_pane.children():
+            if isinstance(child, QPushButton):
+                child.deleteLater()
 
     def run(self, result: "jc.SearchResult"):
         """
@@ -105,13 +81,14 @@ class SearchActionDisplay(QWidget):
 
     # -- HELPER FUNCTIONALITY -- #
 
-    def _setText(self, text: str):
+    def _setText(self, text: Union[str, "jc.String"]):
         """
         Sets the text of this widget's QLabel.
         """
         if text:
             self.selected_module_label.show()
-            self.selected_module_label.setText(text)
+            # NB Java strings need to be converted explicitly
+            self.selected_module_label.setText(str(text))
         else:
             self.selected_module_label.hide()
 
@@ -121,7 +98,7 @@ class SearchActionDisplay(QWidget):
         """
         Gets the list of predefined button parameters that should appear
         for a given action name.
-        :return: A dict of button parameter, keyed by the run actions they wrap.
+        :return: A dict of button parameter, keyed by the actions they wrap.
             Button parameters are defined in tuples, where the first element is
             the name, and the section element is the on-click action.
         """
@@ -146,14 +123,7 @@ class SearchActionDisplay(QWidget):
             ],
         }
 
-    _tooltips: Dict[str, str] = {
-        "Widget": "Runs functionality from a napari widget. "
-        "Useful for parameter sweeping",
-        "Run": "Runs functionality from a modal widget. Best for single executions",
-        "Source": "Opens the source code on GitHub",
-        "Help": "Opens the functionality's ImageJ.net wiki page",
-    }
-
+    @lru_cache(maxsize=None)
     def _actions_from_result(self, result: "jc.SearchResult") -> List[SearchAction]:
         button_params: List[SearchAction] = []
         # Get all additional python actions for result
@@ -163,7 +133,7 @@ class SearchActionDisplay(QWidget):
         # Iterate over all available python actions
         searchService = ij().get("org.scijava.search.SearchService")
         for java_action in searchService.actions(result):
-            action_name = ij().py.from_java(java_action.toString())
+            action_name = str(java_action.toString())
             # If we have python replacements for this action, use them
             if action_name in python_action_replacements:
                 button_params.extend(python_action_replacements[action_name])
@@ -192,3 +162,21 @@ class SearchActionDisplay(QWidget):
             widget = magicgui(function=func, **param_options)
             self.viewer.window.add_dock_widget(widget)
             widget[0].native.setFocus()
+
+
+_tooltips: Dict[str, str] = {
+    "Widget": "Runs functionality from a napari widget. "
+    "Useful for parameter sweeping",
+    "Run": "Runs functionality from a modal widget. Best for single executions",
+    "Source": "Opens the source code on GitHub",
+    "Help": "Opens the functionality's ImageJ.net wiki page",
+}
+
+
+class SearchActionButton(QPushButton):
+    def __init__(self, name: str, action: Callable[[], None]):
+        super().__init__()
+        self.setText(name)
+        if name in _tooltips:
+            self.setToolTip(_tooltips[name])
+        self.clicked.connect(action)

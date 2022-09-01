@@ -5,7 +5,7 @@ import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from napari_imagej.java import JavaClasses
-from napari_imagej.widgets.action_display import SearchActionDisplay
+from napari_imagej.widgets.action_display import SearchActionDisplay, _tooltips
 from napari_imagej.widgets.layouts import FlowLayout
 
 
@@ -53,13 +53,13 @@ def test_button_param_regression(
     py_actions = action_display._actions_from_result(result)
     assert py_actions[0].name == "Run"
     assert (
-        action_display._tooltips[py_actions[0][0]]
+        _tooltips[py_actions[0][0]]
         == "Runs functionality from a modal widget. Best for single executions"
     )
     assert py_actions[1].name == "Widget"
     assert (
-        action_display._tooltips[py_actions[1][0]]
+        _tooltips[py_actions[1][0]]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
     assert py_actions[2].name == "Batch"
-    assert py_actions[2].name not in action_display._tooltips
+    assert py_actions[2].name not in _tooltips
