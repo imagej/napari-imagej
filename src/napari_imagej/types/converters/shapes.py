@@ -7,7 +7,7 @@ from jpype import JArray, JDouble
 from napari.layers import Shapes
 from scyjava import Priority
 
-from napari_imagej.setup_imagej import jc
+from napari_imagej.java import jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
 
 # -- Shapes Utils -- #

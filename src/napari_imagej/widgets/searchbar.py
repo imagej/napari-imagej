@@ -9,7 +9,7 @@ from threading import Thread
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.setup_imagej import ensure_jvm_started
+from napari_imagej.java import ensure_jvm_started
 
 
 class ImageJSearchbar(QWidget):

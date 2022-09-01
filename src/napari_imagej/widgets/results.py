@@ -11,7 +11,7 @@ from jpype import JArray, JImplements, JOverride
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
 
-from napari_imagej.setup_imagej import ensure_jvm_started, ij, jc
+from napari_imagej.java import ensure_jvm_started, ij, jc
 
 
 class ResultTreeItem(QTreeWidgetItem):

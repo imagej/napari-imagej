@@ -1,5 +1,5 @@
 """
-A module designed to encapsulate all Java setup.
+A module encapsulating access to Java functionality.
 
 Notable functions included in the module:
     * ij()

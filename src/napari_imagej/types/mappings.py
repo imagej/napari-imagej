@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 
-from napari_imagej.setup_imagej import jc
+from napari_imagej.java import jc
 
 MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
 

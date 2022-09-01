@@ -16,7 +16,7 @@ from typing import Callable, List, Optional, Tuple, Type
 
 from scyjava import Priority
 
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.java import ij, jc
 from napari_imagej.types.mappings import ptypes
 from napari_imagej.types.standins import standin_for
 

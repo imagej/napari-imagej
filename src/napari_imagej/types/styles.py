@@ -3,7 +3,7 @@ The definitive mapping of scyjava widget styles to magicgui widget types
 """
 from typing import Dict, Optional, Union
 
-from napari_imagej.setup_imagej import jc
+from napari_imagej.java import jc
 
 # The definitive mapping of scyjava widget styles to magicgui widget types
 # This map allows us to determine the "best" widget for a given ModuleItem.

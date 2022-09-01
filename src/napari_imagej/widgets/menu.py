@@ -14,7 +14,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
-from napari_imagej.setup_imagej import (
+from napari_imagej.java import (
     ensure_jvm_started,
     ij,
     jc,

@@ -1,4 +1,4 @@
-from napari_imagej.setup_imagej import JavaClasses
+from napari_imagej.java import JavaClasses
 
 
 class JavaClassesTest(JavaClasses):

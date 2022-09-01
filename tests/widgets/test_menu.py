@@ -7,7 +7,7 @@ from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
-from napari_imagej.setup_imagej import JavaClasses, running_headless
+from napari_imagej.java import JavaClasses, running_headless
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
     FromIJButton,

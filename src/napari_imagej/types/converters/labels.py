@@ -6,7 +6,7 @@ from labeling.Labeling import Labeling
 from napari.layers import Labels
 from scyjava import Priority
 
-from napari_imagej.setup_imagej import ij, jc
+from napari_imagej.java import ij, jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
 
 

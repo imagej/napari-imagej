@@ -12,7 +12,7 @@ from napari_imagej.widgets.napari_imagej import NapariImageJ
 @pytest.fixture(scope="module")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
-    from napari_imagej.setup_imagej import ij
+    from napari_imagej.java import ij
 
     return ij()
 

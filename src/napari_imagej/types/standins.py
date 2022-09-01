@@ -21,7 +21,7 @@ the correct PythonStandin for a Java enum-like!
 from enum import Enum, auto
 from typing import List
 
-from napari_imagej.setup_imagej import jc
+from napari_imagej.java import jc
 
 
 class PythonStandin(Enum):
