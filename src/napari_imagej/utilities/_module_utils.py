@@ -21,10 +21,11 @@ from napari.layers import Layer
 from napari.utils._magicgui import find_viewer_ancestor
 from scyjava import JavaIterable, JavaMap, JavaSet, jstacktrace
 
-from napari_imagej.setup_imagej import ij, jc, log_debug
+from napari_imagej.setup_imagej import ij, jc
 from napari_imagej.types.styles import widget_for_item_and_type
 from napari_imagej.types.type_conversions import python_type_of
 from napari_imagej.types.type_utils import type_displayable_in_napari
+from napari_imagej.utilities.logging import log_debug
 
 
 def _widget_return_type(

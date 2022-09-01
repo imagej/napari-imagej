@@ -17,7 +17,6 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-import logging
 import os
 import sys
 from functools import lru_cache
@@ -29,28 +28,7 @@ import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
-# -- LOGGER API -- #
-
-_logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)  # TEMP
-
-
-def logger() -> logging.Logger:
-    """
-    Gets the Logger instance
-    :return: the Logger instance used by this application
-    """
-    return _logger
-
-
-def log_debug(msg: str):
-    """
-    Provides a debug message to the logger, prefaced by 'napari-imagej: '
-    :param msg: The message to output
-    """
-    debug_msg = "napari-imagej: " + msg
-    _logger.debug(debug_msg)
-
+from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
 
