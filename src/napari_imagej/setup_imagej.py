@@ -5,7 +5,17 @@ Notable functions included in the module:
     * ij()
         - used to access the ImageJ instance
     * ensure_jvm_started()
-        - used to block execution until the ImageJ instance is ready.
+        - used to block execution until the ImageJ instance is ready
+    * running_headless()
+        - reports whether the JVM is being run headlessly
+    * setting()
+        - used to obtain values of configuration settings
+    * log_debug()
+        - used for logging in a standardized way
+
+Notable fields included in the module:
+    * jc
+        - object whose fields are lazily-loaded Java Class instances.
 """
 import logging
 import os
