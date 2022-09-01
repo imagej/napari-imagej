@@ -22,9 +22,9 @@ from napari.utils._magicgui import find_viewer_ancestor
 from scyjava import JavaIterable, JavaMap, JavaSet, jstacktrace
 
 from napari_imagej.java import ij, jc
-from napari_imagej.types.styles import widget_for_item_and_type
 from napari_imagej.types.type_conversions import python_type_of
 from napari_imagej.types.type_utils import type_displayable_in_napari
+from napari_imagej.types.widget_preferences import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
 
 
@@ -475,7 +475,7 @@ def _add_scijava_metadata(
         if choices is not None and len(choices) > 0:
             _add_param_metadata(param_map, "choices", choices)
         # Convert supported SciJava styles to widget types.
-        widget_type = widget_for_item_and_type(input, type_hints[input.getName()])
+        widget_type = preferred_widget_for(input, type_hints[input.getName()])
         if widget_type is not None:
             _add_param_metadata(param_map, "widget_type", widget_type)
 

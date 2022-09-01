@@ -1,19 +1,17 @@
 """
-The definitive mapping of scyjava widget styles to magicgui widget types
+A module used to identify widget preferences for given Java parameters.
 
 Notable functions included in the module:
     * widget_for_item_and_type()
-        - finds the best widget (as a str) for a ModuleItem and python type
+        - finds the best widget (as a str) for a ModuleItem
+        and corresponding python type
 """
 from typing import Dict, Optional, Union
 
 from napari_imagej.java import jc
 
-# The definitive mapping of scyjava widget styles to magicgui widget types
-# This map allows us to determine the "best" widget for a given ModuleItem.
-# For particular styles, there are sometimes multiple corresponding widgets.
-# We then have to differentiate by the PYTHON type of the parameter.
-supported_styles: Dict[str, Dict[type, str]] = {
+# The definitive mapping of scijava widget styles to magicgui widget types
+_supported_scijava_styles: Dict[str, Dict[type, str]] = {
     # ChoiceWidget styles
     "listBox": {str: "Select"},
     "radioButtonHorizontal": {str: "RadioButtons"},
@@ -24,23 +22,27 @@ supported_styles: Dict[str, Dict[type, str]] = {
 }
 
 
-def widget_for_item_and_type(
+def preferred_widget_for(
     item: "jc.ModuleItem",
     type_hint: Union[type, str],
 ) -> Optional[str]:
     """
-    Convenience function for interacting with _supported_styles
+    Finds the best MAGICGUI widget for a given SciJava ModuleItem,
+    and its corresponding Python type
+
+    For ModuleItems with unknown preferences, None is returned.
+
     :param item: The ModuleItem with a style
     :param type_hint: The PYTHON type for the parameter
-    :return: The best widget type, if it is known
+    :return: The best magicgui widget type, if it is known
     """
     if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
         return "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
 
     style: str = item.getWidgetStyle()
-    if style not in supported_styles:
+    if style not in _supported_scijava_styles:
         return None
-    style_options = supported_styles[style]
+    style_options = _supported_scijava_styles[style]
     for k, v in style_options.items():
         if issubclass(type_hint, k):
             return v

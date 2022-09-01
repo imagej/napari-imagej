@@ -9,7 +9,10 @@ from magicgui.widgets import (
     SpinBox,
 )
 
-from napari_imagej.types.styles import supported_styles, widget_for_item_and_type
+from napari_imagej.types.widget_preferences import (
+    _supported_scijava_styles,
+    preferred_widget_for,
+)
 from napari_imagej.widgets.parameter_widgets import MutableOutputWidget
 from tests.utils import DummyModuleItem, jc
 
@@ -28,7 +31,7 @@ parameterizations = [
     argnames=["style", "type_hint", "widget_type", "widget_class"],
     argvalues=parameterizations,
 )
-def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
+def test_preferred_widget_for(style, type_hint, widget_type, widget_class):
     """
     Tests that a style and type are mapped to the corresponding widget_class
     :param style: the SciJava style
@@ -39,7 +42,7 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
     # We only need item for the getWidgetStyle() function
     item: DummyModuleItem = DummyModuleItem()
     item.setWidgetStyle(style)
-    actual = widget_for_item_and_type(item, type_hint)
+    actual = preferred_widget_for(item, type_hint)
     assert widget_type == actual
 
     def func(foo):
@@ -54,14 +57,14 @@ def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
     assert isinstance(widget._list[0], widget_class)
 
 
-def test_helper_widgets_for_item_and_type():
+def test_preferred_widget_for_parameter_widgets():
 
     # MutableOutputWidget
     item: DummyModuleItem = DummyModuleItem(
         jtype=jc.ArrayImg, isInput=True, isOutput=True
     )
     type_hint = "napari.layers.Image"
-    actual = widget_for_item_and_type(item, type_hint)
+    actual = preferred_widget_for(item, type_hint)
     assert "napari_imagej.widgets.parameter_widgets.MutableOutputWidget" == actual
 
     def func(foo):
@@ -83,7 +86,7 @@ def test_all_styles_in_parameterizations():
     """
     _parameterizations = [p[:-1] for p in parameterizations]
     all_styles = []
-    for style in supported_styles:
-        for type_hint, widget_type in supported_styles[style].items():
+    for style in _supported_scijava_styles:
+        for type_hint, widget_type in _supported_scijava_styles[style].items():
             all_styles.append((style, type_hint, widget_type))
     assert all_styles == _parameterizations
