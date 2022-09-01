@@ -14,6 +14,9 @@ each created without variation (giving rise to the above constraints).
 
 In such cases, we can abstract the interface to a standin and the implementations
 to enumerations of that standin, as done below.
+
+PythonStandins are NOT intended for direct use. Instead, use standin_for() to obtain
+the correct PythonStandin for a Java enum-like!
 """
 from enum import Enum, auto
 from typing import List
