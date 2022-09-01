@@ -1,8 +1,8 @@
 """
-A QWidget designed to highlight SciJava Modules.
+A QWidget designed to run SciJava SearchResult functionality.
 
-Calls to SearchActionDisplay.run() will generate a list of actions that can be performed
-using the provided SciJava SearchResult. These actions will appear as QPushButtons.
+Calls to ResultRunner.select(result) will generate a set of actions that operate
+on the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
 from typing import Callable, Dict, List, Union
 
@@ -20,8 +20,31 @@ from napari_imagej.utilities._module_utils import (
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.layouts import QFlowLayout
 
+_action_tooltips: Dict[str, str] = {
+    "Widget": "Runs functionality from a napari widget. "
+    "Useful for parameter sweeping",
+    "Run": "Runs functionality from a modal widget. Best for single executions",
+    "Source": "Opens the source code on GitHub",
+    "Help": "Opens the functionality's ImageJ.net wiki page",
+}
 
-class SearchActionDisplay(QWidget):
+
+class ActionButton(QPushButton):
+    """
+    A QPushButton that starts with a function, occuring on click
+    """
+
+    def __init__(self, name: str, func: Callable[[], None]):
+        super().__init__()
+        self.setText(name)
+        if name in _action_tooltips:
+            self.setToolTip(_action_tooltips[name])
+
+        self.action = func
+        self.clicked.connect(self.action)
+
+
+class ResultRunner(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
@@ -35,7 +58,7 @@ class SearchActionDisplay(QWidget):
         self.layout().addWidget(self.button_pane)
 
     def select(self, result: "jc.SearchResult"):
-        """Selects result, displaying its name and its SearchActions as buttons"""
+        """Selects result, displaying its name and its actions as buttons"""
         # First, remove the old information
         self.clear()
 
@@ -56,13 +79,13 @@ class SearchActionDisplay(QWidget):
 
     def run(self, result: "jc.SearchResult"):
         """
-        Runs a SearchAction of the provided SearchResult.
-        The SearchAction chosen depends on keyboard modifiers.
+        Runs an action of the provided SearchResult.
+        The action chosen depends on keyboard modifiers.
         By default, the highest-priority action is run.
         Using SHIFT, the second-highest action is run.
         :param result: The selected SearchResult
         """
-        buttons: List[SearchActionButton] = self._buttons_for(result)
+        buttons: List[ActionButton] = self._buttons_for(result)
         # Run the first action UNLESS Shift is also pressed.
         # If so, run the second action
         if len(buttons) > 0:
@@ -84,22 +107,22 @@ class SearchActionDisplay(QWidget):
         else:
             self.selected_module_label.hide()
 
-    def _buttons_for(self, result: "jc.SearchResult") -> List["SearchActionButton"]:
-        buttons: List["SearchActionButton"] = []
+    def _buttons_for(self, result: "jc.SearchResult") -> List[ActionButton]:
+        buttons: List[ActionButton] = []
 
         # Iterate over all available python actions
         searchService = ij().get("org.scijava.search.SearchService")
         for action in searchService.actions(result):
             action_name = str(action.toString())
-            # Add buttons for the java SearchAction
+            # Add buttons for the java action
             if action_name == "Run":
                 buttons.extend(self._run_actions_for(result))
             else:
-                buttons.append(SearchActionButton(action_name, action.run))
+                buttons.append(ActionButton(action_name, action.run))
 
         return buttons
 
-    def _run_actions_for(self, result: "jc.SearchResult") -> List["SearchActionButton"]:
+    def _run_actions_for(self, result: "jc.SearchResult") -> List["ActionButton"]:
         def execute_result(modal: bool):
             """Helper function to perform module execution."""
             log_debug("Creating module...")
@@ -125,30 +148,8 @@ class SearchActionDisplay(QWidget):
                 widget[0].native.setFocus()
 
         buttons = [
-            SearchActionButton(name="Run", action=lambda: execute_result(modal=True)),
-            SearchActionButton(
-                name="Widget", action=lambda: execute_result(modal=False)
-            ),
+            ActionButton(name="Run", func=lambda: execute_result(modal=True)),
+            ActionButton(name="Widget", func=lambda: execute_result(modal=False)),
         ]
 
         return buttons
-
-
-_tooltips: Dict[str, str] = {
-    "Widget": "Runs functionality from a napari widget. "
-    "Useful for parameter sweeping",
-    "Run": "Runs functionality from a modal widget. Best for single executions",
-    "Source": "Opens the source code on GitHub",
-    "Help": "Opens the functionality's ImageJ.net wiki page",
-}
-
-
-class SearchActionButton(QPushButton):
-    def __init__(self, name: str, action: Callable[[], None]):
-        super().__init__()
-        self.setText(name)
-        if name in _tooltips:
-            self.setToolTip(_tooltips[name])
-
-        self.action = action
-        self.clicked.connect(self.action)

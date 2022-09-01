@@ -1,12 +1,12 @@
 """
-A module testing napari_imagej.widgets.action_display
+A module testing napari_imagej.widgets.result_runner
 """
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from napari_imagej.java import JavaClasses
-from napari_imagej.widgets.action_display import SearchActionDisplay, _tooltips
 from napari_imagej.widgets.layouts import QFlowLayout
+from napari_imagej.widgets.result_runner import ResultRunner, _action_tooltips
 
 
 class JavaClassesTest(JavaClasses):
@@ -19,13 +19,13 @@ jc = JavaClassesTest()
 
 
 @pytest.fixture
-def action_display(viewer):
-    return SearchActionDisplay(viewer)
+def result_runner(viewer):
+    return ResultRunner(viewer)
 
 
-def test_action_display_widget_layout(action_display):
-    """Tests the number and expected order of SearchActionDisplay widget children"""
-    subwidgets = action_display.children()
+def test_result_runner(result_runner):
+    """Tests the number and expected order of ResultRunner widget children"""
+    subwidgets = result_runner.children()
     # Note: This is BEFORE any module is selected.
     assert len(subwidgets) == 3
     # The layout
@@ -45,21 +45,21 @@ def example_info(ij):
 
 
 def test_button_param_regression(
-    action_display: SearchActionDisplay, example_info: "jc.ModuleInfo"
+    result_runner: ResultRunner, example_info: "jc.ModuleInfo"
 ):
     """Simple regression test ensuring search action button population"""
 
     result = jc.ModuleSearchResult(example_info, "")
-    buttons = action_display._buttons_for(result)
+    buttons = result_runner._buttons_for(result)
     assert buttons[0].text() == "Run"
     assert (
-        _tooltips[buttons[0].text()]
+        _action_tooltips[buttons[0].text()]
         == "Runs functionality from a modal widget. Best for single executions"
     )
     assert buttons[1].text() == "Widget"
     assert (
-        _tooltips[buttons[1].text()]
+        _action_tooltips[buttons[1].text()]
         == "Runs functionality from a napari widget. Useful for parameter sweeping"
     )
     assert buttons[2].text() == "Batch"
-    assert buttons[2].text() not in _tooltips
+    assert buttons[2].text() not in _action_tooltips

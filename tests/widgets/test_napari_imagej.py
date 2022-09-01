@@ -6,7 +6,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.napari_imagej import NapariImageJ, SearchActionDisplay
+from napari_imagej.widgets.napari_imagej import NapariImageJ, ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from tests.widgets.widget_utils import _populate_tree
@@ -22,7 +22,7 @@ def test_widget_subwidget_layout(imagej_widget: NapariImageJ):
     assert isinstance(subwidgets[1], NapariImageJMenu)
     assert isinstance(subwidgets[2], JVMEnabledSearchbar)
     assert isinstance(subwidgets[3], SearchResultTree)
-    assert isinstance(subwidgets[4], SearchActionDisplay)
+    assert isinstance(subwidgets[4], ResultRunner)
 
 
 def test_keymaps(make_napari_viewer, qtbot):
@@ -36,14 +36,14 @@ def test_keymaps(make_napari_viewer, qtbot):
     # Typing viewer.keymap['L'](viewer) does nothing. :(
 
 
-def _action_buttons(imagej_widget: NapariImageJ):
-    return imagej_widget.action_display.button_pane.findChildren(QPushButton)
+def _run_buttons(imagej_widget: NapariImageJ):
+    return imagej_widget.result_runner.button_pane.findChildren(QPushButton)
 
 
 def test_result_single_click(imagej_widget: NapariImageJ, qtbot, asserter):
     # Assert that there are initially no buttons
     imagej_widget.result_tree.wait_for_setup()
-    assert len(_action_buttons(imagej_widget)) == 0
+    assert len(_run_buttons(imagej_widget)) == 0
     # Search something, then wait for the results to populate
     imagej_widget.result_tree.search("Frangi")
     tree = imagej_widget.result_tree
@@ -53,18 +53,18 @@ def test_result_single_click(imagej_widget: NapariImageJ, qtbot, asserter):
     item = tree.topLevelItem(0).child(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    asserter(lambda: len(_action_buttons(imagej_widget)) > 0)
+    asserter(lambda: len(_run_buttons(imagej_widget)) > 0)
     # Test single click on searcher hides buttons
     item = tree.topLevelItem(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    # Ensure we don't see any text in the action display widget
+    # Ensure we don't see any text in the runner widget
     asserter(
-        lambda: imagej_widget.action_display.selected_module_label.isHidden()
-        or imagej_widget.action_display.selected_module_label.text() == ""
+        lambda: imagej_widget.result_runner.selected_module_label.isHidden()
+        or imagej_widget.result_runner.selected_module_label.text() == ""
     )
-    # Ensure we don't see any buttons in the action display widget
-    buttons = _action_buttons(imagej_widget)
+    # Ensure we don't see any buttons in the runner widget
+    buttons = _run_buttons(imagej_widget)
     asserter(lambda: len(buttons) == 0)
 
 

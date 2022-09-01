@@ -7,8 +7,8 @@ This Widget is made accessible to napari through napari.yml
 from napari import Viewer
 from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 
-from napari_imagej.widgets.action_display import SearchActionDisplay
 from napari_imagej.widgets.menu import NapariImageJMenu
+from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import ResultTreeItem, SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
@@ -31,30 +31,30 @@ class NapariImageJ(QWidget):
         # Then: The results tree
         self.result_tree: SearchResultTree = SearchResultTree()
         self.layout().addWidget(self.result_tree)
-        # Finally: The SearchAction display widget
-        self.action_display: SearchActionDisplay = SearchActionDisplay(napari_viewer)
-        self.layout().addWidget(self.action_display)
+        # Finally: The SearchResult runner
+        self.result_runner: ResultRunner = ResultRunner(napari_viewer)
+        self.layout().addWidget(self.result_runner)
 
         # -- Interwidget connections -- #
 
         # When the text bar changes, update the search results.
         self.search.bar.textEdited.connect(self.result_tree.search)
 
-        # When clicking a result, select it with the SearchActionDisplay
+        # When clicking a result, select it with the ResultRunner
         def click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
-                self.action_display.select(treeItem.result)
+                self.result_runner.select(treeItem.result)
             else:
-                self.action_display.clear()
+                self.result_runner.clear()
 
         # self.results.onClick = clickFunc
         self.result_tree.itemClicked.connect(click)
 
         # When double clicking a result,
-        # select it with the SearchActionDisplay and run the first action
+        # select it with the ResultRunner and run the first action
         def double_click(treeItem: QTreeWidgetItem):
             if isinstance(treeItem, ResultTreeItem):
-                self.action_display.run(treeItem.result)
+                self.result_runner.run(treeItem.result)
 
         self.result_tree.itemDoubleClicked.connect(double_click)
 
@@ -77,7 +77,7 @@ class NapariImageJ(QWidget):
             """Define the return behavior for this widget"""
             result = self.result_tree._first_result()
             if result is not None:
-                self.action_display.run(result)
+                self.result_runner.run(result)
 
         self.search.bar.returnPressed.connect(return_search_bar)
 
