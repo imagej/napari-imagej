@@ -2,7 +2,7 @@
 A module used to identify widget preferences for given Java parameters.
 
 Notable functions included in the module:
-    * widget_for_item_and_type()
+    * preferred_widget_for()
         - finds the best widget (as a str) for a ModuleItem
         and corresponding python type
 """
