@@ -11,6 +11,10 @@ their "equivalent" JAVA objects.
 
 This module concerns itself with the first phase of conversion, while the second phase
 is left to PyImageJ's to_java function.
+
+Notable functions included in the module:
+    * python_type_of()
+        - determines an "equivalent" python type for a given SciJava ModuleItem
 """
 from typing import Callable, List, Optional, Tuple, Type
 
@@ -42,7 +46,6 @@ def module_item_converter(
     return converter
 
 
-# TODO: Move this function to scyjava.convert and/or ij.py.
 def python_type_of(module_item: "jc.ModuleItem"):
     """Returns the Python type associated with the passed ModuleItem."""
     for converter, _ in sorted(
