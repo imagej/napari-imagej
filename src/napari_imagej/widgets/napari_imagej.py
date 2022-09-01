@@ -18,9 +18,6 @@ class NapariImageJ(QWidget):
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
-
-        # We actually create the widgets in the opposite order,
-        # as the top widgets will want to control the ones below.
         self.setLayout(QVBoxLayout())
 
         # GUI Buttons
