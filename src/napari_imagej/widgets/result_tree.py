@@ -3,13 +3,13 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
-import atexit
 from threading import Thread
 from typing import List, Optional
 
 from jpype import JArray, JImplements, JOverride
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
+from scyjava import when_jvm_stops
 
 from napari_imagej.java import ensure_jvm_started, ij, jc
 from napari_imagej.utilities.logging import log_debug
@@ -172,7 +172,7 @@ class SearchResultTree(QTreeWidget):
         )
         # Make sure that the search stops when we close napari
         # Otherwise the Java threads like to continue
-        atexit.register(self._searchOperation.terminate)
+        when_jvm_stops(self._searchOperation.terminate)
 
     def _first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
