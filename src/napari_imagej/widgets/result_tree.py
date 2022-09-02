@@ -12,6 +12,7 @@ from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from napari_imagej.java import ensure_jvm_started, ij, jc
+from napari_imagej.utilities.logging import log_debug
 
 
 class ResultTreeItem(QTreeWidgetItem):
@@ -27,17 +28,6 @@ class ResultTreeItem(QTreeWidgetItem):
 
         # Set QtPy properties
         self.setText(0, self.name)
-
-
-class SearchEventWrapper:
-    """
-    Python Class wrapping org.scijava.search.SearchEvent.
-    Needed for SearchTree.process, as signal types must be Python types.
-    """
-
-    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
-        self.searcher = searcher
-        self.results = [ResultTreeItem(r) for r in results]
 
 
 class SearcherTreeItem(QTreeWidgetItem):
@@ -58,9 +48,10 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setText(0, self.title)
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
 
-    def update(self, results: List[SearchEventWrapper]):
+    def update(self, results: List[ResultTreeItem]):
         """
-        Update children with the results stored in the SearchEventWrapper
+        Set the children of this node to results.
+        :param results: the future children of this node
         """
         self.takeChildren()
         if results and len(results):
@@ -71,9 +62,13 @@ class SearcherTreeItem(QTreeWidgetItem):
 
 class SearchResultTree(QTreeWidget):
 
-    # Signal used to update this widget with org.scijava.search.SearchResults.
-    # Given a SearchEventWrapper w, process.emit(w) will update the widget.
-    process = Signal(SearchEventWrapper)
+    # Signal used to update the children of this widget.
+    # NB the object passed in this signal's emissions will always be a
+    # org.scijava.search.SearchEvent in practice. BUT the signal requires
+    # a concrete type at instantiation time, and we don't want to delay
+    # the instantiation of this signal until we'd have that class. So,
+    # without a better option, we declare the type as object.
+    process = Signal(object)
     floatAbove = Signal()
 
     def __init__(
@@ -102,20 +97,20 @@ class SearchResultTree(QTreeWidget):
         self.wait_for_setup()
         self._searchOperation.search(text)
 
-    @Slot(SearchEventWrapper)
-    def update(self, event: SearchEventWrapper):
+    @Slot(object)
+    def update(self, event: "jc.SearchEvent"):
         """
         Update the search results using event
 
         :param event: The org.scijava.search.SearchResult asynchronously
         returned by the org.scijava.search.SearchService
         """
-        header = self._get_matching_item(event.searcher)
+        header = self._get_matching_item(event.searcher())
         if self._valid_results(event):
             if header is None:
-                header = self._add_new_searcher(event.searcher)
+                header = self._add_new_searcher(event.searcher())
                 self.sortItems(0, Qt.AscendingOrder)
-            header.update(event.results)
+            header.update([ResultTreeItem(r) for r in event.results()])
         elif header is not None:
             self.invisibleRootItem().removeChild(header)
 
@@ -165,7 +160,7 @@ class SearchResultTree(QTreeWidget):
 
             @JOverride
             def searchCompleted(self, event: "jc.SearchEvent"):
-                self.handler.emit(SearchEventWrapper(event.searcher(), event.results()))
+                self.handler.emit(event)
 
         # Start the search!
         # NB: SearchService.search takes varargs, so we need an array
@@ -202,8 +197,8 @@ class SearchResultTree(QTreeWidget):
         else:
             raise ValueError(f"Multiple Search Result Items matching name {name}")
 
-    def _valid_results(self, event: SearchEventWrapper):
-        results = event.results
+    def _valid_results(self, event: "jc.SearchEvent"):
+        results = event.results()
         # Return False for results == null
         if not results:
             return False
@@ -212,6 +207,7 @@ class SearchResultTree(QTreeWidget):
             return False
         # Return False for search errors
         if len(results) == 1:
-            if str(results[0].name) == "<error>":
+            if str(results[0].name()) == "<error>":
+                log_debug(f"Failed Search: {str(results[0].properties().get(None))}")
                 return False
         return True

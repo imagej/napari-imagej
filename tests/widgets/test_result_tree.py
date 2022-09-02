@@ -7,10 +7,9 @@ from qtpy.QtCore import Qt
 from napari_imagej.widgets.result_tree import (
     ResultTreeItem,
     SearcherTreeItem,
-    SearchEventWrapper,
     SearchResultTree,
 )
-from tests.utils import DummySearcher, jc
+from tests.utils import DummySearcher, DummySearchEvent, jc
 from tests.widgets.widget_utils import _populate_tree
 
 
@@ -59,12 +58,12 @@ def test_searchers_disappear(results_tree: SearchResultTree, asserter):
     # Update the Tree with some search results
     searcher = DummySearcher("foo")
     results = [jc.ClassSearchResult(c, "") for c in (jc.Float, jc.Double)]
-    results_tree.process.emit(SearchEventWrapper(searcher, results))
+    results_tree.process.emit(DummySearchEvent(searcher, results))
     asserter(lambda: results_tree.topLevelItemCount() == 1)
     asserter(lambda: results_tree.topLevelItem(0).childCount() == 2)
 
     # Update the tree with no search results, ensure that the searcher disappears
-    results_tree.process.emit(SearchEventWrapper(searcher, []))
+    results_tree.process.emit(DummySearchEvent(searcher, []))
     asserter(lambda: results_tree.topLevelItemCount() == 0)
 
 

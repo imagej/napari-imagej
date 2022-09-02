@@ -1,6 +1,8 @@
 """
 A module containing testing utilities
 """
+from typing import List
+
 from napari_imagej.java import JavaClasses
 
 
@@ -62,6 +64,22 @@ class DummySearcher:
 
     def title(self):
         return self._title
+
+
+class DummySearchEvent:
+    """
+    A mock of org.scijava.search.search.SearchEvent
+    """
+
+    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
+        self._searcher = searcher
+        self._results = results
+
+    def searcher(self):
+        return self._searcher
+
+    def results(self):
+        return self._results
 
 
 class DummyModuleInfo:
