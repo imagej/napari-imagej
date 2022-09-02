@@ -13,9 +13,9 @@ from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidg
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities._module_utils import (
-    convert_searchResult_to_info,
     execute_function_modally,
     functionify_module_execution,
+    info_for,
 )
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.layouts import QFlowLayout
@@ -128,7 +128,7 @@ class ResultRunner(QWidget):
             log_debug("Creating module...")
 
             name = str(result.name())
-            moduleInfo = convert_searchResult_to_info(result)
+            moduleInfo = info_for(result)
             module = ij().module().createModule(moduleInfo)
 
             # preprocess using napari GUI

@@ -659,5 +659,5 @@ def test_convert_searchResult_to_info(imagej_widget: NapariImageJ, ij):
     for i in range(imagej_widget.result_tree.topLevelItemCount()):
         searcher = imagej_widget.result_tree.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]
-        info = _module_utils.convert_searchResult_to_info(result)
+        info = _module_utils.info_for(result)
         assert isinstance(info, jc.ModuleInfo)

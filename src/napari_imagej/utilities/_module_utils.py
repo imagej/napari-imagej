@@ -7,7 +7,7 @@ There are a few functions that are designed for use by graphical widgets, namely
         - converts a SciJava module into a Python function
     * execute_function_modally(viewer, name, function, param_options)
         - executes a Python function, obtaining inputs through a modal dialog
-    * convert_searchResult_to_info(searchResult)
+    * info_for(searchResult)
         - converts a SciJava SearchResult to a ModuleInfo
 """
 from inspect import Parameter, Signature, _empty, signature
@@ -650,7 +650,7 @@ def execute_function_modally(
     _execute_function_with_params(viewer, params, func)
 
 
-def convert_searchResult_to_info(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
+def info_for(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
     info = search_result.info()
     # There is an extra step for Ops - we actually need the CommandInfo
     if isinstance(info, jc.OpInfo):
