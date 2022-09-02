@@ -17,6 +17,7 @@ from napari_imagej.java import ensure_jvm_started, ij, jc
 class ResultTreeItem(QTreeWidgetItem):
     """
     A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
+    Within a QTreeWidget, ResultTreeItem is designed to be a LEAF item.
     """
 
     def __init__(self, result: "jc.SearchResult"):
@@ -43,6 +44,9 @@ class SearcherTreeItem(QTreeWidgetItem):
     """
     A QTreeWidgetItem wrapping a org.scijava.search.Searcher
     with a set of org.scijava.search.SearchResults
+
+    Within a QTreeWidget, ResultTreeItem is designed to be a NON-LEAF item containing
+    ResultTreeItem children.
     """
 
     def __init__(self, searcher: "jc.Searcher"):
