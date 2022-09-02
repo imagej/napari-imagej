@@ -13,14 +13,14 @@ from napari_imagej.widgets.result_tree import ResultTreeItem, SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
 
-class NapariImageJ(QWidget):
+class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.setLayout(QVBoxLayout())
 
-        # -- NapariImageJ widget construction -- #
+        # -- NapariImageJWidget construction -- #
 
         # At the top: the napari-imagej menu
         self.menu: NapariImageJMenu = NapariImageJMenu(napari_viewer)

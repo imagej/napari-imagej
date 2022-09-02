@@ -13,7 +13,7 @@ from napari.layers import Image, Layer
 from napari_imagej.types.mappings import ptypes
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
-from napari_imagej.widgets.napari_imagej import NapariImageJ
+from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 from tests.utils import DummyModuleItem, jc
 
 
@@ -655,7 +655,7 @@ def test_execute_function_with_params(make_napari_viewer, ij):
     assert len(viewer.layers) == 1
 
 
-def test_convert_searchResult_to_info(imagej_widget: NapariImageJ, ij):
+def test_convert_searchResult_to_info(imagej_widget: NapariImageJWidget, ij):
     for i in range(imagej_widget.result_tree.topLevelItemCount()):
         searcher = imagej_widget.result_tree.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]

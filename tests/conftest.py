@@ -9,7 +9,7 @@ from napari import Viewer
 
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.napari_imagej import NapariImageJ
+from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
 
 @pytest.fixture(scope="module")
@@ -27,10 +27,10 @@ def viewer(make_napari_viewer) -> Generator[Viewer, None, None]:
 
 
 @pytest.fixture
-def imagej_widget(viewer) -> Generator[NapariImageJ, None, None]:
+def imagej_widget(viewer) -> Generator[NapariImageJWidget, None, None]:
     """Fixture providing an ImageJWidget"""
     # Create widget
-    ij_widget: NapariImageJ = NapariImageJ(viewer)
+    ij_widget: NapariImageJWidget = NapariImageJWidget(viewer)
 
     yield ij_widget
 
