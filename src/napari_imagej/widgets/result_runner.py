@@ -21,10 +21,9 @@ from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.layouts import QFlowLayout
 
 _action_tooltips: Dict[str, str] = {
-    "Widget": "Runs functionality from a napari widget. "
-    "Useful for parameter sweeping",
-    "Run": "Runs functionality from a modal widget. Best for single executions",
-    "Source": "Opens the source code on GitHub",
+    "Widget": "Creates a napari widget for executing this command with varying inputs",
+    "Run": "Runs the command immediately, asking for inputs in a pop-up dialog box",
+    "Source": "Opens the source code in browser",
     "Help": "Opens the functionality's ImageJ.net wiki page",
 }
 

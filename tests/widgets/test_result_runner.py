@@ -54,12 +54,12 @@ def test_button_param_regression(
     assert buttons[0].text() == "Run"
     assert (
         _action_tooltips[buttons[0].text()]
-        == "Runs functionality from a modal widget. Best for single executions"
+        == "Runs the command immediately, asking for inputs in a pop-up dialog box"
     )
     assert buttons[1].text() == "Widget"
     assert (
         _action_tooltips[buttons[1].text()]
-        == "Runs functionality from a napari widget. Useful for parameter sweeping"
+        == "Creates a napari widget for executing this command with varying inputs"
     )
     assert buttons[2].text() == "Batch"
     assert buttons[2].text() not in _action_tooltips
