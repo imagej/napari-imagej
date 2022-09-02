@@ -38,14 +38,14 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return ij_instance.get()
+    return ij_future.get()
 
 
 def ensure_jvm_started() -> None:
     """
     Blocks until the ImageJ instance is ready.
     """
-    ij_instance.wait()
+    ij_future.wait()
 
 
 def setting(name: str):
@@ -112,7 +112,9 @@ def _imagej_init():
 # issue with pickling. See
 # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
 threadpool: ThreadPool = ThreadPool(processes=1)
-ij_instance: AsyncResult = threadpool.apply_async(func=_imagej_init)
+# ij_future is not very pythonic, but we are dealing with a Java Object
+# and it better conveys the object's meaning than e.g. ij_result
+ij_future: AsyncResult = threadpool.apply_async(func=_imagej_init)
 
 
 class JavaClasses(object):
