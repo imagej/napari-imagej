@@ -158,7 +158,7 @@ class SearchResultTree(QTreeWidget):
 
         # Then, define our SearchListener
         @JImplements("org.scijava.search.SearchListener")
-        class NapariSearchListener:
+        class NapariImageJSearchListener:
             def __init__(self, event_handler: Signal):
                 super().__init__()
                 self.handler = event_handler
@@ -169,7 +169,9 @@ class SearchResultTree(QTreeWidget):
 
         # Start the search!
         # NB: SearchService.search takes varargs, so we need an array
-        listener_arr = JArray(jc.SearchListener)([NapariSearchListener(self.process)])
+        listener_arr = JArray(jc.SearchListener)(
+            [NapariImageJSearchListener(self.process)]
+        )
         self._searchOperation = (
             ij().get("org.scijava.search.SearchService").search(listener_arr)
         )
