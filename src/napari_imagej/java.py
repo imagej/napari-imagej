@@ -148,6 +148,10 @@ class JavaClasses(object):
         return "java.lang.Byte"
 
     @blocking_import
+    def Class(self):
+        return "java.lang.Class"
+
+    @blocking_import
     def Character(self):
         return "java.lang.Character"
 

@@ -9,11 +9,11 @@ from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
 from napari.layers import Labels, Points, Shapes, Surface
 
-from napari_imagej.java import jc
 from napari_imagej.types.converters.labels import _labeling_to_layer, _layer_to_labeling
-from napari_imagej.types.standins import OutOfBoundsFactory, StructuringElement
+from napari_imagej.types.enums import _ENUMS, py_enum_for
+from napari_imagej.types.standins import OutOfBoundsFactory
 from napari_imagej.types.type_conversions import python_type_of
-from tests.utils import DummyModuleItem
+from tests.utils import DummyModuleItem, jc
 
 
 def assert_labels_equality(
@@ -709,21 +709,27 @@ def test_surface_wrong_dimensions(ij, surface: Surface):
 # -- Enum(like)s -- #
 
 
-def test_StructuringElement_conversion(ij):
-    # Test python_type_of
-    assert (
-        python_type_of(DummyModuleItem(jtype=jc.StructuringElement))
-        == StructuringElement
-    )
-    # Test conversion
-    assert (
-        ij.py.to_java(StructuringElement.FOUR_CONNECTED)
-        == jc.StructuringElement.FOUR_CONNECTED
-    )
-    assert (
-        ij.py.to_java(StructuringElement.EIGHT_CONNECTED)
-        == jc.StructuringElement.EIGHT_CONNECTED
-    )
+def test_enum_conversion_regression(ij):
+    """
+    Ensures that all values of an enum can be converted bidirectionally
+    """
+    # We use StructuringElement for fun!
+    j_enum = jc.StructuringElement
+    py_enum = py_enum_for(j_enum.class_)
+    for j, p in zip(j_enum.values(), py_enum):
+        assert ij.py.to_java(p) == j
+        assert ij.py.from_java(j) == p
+
+
+def test_enum_conversion_on_the_fly(ij):
+    """
+    Ensures that an enum can be converted without calling py_enum_for first!
+    """
+    j_enum = jc.ExtremaType.MINIMA
+    assert j_enum.getClass() not in _ENUMS.values()
+    py_enum = ij.py.from_java(j_enum)
+    assert py_enum.__class__.__name__ == "ExtremaType"
+    assert py_enum.name == "MINIMA"
 
 
 def test_OutOfBoundsFactory_conversion(ij):

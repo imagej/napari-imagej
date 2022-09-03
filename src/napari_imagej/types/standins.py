@@ -52,19 +52,17 @@ def standin_for(java_type, default=None) -> type:
     :param default: the return when we can't find a standin
     :return: a standin for java_type, or default if we can't find one.
     """
+    # # First, check for an Enum
+    # py_enum = py_enum_for(java_type)
+    # if py_enum:
+    #     return py_enum
+
+    # Then, check for an EnumLike
+
     for standin in STANDINS:
         if java_type == standin.java_type():
             return standin
     return default
-
-
-class StructuringElement(PythonStandin):
-    FOUR_CONNECTED = auto()
-    EIGHT_CONNECTED = auto()
-
-    @staticmethod
-    def java_type():
-        return jc.StructuringElement
 
 
 class OutOfBoundsFactory(PythonStandin):

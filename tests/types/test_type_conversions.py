@@ -90,3 +90,8 @@ def test_python_type_of_standin_IO():
     # Test that a pure output does not match the enum
     module_item._isInput = False
     assert _module_utils.python_type_of(module_item) == str
+
+
+def test_enum():
+    p_type = _module_utils.python_type_of(DummyModuleItem(jtype=jc.StructuringElement))
+    assert p_type.__name__ == "StructuringElement"

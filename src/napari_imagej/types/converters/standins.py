@@ -3,21 +3,7 @@ scyjava Converters for converting PythonStandins into their java equivalents.
 """
 from napari_imagej.java import jc
 from napari_imagej.types.converters import py_to_java_converter
-from napari_imagej.types.standins import OutOfBoundsFactory, StructuringElement
-
-
-@py_to_java_converter(predicate=lambda obj: isinstance(obj, StructuringElement))
-def _py_to_java_structuringElement(obj: StructuringElement) -> "jc.StructuringElement":
-    """
-    Converts StructuringElement standins into actual StructuringElements
-    :param obj: the StructuringElement PythonStandin
-    :return: the actual StructuringElement
-    """
-    if obj == StructuringElement.FOUR_CONNECTED:
-        return jc.StructuringElement.FOUR_CONNECTED
-    if obj == StructuringElement.EIGHT_CONNECTED:
-        return jc.StructuringElement.EIGHT_CONNECTED
-    raise ValueError(f"{obj} is not a StructuringElement!")
+from napari_imagej.types.standins import OutOfBoundsFactory
 
 
 @py_to_java_converter(predicate=lambda obj: isinstance(obj, OutOfBoundsFactory))
