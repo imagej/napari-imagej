@@ -1,3 +1,6 @@
+"""
+The top-level menu for the napari-imagej widget.
+"""
 from enum import Enum
 from threading import Thread
 from typing import Optional
@@ -11,8 +14,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
-from napari_imagej._module_utils import _get_layers_hack
-from napari_imagej.setup_imagej import (
+from napari_imagej.java import (
     ensure_jvm_started,
     ij,
     jc,
@@ -20,9 +22,10 @@ from napari_imagej.setup_imagej import (
     running_headless,
     setting,
 )
+from napari_imagej.utilities._module_utils import _get_layers_hack
 
 
-class GUIWidget(QWidget):
+class NapariImageJMenu(QWidget):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.setLayout(QHBoxLayout())

@@ -1,6 +1,17 @@
-from functools import lru_cache
+"""
+This module contains various utilities for interacting with SciJava Modules.
+Most of these functions are designed for INTERNAL USE ONLY.
+
+There are a few functions that are designed for use by graphical widgets, namely:
+    * functionify_module_execution(viewer, module, module_info)
+        - converts a SciJava module into a Python function
+    * execute_function_modally(viewer, name, function, param_options)
+        - executes a Python function, obtaining inputs through a modal dialog
+    * info_for(searchResult)
+        - converts a SciJava SearchResult to a ModuleInfo
+"""
 from inspect import Parameter, Signature, _empty, signature
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException
 from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
@@ -8,180 +19,13 @@ from magicgui.widgets._bases import CategoricalWidget
 from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import find_viewer_ancestor
-from scyjava import JavaIterable, JavaMap, JavaSet, Priority, jstacktrace
+from scyjava import JavaIterable, JavaMap, JavaSet, jstacktrace
 
-from napari_imagej._ptypes import TypeMappings, TypePlaceholders, _supported_styles
-from napari_imagej.setup_imagej import ij, jc, log_debug
-
-
-@lru_cache(maxsize=None)
-def type_mappings():
-    """
-    Lazily creates a TypeMappings object.
-    This object is then cached upon function return,
-    effectively making this function a lazily initialized field.
-
-    This object should be lazily initialized as it will import java classes.
-    Those Java classes should not be imported until ImageJ has been able to set
-    up the JVM, adding its required JARs to the classpath. For that reason,
-    java class importing is done with java_import, which blocks UNTIL the imagej
-    gateway has been created (in a separate thread). Thus, prematurely calling this
-    function would block the calling thread.
-
-    By lazily initializing this function, we minimize the time this thread is blocked.
-    """
-    return TypeMappings()
-
-
-@lru_cache(maxsize=None)
-def type_placeholders() -> Dict[Any, Any]:
-    """
-    Lazily creates a map of type placeholders.
-    This object is then cached upon function return,
-    effectively making this function a lazily initialized field.
-
-    This object should be lazily initialized as it will import java classes.
-    Those Java classes should not be imported until ImageJ has been able to set
-    up the JVM, adding its required JARs to the classpath. For that reason,
-    java class importing is done with java_import, which blocks UNTIL the imagej
-    gateway has been created (in a separate thread). Thus, prematurely calling this
-    function would block the calling thread.
-
-    By lazily initializing this function, we minimize the time this thread is blocked.
-    """
-    return TypePlaceholders()
-
-
-# List of Module Item Converters, along with their priority
-_MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
-
-
-def module_item_converter(
-    priority: int = Priority.NORMAL,
-) -> Callable[["jc.ModuleInfo"], Callable]:
-    """
-    A decorator used to register the annotated function among the
-    available module item converters
-    :param priority: How much this converter should be prioritized
-    :return: The annotated function
-    """
-
-    def converter(func: Callable):
-        """Registers the annotated function with its priority"""
-        _MODULE_ITEM_CONVERTERS.append((func, priority))
-        return func
-
-    return converter
-
-
-# TODO: Move this function to scyjava.convert and/or ij.py.
-def python_type_of(module_item: "jc.ModuleItem"):
-    """Returns the Python type associated with the passed ModuleItem."""
-    for converter, _ in sorted(
-        _MODULE_ITEM_CONVERTERS, reverse=True, key=lambda x: x[1]
-    ):
-        converted = converter(module_item)
-        if converted is not None:
-            return converted
-    raise ValueError(
-        (
-            f"Unsupported Java Type: {module_item.getType()}. "
-            "Let us know about the failure at https://forum.image.sc, "
-            "or file an issue at https://github.com/imagej/napari-imagej!"
-        )
-    )
-
-
-@module_item_converter(priority=Priority.HIGH)
-def placeholder_converter(item: "jc.ModuleItem"):
-    """
-    Checks to see if this type can be satisfied by a placeholder.
-    For a placeholder to work, it MUST be a pure input.
-    This is because the python type has no functionality, as it is just an Enum choice.
-    """
-    if item.isInput() and not item.isOutput():
-        java_type = item.getType()
-        return type_placeholders().get(java_type, None)
-
-
-def _checkerUsingFunc(
-    item: "jc.ModuleItem", func: Callable[[Type, Type], bool]
-) -> Optional[Type]:
-    """
-    The logic of this checker is as follows:
-
-    type_mappings().ptypes.items() contains (java_type, python_type) pairs.
-    These pairs are considered to be equivalent types; i.e. we can freely
-    convert between these types.
-
-    There are 3 cases:
-    1) The ModuleItem is a PURE INPUT:
-        We can satisfy item with an object of ptype IF its corresponding
-        jtype can be converted to item's type. The conversion then goes
-        ptype -> jtype -> java_type
-    2) The ModuleItem is a PURE OUTPUT:
-        We can satisfy item with ptype IF java_type can be converted to jtype.
-        Then jtype can be converted to ptype. The conversion then goes
-        java_type -> jtype -> ptype
-    3) The ModuleItem is BOTH:
-        We can satisfy item with ptype IF we satisfy both 1 and 2.
-        ptype -> jtype -> java_type -> jtype -> ptype
-
-    :param item: the ModuleItem we'd like to convert
-    :return: the python equivalent of ModuleItem's type, or None if that type
-    cannot be converted.
-    """
-    # Get the type of the Module item
-    java_type = item.getType()
-    type_pairs = type_mappings().ptypes.items()
-    # Case 1
-    if item.isInput() and not item.isOutput():
-        for jtype, ptype in type_pairs:
-            # can we go from jtype to java_type?
-            if func(jtype, java_type):
-                return ptype
-    # Case 2
-    elif item.isOutput() and not item.isInput():
-        # NB type_pairs is ordered from least to most specific.
-        for jtype, ptype in reversed(type_pairs):
-            # can we go from java_type to jtype?
-            if func(java_type, jtype):
-                return ptype
-    # Case 3
-    elif item.isInput() and item.isOutput():
-        for jtype, ptype in type_pairs:
-            # can we go both ways?
-            if func(java_type, jtype) and func(jtype, java_type):
-                return ptype
-    # Didn't satisfy any cases!
-    return None
-
-
-@module_item_converter()
-def isAssignableChecker(item: "jc.ModuleItem") -> Optional[Type]:
-    """
-    Determines whether we can simply cast from ptype to item's type java_type
-    """
-
-    def isAssignable(from_type, to_type) -> bool:
-        # Use Types to get the raw type of each
-        from_raw = jc.Types.raw(from_type)
-        to_raw = jc.Types.raw(to_type)
-        return from_raw.isAssignableFrom(to_raw)
-
-    return _checkerUsingFunc(item, isAssignable)
-
-
-@module_item_converter(priority=Priority.LOW)
-def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
-    """
-    Determines whether imagej can do a conversion from ptype to item's type java_type.
-    """
-
-    def isAssignable(from_type, to_type) -> bool:
-        return ij().convert().supports(from_type, to_type)
-
-    return _checkerUsingFunc(item, isAssignable)
+from napari_imagej.java import ij, jc
+from napari_imagej.types.type_conversions import python_type_of
+from napari_imagej.types.type_utils import type_displayable_in_napari
+from napari_imagej.types.widget_mappings import preferred_widget_for
+from napari_imagej.utilities.logging import log_debug
 
 
 def _widget_return_type(
@@ -197,7 +41,7 @@ def _widget_return_type(
         # If the user passed the output, we shouldn't return it.
         if output_item in user_resolved_inputs:
             continue
-        if type_mappings().type_displayable_in_napari(output_item.getType()):
+        if type_displayable_in_napari(output_item.getType()):
             return List[Layer]
     return None
 
@@ -380,7 +224,7 @@ def _napari_module_param_additions(
     # coerced into a layer. If there are any, we add the option to the
     # parameter map.
     for output_item in module_info.outputs():
-        if not type_mappings().type_displayable_in_napari(output_item.getType()):
+        if not type_displayable_in_napari(output_item.getType()):
             additional_params["display_results_in_new_window"] = (bool, False)
     return additional_params
 
@@ -610,29 +454,6 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
         pass
 
 
-def _widget_for_item_and_type(
-    item: "jc.ModuleItem",
-    type_hint: Union[type, str],
-) -> Optional[str]:
-    """
-    Convenience function for interacting with _supported_styles
-    :param item: The ModuleItem with a style
-    :param type_hint: The PYTHON type for the parameter
-    :return: The best widget type, if it is known
-    """
-    if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
-        return "napari_imagej._helper_widgets.MutableOutputWidget"
-
-    style: str = item.getWidgetStyle()
-    if style not in _supported_styles:
-        return None
-    style_options = _supported_styles[style]
-    for k, v in style_options.items():
-        if issubclass(type_hint, k):
-            return v
-    return None
-
-
 def _add_scijava_metadata(
     unresolved_inputs: List["jc.ModuleItem"],
     type_hints: Dict[str, Union[str, type]],
@@ -654,7 +475,7 @@ def _add_scijava_metadata(
         if choices is not None and len(choices) > 0:
             _add_param_metadata(param_map, "choices", choices)
         # Convert supported SciJava styles to widget types.
-        widget_type = _widget_for_item_and_type(input, type_hints[input.getName()])
+        widget_type = preferred_widget_for(input, type_hints[input.getName()])
         if widget_type is not None:
             _add_param_metadata(param_map, "widget_type", widget_type)
 
@@ -829,7 +650,7 @@ def execute_function_modally(
     _execute_function_with_params(viewer, params, func)
 
 
-def convert_searchResult_to_info(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
+def info_for(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
     info = search_result.info()
     # There is an extra step for Ops - we actually need the CommandInfo
     if isinstance(info, jc.OpInfo):

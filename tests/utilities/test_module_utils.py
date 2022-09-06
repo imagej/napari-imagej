@@ -1,251 +1,20 @@
+"""
+A module testing napari_imagej.utilities._module_utils
+"""
 from inspect import Parameter, _empty
 from typing import Any, Dict, List, Optional
 
 import numpy
 import pytest
-from magicgui.widgets import (
-    Container,
-    FloatSlider,
-    FloatSpinBox,
-    Label,
-    LineEdit,
-    RadioButtons,
-    Select,
-    Slider,
-    SpinBox,
-    Widget,
-)
+from magicgui.widgets import Container, Label, LineEdit, Widget
 from napari import Viewer
 from napari.layers import Image, Layer
 
-from napari_imagej import _module_utils
-from napari_imagej._ptypes import OutOfBoundsFactory, TypeMappings, _supported_styles
-from napari_imagej.setup_imagej import JavaClasses
-from napari_imagej.widget import ImageJWidget
-
-
-class JavaClassesTest(JavaClasses):
-    """
-    Here we override JavaClasses to get extra test imports
-    """
-
-    @JavaClasses.blocking_import
-    def ArrayImg(self):
-        return "net.imglib2.img.array.ArrayImg"
-
-    @JavaClasses.blocking_import
-    def ArrayImgs(self):
-        return "net.imglib2.img.array.ArrayImgs"
-
-    @JavaClasses.blocking_import
-    def DefaultMutableModuleItem(self):
-        return "org.scijava.module.DefaultMutableModuleItem"
-
-    @JavaClasses.blocking_import
-    def DefaultMutableModuleInfo(self):
-        return "org.scijava.module.DefaultMutableModuleInfo"
-
-    @JavaClasses.blocking_import
-    def DoubleArray(self):
-        return "org.scijava.util.DoubleArray"
-
-    @JavaClasses.blocking_import
-    def EuclideanSpace(self):
-        return "net.imglib2.EuclideanSpace"
-
-    @JavaClasses.blocking_import
-    def ItemIO(self):
-        return "org.scijava.ItemIO"
-
-    @JavaClasses.blocking_import
-    def ScriptInfo(self):
-        return "org.scijava.script.ScriptInfo"
-
-    @JavaClasses.blocking_import
-    def System(self):
-        return "java.lang.System"
-
-
-jc = JavaClassesTest()
-
-
-class DummyModuleInfo:
-    """
-    A mock of org.scijava.module.ModuleInfo that is created much easier
-    Fields can and should be added as needed for tests.
-    """
-
-    def __init__(self, inputs=[], outputs=[]):
-        self._inputs = inputs
-        self._outputs = outputs
-
-    def outputs(self):
-        return self._outputs
-
-
-class DummyModuleItem:
-    """
-    A mock of org.scijava.module.ModuleItem that is created much easier
-    Fields can and should be added as needed for tests.
-    """
-
-    def __init__(
-        self,
-        name="",
-        jtype=jc.String,
-        isRequired=True,
-        isInput=True,
-        isOutput=False,
-        default=None,
-    ):
-        self._name = name
-        self._jtype = jtype
-        self._isRequired = isRequired
-        self._isInput = isInput
-        self._isOutput = isOutput
-        self._default = default
-
-    def getName(self):
-        return self._name
-
-    def getType(self):
-        return self._jtype
-
-    def isRequired(self):
-        return self._isRequired
-
-    def isInput(self):
-        return self._isInput
-
-    def isOutput(self):
-        return self._isOutput
-
-    def getDefaultValue(self):
-        return self._default
-
-    def getMaximumValue(self):
-        return self._maximumValue
-
-    def setMaximumValue(self, val):
-        self._maximumValue = val
-
-    def getMinimumValue(self):
-        return self._minimumValue
-
-    def setMinimumValue(self, val):
-        self._minimumValue = val
-
-    def getStepSize(self):
-        return self._stepSize
-
-    def setStepSize(self, val):
-        self._stepSize = val
-
-    def getLabel(self):
-        return self._label
-
-    def setLabel(self, val):
-        self._label = val
-
-    def getDescription(self):
-        return self._description
-
-    def setDescription(self, val):
-        self._description = val
-
-    def getChoices(self):
-        return self._choices
-
-    def setChoices(self, val):
-        self._choices = val
-
-    def getWidgetStyle(self):
-        return self._style
-
-    def setWidgetStyle(self, val):
-        self._style = val
-
-
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
-assignable_match_pairs = [
-    (jc.ArrayImg, "napari.layers.Image")  # ArrayImg -> RAI -> ImageData
-]
-convertible_match_pairs = [
-    # We want to test that napari could tell that a DoubleArray ModuleItem
-    # could be satisfied by a List[float], as napari-imagej knows how to
-    # convert that List[float] into a Double[], and imagej knows how to
-    # convert that Double[] into a DoubleArray. Unfortunately, DefaultConverter
-    # can convert Integers into DoubleArrays; because it comes first in
-    # TypeMappings, it is the python type that returns.
-    # This is really not napari-imagej's fault.
-    # Since the goal was just to test that python_type_of uses ij.convert()
-    # as an option, we will leave the conversion like this.
-    (jc.DoubleArray, int)
-]
-type_pairs = direct_match_pairs + assignable_match_pairs + convertible_match_pairs
-
-
-@pytest.mark.parametrize("jtype, ptype", type_pairs)
-def test_python_type_of_input_only(jtype, ptype):
-    module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=False)
-    assert _module_utils.python_type_of(module_item) == ptype
-
-
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
-assignable_match_pairs = [
-    # ImageData -> RAI -> EuclideanSpace
-    (jc.EuclideanSpace, "napari.types.ImageData")
-]
-convertible_match_pairs = [
-    # We want to test that napari could tell that a DoubleArray ModuleItem
-    # could be satisfied by a List[float], as napari-imagej knows how to
-    # convert that List[float] into a Double[], and imagej knows how to
-    # convert that Double[] into a DoubleArray. Unfortunately, DefaultConverter
-    # can convert DoubleArrays into strings; because it comes first in
-    # TypeMappings, it is the python type that returns.
-    # This is really not napari-imagej's fault.
-    # Since the goal was just to test that python_type_of uses ij.convert()
-    # as an option, we will leave the conversion like this.
-    (jc.DoubleArray, str)  # DoubleArray -> String -> str
-]
-type_pairs = direct_match_pairs + convertible_match_pairs
-
-
-@pytest.mark.parametrize("jtype, ptype", type_pairs)
-def test_python_type_of_output_only(jtype, ptype):
-    module_item = DummyModuleItem(jtype=jtype, isInput=False, isOutput=True)
-    assert _module_utils.python_type_of(module_item) == ptype
-
-
-direct_match_pairs = [(jtype, ptype) for jtype, ptype in TypeMappings().ptypes.items()]
-convertible_match_pairs = [(jc.DoubleArray, List[float])]
-type_pairs = direct_match_pairs + convertible_match_pairs
-
-
-@pytest.mark.parametrize("jtype, ptype", type_pairs)
-def test_python_type_of_IO(jtype, ptype):
-    module_item = DummyModuleItem(jtype=jtype, isInput=True, isOutput=True)
-    assert _module_utils.python_type_of(module_item) == ptype
-
-
-def test_python_type_of_placeholder_IO():
-    # Test that a pure input matches
-    module_item = DummyModuleItem(
-        jtype=jc.OutOfBoundsFactory, isInput=True, isOutput=False
-    )
-    assert _module_utils.python_type_of(module_item) == OutOfBoundsFactory
-
-    # Test that a mutable input does not match
-    module_item._isOutput = True
-    try:
-        _module_utils.python_type_of(module_item)
-        pytest.fail()
-    except ValueError:
-        pass
-
-    # Test that a pure output does not match the enum
-    module_item._isInput = False
-    assert _module_utils.python_type_of(module_item) == str
+from napari_imagej.types.mappings import ptypes
+from napari_imagej.types.type_utils import _napari_layer_types
+from napari_imagej.utilities import _module_utils
+from napari_imagej.widgets.napari_imagej import NapariImageJWidget
+from tests.utils import DummyModuleItem, jc
 
 
 @pytest.fixture
@@ -389,14 +158,12 @@ def assert_new_window_checkbox_for_type(type, expected):
 
 
 def test_napari_param_new_window_checkbox():
-    ptypes = TypeMappings()
-
-    types_absent = ptypes._napari_layer_types
+    types_absent = _napari_layer_types()
 
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(ptypes.ptypes.keys()) - set(ptypes._napari_layer_types))
+    types_present = list(set(ptypes().keys()) - set(_napari_layer_types()))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 
@@ -535,85 +302,6 @@ def test_add_scijava_metadata_empty_choices(
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert "choices" not in param_map
-
-
-parameterizations = [
-    ("listBox", str, "Select", Select),
-    ("radioButtonHorizontal", str, "RadioButtons", RadioButtons),
-    ("radioButtonVertical", str, "RadioButtons", RadioButtons),
-    ("slider", int, "Slider", Slider),
-    ("slider", float, "FloatSlider", FloatSlider),
-    ("spinner", int, "SpinBox", SpinBox),
-    ("spinner", float, "FloatSpinBox", FloatSpinBox),
-]
-
-
-@pytest.mark.parametrize(
-    argnames=["style", "type_hint", "widget_type", "widget_class"],
-    argvalues=parameterizations,
-)
-def test_widget_for_style_and_type(style, type_hint, widget_type, widget_class):
-    """
-    Tests that a style and type are mapped to the corresponding widget_class
-    :param style: the SciJava style
-    :param type_hint: the PYTHON type of a parameter
-    :param widget_type: the name of a magicgui widget
-    :param widget_class: the class corresponding to name
-    """
-    # We only need item for the getWidgetStyle() function
-    item: DummyModuleItem = DummyModuleItem()
-    item.setWidgetStyle(style)
-    actual = _module_utils._widget_for_item_and_type(item, type_hint)
-    assert widget_type == actual
-
-    def func(foo):
-        print(foo, "bar")
-
-    func.__annotation__ = {"foo": type_hint}
-    import magicgui
-
-    widget = magicgui.magicgui(
-        function=func, call_button=False, foo={"widget_type": actual}
-    )
-    assert len(widget._list) == 1
-    assert isinstance(widget._list[0], widget_class)
-
-
-def test_helper_widgets_for_item_and_type():
-    from napari_imagej._helper_widgets import MutableOutputWidget
-
-    # MutableOutputWidget
-    item: DummyModuleItem = DummyModuleItem(
-        jtype=jc.ArrayImg, isInput=True, isOutput=True
-    )
-    type_hint = "napari.layers.Image"
-    actual = _module_utils._widget_for_item_and_type(item, type_hint)
-    assert "napari_imagej._helper_widgets.MutableOutputWidget" == actual
-
-    def func(foo):
-        print(foo, "bar")
-
-    func.__annotation__ = {"foo": type_hint}
-    import magicgui
-
-    widget = magicgui.magicgui(
-        function=func, call_button=False, foo={"widget_type": actual}
-    )
-    assert len(widget._list) == 1
-    assert isinstance(widget._list[0], MutableOutputWidget)
-
-
-def test_all_styles_in_parameterizations():
-    """
-    Tests that all style mappings declared in _supported_styles
-    are tested in test_wiget_for_style_and_type
-    """
-    _parameterizations = [p[:-1] for p in parameterizations]
-    all_styles = []
-    for style in _supported_styles:
-        for type_hint, widget_type in _supported_styles[style].items():
-            all_styles.append((style, type_hint, widget_type))
-    assert all_styles == _parameterizations
 
 
 def test_modify_functional_signature():
@@ -967,9 +655,9 @@ def test_execute_function_with_params(make_napari_viewer, ij):
     assert len(viewer.layers) == 1
 
 
-def test_convert_searchResult_to_info(imagej_widget: ImageJWidget, ij):
-    for i in range(imagej_widget.results.topLevelItemCount()):
-        searcher = imagej_widget.results.topLevelItem(i)._searcher
+def test_convert_searchResult_to_info(imagej_widget: NapariImageJWidget, ij):
+    for i in range(imagej_widget.result_tree.topLevelItemCount()):
+        searcher = imagej_widget.result_tree.topLevelItem(i)._searcher
         result = searcher.search("f", True)[0]
-        info = _module_utils.convert_searchResult_to_info(result)
+        info = _module_utils.info_for(result)
         assert isinstance(info, jc.ModuleInfo)

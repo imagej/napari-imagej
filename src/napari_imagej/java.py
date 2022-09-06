@@ -1,32 +1,76 @@
-import logging
+"""
+A module encapsulating access to Java functionality.
+
+Notable functions included in the module:
+    * ij()
+        - used to access the ImageJ instance
+    * ensure_jvm_started()
+        - used to block execution until the ImageJ instance is ready
+    * running_headless()
+        - reports whether the JVM is being run headlessly
+    * setting()
+        - used to obtain values of configuration settings
+    * log_debug()
+        - used for logging in a standardized way
+
+Notable fields included in the module:
+    * jc
+        - object whose fields are lazily-loaded Java Class instances.
+"""
 import os
 import sys
 from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import imagej
 import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
-# -- LOGGER CONFIG -- #
+from napari_imagej.utilities.logging import log_debug
 
-_logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)  # TEMP
-
-# -- PUBLIC API -- #
+# -- ImageJ API -- #
 
 
-def log_debug(msg: str):
+def ij():
     """
-    Provides a debug message to the logger, prefaced by 'napari-imagej: '
+    Returns the ImageJ instance.
+    If it isn't ready yet, blocks until it is ready.
     """
-    debug_msg = "napari-imagej: " + msg
-    _logger.debug(debug_msg)
+    return ij_future.get()
 
 
-def imagej_init():
+def ensure_jvm_started() -> None:
+    """
+    Blocks until the ImageJ instance is ready.
+    """
+    ij_future.wait()
+
+
+def setting(name: str):
+    """Gets the value of setting name"""
+    return settings().get(name, None)
+
+
+@lru_cache(maxsize=None)
+def settings() -> Dict[Any, Any]:
+    """Gets all plugin settings as a dictionary"""
+    return yaml.safe_load(open("settings.yml", "r"))
+
+
+def get_mode() -> str:
+    """
+    Returns the mode ImageJ will be run in
+    """
+    return "headless" if sys.platform == "darwin" else "interactive"
+
+
+def running_headless() -> bool:
+    return get_mode() == "headless"
+
+
+def _imagej_init():
     # Initialize ImageJ
     log_debug("Initializing ImageJ2")
 
@@ -56,26 +100,6 @@ def imagej_init():
     return _ij
 
 
-def setting(value: str):
-    return settings().get(value, None)
-
-
-@lru_cache(maxsize=None)
-def settings():
-    return yaml.safe_load(open("settings.yml", "r"))
-
-
-def get_mode() -> str:
-    """
-    Returns the mode ImageJ will be run in
-    """
-    return "headless" if sys.platform == "darwin" else "interactive"
-
-
-def running_headless() -> bool:
-    return get_mode() == "headless"
-
-
 # There is a good debate to be had whether to multithread or multiprocess.
 # From what I (Gabe) have read, it seems that threading is preferrable for
 # network / IO bottlenecking, while multiprocessing is preferrable for CPU
@@ -88,23 +112,9 @@ def running_headless() -> bool:
 # issue with pickling. See
 # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
 threadpool: ThreadPool = ThreadPool(processes=1)
-ij_instance: AsyncResult = threadpool.apply_async(func=imagej_init)
-
-
-def ensure_jvm_started() -> None:
-    ij_instance.wait()
-
-
-def ij():
-    """
-    Returns the ImageJ instance.
-    If it isn't ready yet, blocks until it is ready.
-    """
-    return ij_instance.get()
-
-
-def logger():
-    return _logger
+# ij_future is not very pythonic, but we are dealing with a Java Object
+# and it better conveys the object's meaning than e.g. ij_result
+ij_future: AsyncResult = threadpool.apply_async(func=_imagej_init)
 
 
 class JavaClasses(object):
@@ -136,6 +146,10 @@ class JavaClasses(object):
     @blocking_import
     def Byte(self):
         return "java.lang.Byte"
+
+    @blocking_import
+    def Class(self):
+        return "java.lang.Class"
 
     @blocking_import
     def Character(self):
@@ -356,12 +370,6 @@ class JavaClasses(object):
     @blocking_import
     def RealType(self):
         return "net.imglib2.type.numeric.RealType"
-
-    # ImgLib2-algorithm Types
-
-    @blocking_import
-    def StructuringElement(self):
-        return "net.imglib2.algorithm.labeling.ConnectedComponents.StructuringElement"
 
     # ImgLib2-roi Types
 
