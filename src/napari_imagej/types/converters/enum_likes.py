@@ -23,4 +23,4 @@ def _py_to_java_outOfBoundsFactory(obj: OutOfBoundsFactory) -> "jc.OutOfBoundsFa
         return jc.OutOfBoundsMirrorFactory(jc.OutOfBoundsMirrorFactory.Boundary.DOUBLE)
     if obj == OutOfBoundsFactory.PERIODIC:
         return jc.OutOfBoundsPeriodicFactory()
-    raise ValueError(f"{obj} is not a StructuringElement!")
+    raise ValueError(f"{obj} is not a supported OutOfBoundsFactory!")

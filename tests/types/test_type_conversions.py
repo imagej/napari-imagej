@@ -93,5 +93,5 @@ def test_python_type_of_enum_like_IO():
 
 
 def test_enum():
-    p_type = _module_utils.python_type_of(DummyModuleItem(jtype=jc.StructuringElement))
-    assert p_type.__name__ == "StructuringElement"
+    p_type = _module_utils.python_type_of(DummyModuleItem(jtype=jc.ItemIO))
+    assert p_type.__name__ == "ItemIO"

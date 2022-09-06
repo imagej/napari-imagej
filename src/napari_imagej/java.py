@@ -371,12 +371,6 @@ class JavaClasses(object):
     def RealType(self):
         return "net.imglib2.type.numeric.RealType"
 
-    # ImgLib2-algorithm Types
-
-    @blocking_import
-    def StructuringElement(self):
-        return "net.imglib2.algorithm.labeling.ConnectedComponents.StructuringElement"
-
     # ImgLib2-roi Types
 
     @blocking_import

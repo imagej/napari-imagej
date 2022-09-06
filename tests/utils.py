@@ -40,12 +40,12 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.EuclideanSpace"
 
     @JavaClasses.blocking_import
-    def ExtremaType(self):
-        return "net.imglib2.algorithm.dog.DogDetection.ExtremaType"
-
-    @JavaClasses.blocking_import
     def ItemIO(self):
         return "org.scijava.ItemIO"
+
+    @JavaClasses.blocking_import
+    def ItemVisibility(self):
+        return "org.scijava.ItemVisibility"
 
     @JavaClasses.blocking_import
     def ScriptInfo(self):

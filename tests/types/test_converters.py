@@ -713,8 +713,8 @@ def test_enum_conversion_regression(ij):
     """
     Ensures that all values of an enum can be converted bidirectionally
     """
-    # We use StructuringElement for fun!
-    j_enum = jc.StructuringElement
+    # We use ItemIO for fun!
+    j_enum = jc.ItemIO
     py_enum = py_enum_for(j_enum.class_)
     for j, p in zip(j_enum.values(), py_enum):
         assert ij.py.to_java(p) == j
@@ -725,11 +725,11 @@ def test_enum_conversion_on_the_fly(ij):
     """
     Ensures that an enum can be converted without calling py_enum_for first!
     """
-    j_enum = jc.ExtremaType.MINIMA
+    j_enum = jc.ItemVisibility.NORMAL
     assert j_enum.getClass() not in _ENUMS.values()
     py_enum = ij.py.from_java(j_enum)
-    assert py_enum.__class__.__name__ == "ExtremaType"
-    assert py_enum.name == "MINIMA"
+    assert py_enum.__class__.__name__ == "ItemVisibility"
+    assert py_enum.name == "NORMAL"
 
 
 def test_OutOfBoundsFactory_conversion(ij):

@@ -7,9 +7,9 @@ from tests.utils import jc
 def test_py_enum_for():
     """
     A regression test ensuring that py_enum_for produces a Python Enum
-    equivalent to imglib2-algorithm's StructuringElement Enum.
+    equivalent to SciJava Common's ItemIO Enum.
     """
-    java_enum = jc.StructuringElement
+    java_enum = jc.ItemIO
     py_enum = py_enum_for(java_enum.class_)
     assert issubclass(py_enum, Enum)
     for p, j in zip(py_enum, java_enum.values()):
