@@ -14,8 +14,8 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
+from napari_imagej import settings
 from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug, running_headless
-from napari_imagej.settings import preferences
 from napari_imagej.utilities._module_utils import _get_layers_hack
 from napari_imagej.widgets.resources import resource_path
 
@@ -34,6 +34,9 @@ class NapariImageJMenu(QWidget):
 
         self.gui_button: GUIButton = GUIButton()
         self.layout().addWidget(self.gui_button)
+
+        self.settings_button: SettingsButton = SettingsButton(viewer)
+        self.layout().addWidget(self.settings_button)
 
         if running_headless():
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
@@ -128,10 +131,11 @@ class ToIJButton(QPushButton):
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Export active napari layer to ImageJ2")
-        if preferences.choose_active_layer:
+        if settings["choose_active_layer"].get():
+            self.setToolTip("Export active napari layer to ImageJ2")
             self.clicked.connect(self.send_active_layer)
         else:
+            self.setToolTip("Export napari layer to ImageJ2")
             self.clicked.connect(self.send_chosen_layer)
 
     def _set_icon(self, path: str):
@@ -173,10 +177,11 @@ class FromIJButton(QPushButton):
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Import active ImageJ2 Dataset to napari")
-        if preferences.choose_active_layer:
+        if settings["choose_active_layer"].get():
+            self.setToolTip("Import active ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_active_layer)
         else:
+            self.setToolTip("Import ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_chosen_layer)
 
     def _set_icon(self, path: str):
@@ -281,3 +286,32 @@ class GUIButton(QPushButton):
         msg.setTextFormat(Qt.RichText)
         msg.setTextInteractionFlags(Qt.TextBrowserInteraction)
         msg.exec()
+
+
+class SettingsButton(QPushButton):
+    def __init__(self, viewer: Viewer):
+        super().__init__()
+        self.viewer = viewer
+
+        icon = QColoredSVGIcon(resource_path("gear"))
+        self.setIcon(icon.colored(theme=viewer.theme))
+
+        self.clicked.connect(self._update_settings)
+
+    def _update_settings(self):
+        args = {}
+        for k, v in settings.items():
+            args[k] = {}
+            args[k]["value"] = v.get()
+        choices = request_values(title="napari-imagej Settings", values=args)
+        if choices is not None:
+            any_changed = False
+            for k, v in choices.items():
+                if v != settings[k].get():
+                    any_changed = True
+                settings[k].set(v)
+
+            if any_changed:
+                output = settings.dump()
+                with open(settings.user_config_path(), "w") as f:
+                    f.write(output)

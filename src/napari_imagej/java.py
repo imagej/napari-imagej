@@ -26,7 +26,7 @@ import imagej
 from jpype import JClass
 from scyjava import config, jimport
 
-from napari_imagej.settings import preferences
+from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
@@ -74,14 +74,14 @@ def _imagej_init():
     log_debug("Completed JVM Configuration")
 
     # Configure PyImageJ settings
-    settings = {
-        "ij_dir_or_version_or_endpoint": preferences.imagej_directory_or_endpoint,
+    ij_settings = {
+        "ij_dir_or_version_or_endpoint": settings["imagej_directory_or_endpoint"].get(),
         "mode": get_mode(),
         "add_legacy": False,
     }
 
     # Launch PyImageJ
-    _ij = imagej.init(**settings)
+    _ij = imagej.init(**ij_settings)
     log_debug(f"Initialized at version {_ij.getVersion()}")
 
     # Return the ImageJ gateway

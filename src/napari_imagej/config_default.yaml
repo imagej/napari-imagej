@@ -1,18 +1,18 @@
-# napari-imagej Settings
+# napari-imagej Default Settings
 
 # USERS BEWARE:
-# This toml file will soon be replaced with napari's contribution configuration.
+# This yaml file will soon be replaced with napari's contribution configuration.
 
 # Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
 # OR version of net.imagej:imagej artifact to launch (e.g. 2.3.0),
 # OR endpoint of another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
 # OR list of Maven artifacts to include (e.g.
 #   ['net.imagej:imagej:2.3.0', 'net.imagej:imagej-legacy', 'net.preibisch:BigStitcher']).
-# The default is the latest version of ImageJ2.
-imagej_directory_or_endpoint = "net.imagej:imagej"
+# The default (null) will use the latest version of ImageJ2, downloading it if needed.
+imagej_directory_or_endpoint: 'net.imagej:imagej'
 
 # This can be used to identify whether transferred data between ImageJ2 and napari
 # should be selected via activation or by user selection via a dialog.
 # By default, the active layer/window is chosen for transfer between applications.
 # By setting this value to false, a popup will be shown instead.
-choose_active_layer = true
+choose_active_layer: true

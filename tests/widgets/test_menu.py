@@ -16,6 +16,7 @@ from napari_imagej.widgets.menu import (
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
+    SettingsButton,
     ToIJButton,
 )
 from napari_imagej.widgets.resources import resource_path
@@ -101,7 +102,7 @@ def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
 def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
-    assert len(subwidgets) == 4
+    assert len(subwidgets) == 5
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
@@ -111,6 +112,8 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
     assert not subwidgets[2].isEnabled()
 
     assert isinstance(subwidgets[3], GUIButton)
+
+    assert isinstance(subwidgets[4], SettingsButton)
 
 
 @pytest.mark.skipif(

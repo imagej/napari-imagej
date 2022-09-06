@@ -4,12 +4,24 @@ A module containing pytest configuration and globally-used fixtures
 import os
 from typing import Callable, Generator
 
+import confuse
 import pytest
 from napari import Viewer
 
-from napari_imagej.settings import preferences
+import napari_imagej
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
+
+
+@pytest.fixture(scope="session", autouse=True)
+def confuse_settings():
+    # Overwrite all settings with defaults
+    napari_imagej.settings = confuse.Configuration(
+        appname="napari-imagej", modname=__name__, read=False
+    )
+    napari_imagej.settings.read(user=False)
+
+    yield
 
 
 @pytest.fixture(scope="module")
@@ -46,8 +58,8 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce active layer selection
-    previous = preferences.choose_active_layer
-    preferences.choose_active_layer = True
+    previous = napari_imagej.settings["choose_active_layer"]
+    napari_imagej.settings["choose_active_layer"] = True
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -56,7 +68,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
-    preferences.choose_active_layer = previous
+    napari_imagej.settings["choose_active_layer"] = previous
 
 
 @pytest.fixture
@@ -67,8 +79,8 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce user layer selection via Dialog
-    previous = preferences.choose_active_layer
-    preferences.choose_active_layer = False
+    previous = napari_imagej.settings["choose_active_layer"]
+    napari_imagej.settings["choose_active_layer"] = False
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -77,7 +89,7 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
-    preferences.choose_active_layer = previous
+    napari_imagej.settings["choose_active_layer"] = previous
 
 
 @pytest.fixture()

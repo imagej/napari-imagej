@@ -17,4 +17,8 @@ of available plugins, including napari-imagej.
 napari-imagej is built upon the PyImageJ project:
 https://pyimagej.readthedocs.io/en/latest/
 """
+import confuse
+
 __version__ = "0.0.1.dev0"
+
+settings = confuse.Configuration(appname="napari-imagej", modname=__name__)
