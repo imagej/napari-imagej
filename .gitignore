@@ -86,3 +86,6 @@ venv/
 # Scripts
 /scripts/*
 !/scripts/examples
+
+# Ignore dynaconf secret files
+.secrets.*

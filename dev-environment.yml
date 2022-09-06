@@ -14,6 +14,7 @@ channels:
   - defaults
 dependencies:
   # Project dependencies
+  - dynaconf
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
   - napari

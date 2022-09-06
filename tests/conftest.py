@@ -7,7 +7,7 @@ from typing import Callable, Generator
 import pytest
 from napari import Viewer
 
-from napari_imagej.widgets import menu
+from napari_imagej.settings import preferences
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -46,10 +46,8 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce active layer selection
-    def mock_setting(value: str):
-        return {"imagej_installation": None, "choose_active_layer": True}[value]
-
-    menu.setting = mock_setting
+    previous = preferences.choose_active_layer
+    preferences.choose_active_layer = True
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -58,6 +56,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
+    preferences.choose_active_layer = previous
 
 
 @pytest.fixture
@@ -68,10 +67,8 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce user layer selection via Dialog
-    def mock_setting(value: str):
-        return {"imagej_installation": None, "choose_active_layer": False}[value]
-
-    menu.setting = mock_setting
+    previous = preferences.choose_active_layer
+    preferences.choose_active_layer = False
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -80,6 +77,7 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
+    preferences.choose_active_layer = previous
 
 
 @pytest.fixture()

@@ -19,15 +19,14 @@ Notable fields included in the module:
 """
 import os
 import sys
-from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
-from typing import Any, Callable, Dict
+from typing import Callable
 
 import imagej
-import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
+from napari_imagej.settings import preferences
 from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
@@ -46,17 +45,6 @@ def ensure_jvm_started() -> None:
     Blocks until the ImageJ instance is ready.
     """
     ij_future.wait()
-
-
-def setting(name: str):
-    """Gets the value of setting name"""
-    return settings().get(name, None)
-
-
-@lru_cache(maxsize=None)
-def settings() -> Dict[Any, Any]:
-    """Gets all plugin settings as a dictionary"""
-    return yaml.safe_load(open("settings.yml", "r"))
 
 
 def get_mode() -> str:
@@ -87,7 +75,7 @@ def _imagej_init():
 
     # Configure PyImageJ settings
     settings = {
-        "ij_dir_or_version_or_endpoint": setting("imagej_installation"),
+        "ij_dir_or_version_or_endpoint": preferences.imagej_directory_or_endpoint,
         "mode": get_mode(),
         "add_legacy": False,
     }

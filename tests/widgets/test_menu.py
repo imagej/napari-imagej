@@ -18,6 +18,7 @@ from napari_imagej.widgets.menu import (
     NapariImageJMenu,
     ToIJButton,
 )
+from napari_imagej.widgets.resources import resource_path
 
 
 class JavaClassesTest(JavaClasses):
@@ -119,7 +120,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
     """Tests headful-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
-    expected: QPixmap = QPixmap("resources/16x16-flat.png")
+    expected: QPixmap = QPixmap(resource_path("imagej2-16x16-flat"))
     actual: QPixmap = button.icon().pixmap(expected.size())
     assert expected.toImage() == actual.toImage()
 
@@ -142,7 +143,7 @@ def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
 
-    expected: QPixmap = QPixmap("resources/16x16-flat-disabled.png")
+    expected: QPixmap = QPixmap(resource_path("imagej2-16x16-flat-disabled"))
     actual: QPixmap = button.icon().pixmap(expected.size())
     assert expected.toImage() == actual.toImage()
 

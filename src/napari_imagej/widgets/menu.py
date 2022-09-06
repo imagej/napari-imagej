@@ -14,15 +14,10 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
-from napari_imagej.java import (
-    ensure_jvm_started,
-    ij,
-    jc,
-    log_debug,
-    running_headless,
-    setting,
-)
+from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug, running_headless
+from napari_imagej.settings import preferences
 from napari_imagej.utilities._module_utils import _get_layers_hack
+from napari_imagej.widgets.resources import resource_path
 
 
 class NapariImageJMenu(QWidget):
@@ -134,7 +129,7 @@ class ToIJButton(QPushButton):
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
         self.setToolTip("Export active napari layer to ImageJ2")
-        if setting("choose_active_layer"):
+        if preferences.choose_active_layer:
             self.clicked.connect(self.send_active_layer)
         else:
             self.clicked.connect(self.send_chosen_layer)
@@ -179,7 +174,7 @@ class FromIJButton(QPushButton):
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
         self.setToolTip("Import active ImageJ2 Dataset to napari")
-        if setting("choose_active_layer"):
+        if preferences.choose_active_layer:
             self.clicked.connect(self.get_active_layer)
         else:
             self.clicked.connect(self.get_chosen_layer)
@@ -259,19 +254,19 @@ class GUIButton(QPushButton):
         Thread(target=post_setup).start()
 
     def _setup_headful(self):
-        self._set_icon("resources/16x16-flat-disabled.png")
+        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("Display ImageJ2 GUI (loading)")
 
         def post_setup():
             ensure_jvm_started()
-            self._set_icon("resources/16x16-flat.png")
+            self._set_icon(resource_path("imagej2-16x16-flat"))
             self.setEnabled(True)
             self.setToolTip("Display ImageJ2 GUI")
 
         Thread(target=post_setup).start()
 
     def _setup_headless(self):
-        self._set_icon("resources/16x16-flat-disabled.png")
+        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("ImageJ2 GUI unavailable!")
 
     def disable_popup(self):
