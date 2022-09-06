@@ -6,6 +6,7 @@ All submodules within this module are DYNAMICALLY IMPORTED; this allows
 automatic discovery of all Converters.
 """
 import pkgutil
+from importlib.util import module_from_spec
 from typing import Any, Callable, List
 
 from scyjava import (
@@ -71,7 +72,13 @@ def py_to_java_converter(
 __all__ = []
 for loader, module_name, is_pkg in pkgutil.walk_packages(__path__):
     __all__.append(module_name)
-    _module = loader.find_module(module_name).load_module(module_name)
+    # Find the module specification
+    _spec = loader.find_spec(module_name)
+    # Get the module
+    _module = module_from_spec(_spec)
+    # Execute the module
+    _spec.loader.exec_module(_module)
+    # Store the module for later
     globals()[module_name] = _module
 
 
