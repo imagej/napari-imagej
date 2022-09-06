@@ -5,9 +5,9 @@ import pytest
 from qtpy.QtCore import Qt
 
 from napari_imagej.widgets.result_tree import (
-    ResultTreeItem,
     SearcherTreeItem,
     SearchResultTree,
+    SearchResultTreeItem,
 )
 from tests.utils import DummySearcher, DummySearchEvent, jc
 from tests.widgets.widget_utils import _populate_tree
@@ -73,7 +73,7 @@ def test_resultTreeItem_regression():
             return "This is not a Search Result"
 
     dummy = DummySearchResult()
-    item = ResultTreeItem(dummy)
+    item = SearchResultTreeItem(dummy)
     assert item.result == dummy
     assert item.text(0) == dummy.name()
 

@@ -15,7 +15,7 @@ from napari_imagej.java import ensure_jvm_started, ij, jc
 from napari_imagej.utilities.logging import log_debug
 
 
-class ResultTreeItem(QTreeWidgetItem):
+class SearchResultTreeItem(QTreeWidgetItem):
     """
     A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
     Within a QTreeWidget, ResultTreeItem is designed to be a LEAF item.
@@ -48,7 +48,7 @@ class SearcherTreeItem(QTreeWidgetItem):
         self.setText(0, self.title)
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
 
-    def update(self, results: List[ResultTreeItem]):
+    def update(self, results: List[SearchResultTreeItem]):
         """
         Set the children of this node to results.
         :param results: the future children of this node
@@ -110,7 +110,7 @@ class SearchResultTree(QTreeWidget):
             if header is None:
                 header = self._add_new_searcher(event.searcher())
                 self.sortItems(0, Qt.AscendingOrder)
-            header.update([ResultTreeItem(r) for r in event.results()])
+            header.update([SearchResultTreeItem(r) for r in event.results()])
         elif header is not None:
             self.invisibleRootItem().removeChild(header)
 

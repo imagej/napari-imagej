@@ -9,7 +9,7 @@ from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
-from napari_imagej.widgets.result_tree import ResultTreeItem, SearchResultTree
+from napari_imagej.widgets.result_tree import SearchResultTree, SearchResultTreeItem
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
 
@@ -42,7 +42,7 @@ class NapariImageJWidget(QWidget):
 
         # When clicking a result, select it with the ResultRunner
         def click(treeItem: QTreeWidgetItem):
-            if isinstance(treeItem, ResultTreeItem):
+            if isinstance(treeItem, SearchResultTreeItem):
                 self.result_runner.select(treeItem.result)
             else:
                 self.result_runner.clear()
@@ -53,7 +53,7 @@ class NapariImageJWidget(QWidget):
         # When double clicking a result,
         # select it with the ResultRunner and run the first action
         def double_click(treeItem: QTreeWidgetItem):
-            if isinstance(treeItem, ResultTreeItem):
+            if isinstance(treeItem, SearchResultTreeItem):
                 self.result_runner.run(treeItem.result)
 
         self.result_tree.itemDoubleClicked.connect(double_click)

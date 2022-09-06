@@ -2,9 +2,9 @@
 A module containing functionality useful for widget testing
 """
 from napari_imagej.widgets.result_tree import (
-    ResultTreeItem,
     SearcherTreeItem,
     SearchResultTree,
+    SearchResultTreeItem,
 )
 from tests.utils import DummySearcher, jc
 
@@ -15,14 +15,17 @@ def _populate_tree(tree: SearchResultTree, asserter):
     searcher1 = SearcherTreeItem(DummySearcher("Commands"))
     searcher1.update(
         [
-            ResultTreeItem(jc.ClassSearchResult(c, ""))
+            SearchResultTreeItem(jc.ClassSearchResult(c, ""))
             for c in (jc.Short, jc.Integer, jc.Long)
         ]
     )
     tree.addTopLevelItem(searcher1)
     searcher2 = SearcherTreeItem(DummySearcher("Ops"))
     searcher2.update(
-        [ResultTreeItem(jc.ClassSearchResult(c, "")) for c in (jc.Float, jc.Double)]
+        [
+            SearchResultTreeItem(jc.ClassSearchResult(c, ""))
+            for c in (jc.Float, jc.Double)
+        ]
     )
     tree.addTopLevelItem(searcher2)
 
