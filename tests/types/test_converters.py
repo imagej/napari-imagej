@@ -10,8 +10,8 @@ from labeling.Labeling import Labeling
 from napari.layers import Labels, Points, Shapes, Surface
 
 from napari_imagej.types.converters.labels import _labeling_to_layer, _layer_to_labeling
+from napari_imagej.types.enum_likes import OutOfBoundsFactory
 from napari_imagej.types.enums import _ENUMS, py_enum_for
-from napari_imagej.types.standins import OutOfBoundsFactory
 from napari_imagej.types.type_conversions import python_type_of
 from tests.utils import DummyModuleItem, jc
 

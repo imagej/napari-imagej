@@ -21,9 +21,9 @@ from typing import Callable, List, Optional, Tuple, Type
 from scyjava import Priority
 
 from napari_imagej.java import ij, jc
+from napari_imagej.types.enum_likes import enum_like
 from napari_imagej.types.enums import py_enum_for
 from napari_imagej.types.mappings import ptypes
-from napari_imagej.types.standins import standin_for
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
@@ -65,14 +65,14 @@ def python_type_of(module_item: "jc.ModuleItem"):
 
 
 @module_item_converter(priority=Priority.HIGH)
-def standin_converter(item: "jc.ModuleItem"):
+def enum_like_converter(item: "jc.ModuleItem"):
     """
     Checks to see if this type can be satisfied by a PythonStandin.
     For a PythonStandin to work, it MUST be a pure input.
     This is because the python type has no functionality, as it is just an Enum choice.
     """
     if item.isInput() and not item.isOutput():
-        return standin_for(item.getType(), None)
+        return enum_like(item.getType(), None)
 
 
 @module_item_converter(priority=Priority.HIGH)

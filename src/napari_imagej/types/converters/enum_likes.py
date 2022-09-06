@@ -1,16 +1,16 @@
 """
-scyjava Converters for converting PythonStandins into their java equivalents.
+scyjava Converters for converting JavaEnumLikes into their java equivalents.
 """
 from napari_imagej.java import jc
 from napari_imagej.types.converters import py_to_java_converter
-from napari_imagej.types.standins import OutOfBoundsFactory
+from napari_imagej.types.enum_likes import OutOfBoundsFactory
 
 
 @py_to_java_converter(predicate=lambda obj: isinstance(obj, OutOfBoundsFactory))
 def _py_to_java_outOfBoundsFactory(obj: OutOfBoundsFactory) -> "jc.OutOfBoundsFactory":
     """
-    Converts OutOfBoundsFactory standins into actual OutOfBoundsFactories
-    :param obj: the OutOfBoundsFactory PythonStandin
+    Converts OutOfBoundsFactory JavaEnumLikes into actual OutOfBoundsFactories
+    :param obj: the OutOfBoundsFactory JavaEnumLike
     :return: the actual OutOfBoundsFactory
     """
     if obj == OutOfBoundsFactory.BORDER:
