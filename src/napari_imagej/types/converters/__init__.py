@@ -4,10 +4,6 @@ that are useful within napari-imagej
 
 All submodules within this module are DYNAMICALLY IMPORTED; this allows
 automatic discovery of all Converters.
-
-The previous approach declared all Converters in one module, imported
-in the top-level __init__.py. This approach imports all of the same functions,
-but allows increased readability through multiple modules.
 """
 import pkgutil
 from typing import Any, Callable, List
