@@ -305,16 +305,17 @@ class SettingsButton(QPushButton):
 
     def _update_settings(self):
         args = {}
-        for k, v in settings.items():
+        default_source = next(s for s in settings.sources if s.default)
+        for k, v in default_source.items():
             args[k] = {}
-            args[k]["value"] = v.get()
+            args[k]["value"] = settings[k].get()
         choices = request_values(title="napari-imagej Settings", values=args)
         if choices is not None:
             any_changed = False
             for k, v in choices.items():
                 if v != settings[k].get():
                     any_changed = True
-                settings[k].set(v)
+                    settings[k] = v
 
             if any_changed:
                 self.setting_change.emit()
