@@ -1,8 +1,11 @@
 """
 A module testing napari_imagej.widgets.menu
 """
+import os
+
 import numpy
 import pytest
+import yaml
 from napari import Viewer
 from napari.layers import Image, Layer
 from napari.viewer import current_viewer
@@ -10,7 +13,8 @@ from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
-from napari_imagej.java import JavaClasses, running_headless
+from napari_imagej import settings
+from napari_imagej.java import running_headless
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
     FromIJButton,
@@ -20,23 +24,31 @@ from napari_imagej.widgets.menu import (
     ToIJButton,
 )
 from napari_imagej.widgets.resources import resource_path
+from tests.utils import jc
 
 
-class JavaClassesTest(JavaClasses):
-    """
-    Here we override JavaClasses to get extra test imports
-    """
+@pytest.fixture(autouse=True)
+def clean_settings():
+    # Obtain prior user settings
+    user_path = settings.user_config_path()
 
-    @JavaClasses.blocking_import
-    def ArrayImgs(self):
-        return "net.imglib2.img.array.ArrayImgs"
+    if os.path.exists(user_path):
+        # If they existed, read in the settings and delete the file
+        with open(user_path, "r") as f:
+            existing_settings = f.read()
+        os.remove(user_path)
 
-    @JavaClasses.blocking_import
-    def ImageDisplay(self):
-        return "net.imagej.display.ImageDisplay"
+        yield
 
+        # After the test, restore the file
+        with open(user_path, "w") as f:
+            f.write(existing_settings)
+    else:
+        yield
 
-jc = JavaClassesTest()
+        # After the test, remove the file
+        if os.path.exists(user_path):
+            os.remove(user_path)
 
 
 @pytest.fixture(autouse=True)
@@ -46,10 +58,14 @@ def napari_mocker(viewer: Viewer):
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    def newfunc(values=(), title="", **kwargs):
+    def newfunc(values={}, title="", **kwargs):
+        values.update(kwargs)
         results = {}
         # Solve each parameter
         for name, options in kwargs.items():
+            if "value" in options:
+                results[name] = options["value"]
+                continue
             if "choices" in options["options"]:
                 if options["annotation"] == Layer:
                     results[name] = viewer.layers[0]
@@ -144,6 +160,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
 )
 def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
+    # Wait until the JVM starts to test settings
     button: GUIButton = gui_widget.gui_button
 
     expected: QPixmap = QPixmap(resource_path("imagej2-16x16-flat-disabled"))
@@ -281,3 +298,87 @@ def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
 
     # Assert that the data is now in napari
     asserter(lambda: 2 == len(button_to.viewer.layers))
+
+
+def test_settings_no_change(gui_widget: NapariImageJMenu):
+    """Ensure that no changes are made when there is no change from the defaults"""
+    button: SettingsButton = gui_widget.settings_button
+
+    # First record the old settings
+    old_yaml = [(k, v.get()) for k, v in settings.items()]
+
+    # Then update the settings, but select all defaults
+    button._update_settings()
+    # Then record the new settings and compare
+    new_yaml = [(k, v.get()) for k, v in settings.items()]
+    assert new_yaml == old_yaml
+
+
+def test_settings_change(asserter, gui_widget: NapariImageJMenu):
+    """Change imagej_directory_or_endpoint and ensure that the settings change"""
+    button: SettingsButton = gui_widget.settings_button
+
+    # REQUEST_VALUES MOCK
+    oldfunc = menu.request_values
+
+    key = "imagej_directory_or_endpoint"
+    old_value = settings[key]
+    new_value = "foo"
+
+    assert old_value != new_value
+
+    def newfunc(values={}, title="", **kwargs):
+        results = {}
+        # Solve each parameter
+        for name, options in values.items():
+            if name == "imagej_directory_or_endpoint":
+                results[name] = new_value
+                continue
+            elif "value" in options:
+                results[name] = options["value"]
+                continue
+
+            # Otherwise, we don't know how to solve that parameter
+            raise NotImplementedError()
+        return results
+
+    menu.request_values = newfunc
+
+    # # Start the handler in a new thread
+    class Handler(QRunnable):
+
+        # Test popup when running headlessly
+        def run(self) -> None:
+            asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
+            msg = QApplication.activeWindow()
+            expected_text = (
+                "Please restart napari for napari-imagej settings "
+                "changes to take effect!"
+            )
+            if expected_text != msg.text():
+                self._passed = False
+                return
+            ok_button = msg.button(QMessageBox.Ok)
+            ok_button.clicked.emit()
+            asserter(lambda: QApplication.activeModalWidget() is not msg)
+            self._passed = True
+
+        def passed(self) -> bool:
+            return self._passed
+
+    runnable = Handler()
+    QThreadPool.globalInstance().start(runnable)
+
+    # Trigger the button
+    button._update_settings()
+
+    # Wait for the popup to be handled
+    asserter(QThreadPool.globalInstance().waitForDone)
+    assert runnable.passed()
+
+    menu.request_values = oldfunc
+
+    # Assert a change in the settings
+    assert settings[key].get() == new_value
+    with open(settings.user_config_path(), "r") as stream:
+        assert yaml.safe_load(stream)[key] == new_value

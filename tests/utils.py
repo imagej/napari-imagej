@@ -40,6 +40,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.EuclideanSpace"
 
     @JavaClasses.blocking_import
+    def ImageDisplay(self):
+        return "net.imagej.display.ImageDisplay"
+
+    @JavaClasses.blocking_import
     def ItemIO(self):
         return "org.scijava.ItemIO"
 

@@ -302,6 +302,7 @@ class SettingsButton(QPushButton):
 
         self.clicked.connect(self._update_settings)
         self.setting_change.connect(self._notify_settings_change)
+        self.setting_change.connect(self._write_settings)
 
     def _update_settings(self):
         args = {}
@@ -319,9 +320,6 @@ class SettingsButton(QPushButton):
 
             if any_changed:
                 self.setting_change.emit()
-                output = settings.dump()
-                with open(settings.user_config_path(), "w") as f:
-                    f.write(output)
 
     def _notify_settings_change(self):
         """
@@ -333,3 +331,11 @@ class SettingsButton(QPushButton):
             "Please restart napari for napari-imagej settings changes to take effect!"
         )
         msg.exec()
+
+    def _write_settings(self):
+        """
+        Writes settings to a local configuration YAML file
+        """
+        output = settings.dump()
+        with open(settings.user_config_path(), "w") as f:
+            f.write(output)
