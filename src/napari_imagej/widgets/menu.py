@@ -10,7 +10,7 @@ from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
 from napari.layers import Layer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
@@ -289,6 +289,10 @@ class GUIButton(QPushButton):
 
 
 class SettingsButton(QPushButton):
+
+    # Signal used to identify changes to user settings
+    setting_change = Signal()
+
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
@@ -297,6 +301,7 @@ class SettingsButton(QPushButton):
         self.setIcon(icon.colored(theme=viewer.theme))
 
         self.clicked.connect(self._update_settings)
+        self.setting_change.connect(self._notify_settings_change)
 
     def _update_settings(self):
         args = {}
@@ -312,6 +317,18 @@ class SettingsButton(QPushButton):
                 settings[k].set(v)
 
             if any_changed:
+                self.setting_change.emit()
                 output = settings.dump()
                 with open(settings.user_config_path(), "w") as f:
                     f.write(output)
+
+    def _notify_settings_change(self):
+        """
+        Notifies (using a popup) that a restart is required for settings changes
+        to take effect
+        """
+        msg: QMessageBox = QMessageBox()
+        msg.setText(
+            "Please restart napari for napari-imagej settings changes to take effect!"
+        )
+        msg.exec()
