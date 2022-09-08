@@ -4,7 +4,6 @@ A module containing pytest configuration and globally-used fixtures
 import os
 from typing import Callable, Generator
 
-import confuse
 import pytest
 from napari import Viewer
 
@@ -13,18 +12,14 @@ from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def confuse_settings():
-    # Overwrite all settings with defaults
-    napari_imagej.settings = confuse.Configuration(
-        appname="napari-imagej", modname=__name__, read=False
-    )
+    """Fixture ensuring user settings are not used in tests"""
+    napari_imagej.settings.clear()
     napari_imagej.settings.read(user=False)
 
-    yield
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
     from napari_imagej.java import ij
