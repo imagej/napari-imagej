@@ -16,8 +16,8 @@ from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
 from napari_imagej import settings
 from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug, running_headless
+from napari_imagej.resources import resource_path
 from napari_imagej.utilities._module_utils import _get_layers_hack
-from napari_imagej.widgets.resources import resource_path
 
 
 class NapariImageJMenu(QWidget):

@@ -15,6 +15,7 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
 from napari_imagej.java import running_headless
+from napari_imagej.resources import resource_path
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
     FromIJButton,
@@ -23,7 +24,6 @@ from napari_imagej.widgets.menu import (
     SettingsButton,
     ToIJButton,
 )
-from napari_imagej.widgets.resources import resource_path
 from tests.utils import jc
 
 
