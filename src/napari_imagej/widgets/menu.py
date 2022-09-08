@@ -305,18 +305,28 @@ class SettingsButton(QPushButton):
         self.setting_change.connect(self._write_settings)
 
     def _update_settings(self):
+        """
+        Spawns a popup allowing the user to configure napari-imagej settings.
+        """
         args = {}
+        # Build values map by iterating over all default settings.
+        # NB grabbing settings and defaults has two benefits. Firstly, it
+        # ensures that settings ALWAYS appear in the order described in
+        # config-default.yaml. Secondly, it ensures that tampering with any user
+        # setting files does not add settings to this popup that don't exist in
+        # the default file
         default_source = next(s for s in settings.sources if s.default)
-        for k, v in default_source.items():
-            args[k] = {}
-            args[k]["value"] = settings[k].get()
+        for setting in default_source:
+            args[setting] = dict(value=settings[setting].get())
+        # Use magicgui.request_values to allow user to configure settings
         choices = request_values(title="napari-imagej Settings", values=args)
         if choices is not None:
+            # Update settings with user selections
             any_changed = False
-            for k, v in choices.items():
-                if v != settings[k].get():
+            for setting, v in choices.items():
+                if v != settings[setting].get():
                     any_changed = True
-                    settings[k] = v
+                    settings[setting] = v
 
             if any_changed:
                 self.setting_change.emit()
