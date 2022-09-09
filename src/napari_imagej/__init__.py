@@ -21,4 +21,6 @@ import confuse
 
 __version__ = "0.0.1.dev0"
 
+# napari-imagej uses confuse (https://confuse.readthedocs.io/en/latest/) to configure
+# user settings.
 settings = confuse.Configuration(appname="napari-imagej", modname=__name__)
