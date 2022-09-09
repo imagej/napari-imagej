@@ -15,6 +15,14 @@ imagej_directory_or_endpoint: 'net.imagej:imagej'
 # Iff True, original ImageJ functionality (ij.* packages) will be available.
 include_imagej_legacy: false
 
+# Designates the mode of execution for ImageJ2.
+# Allowed options are 'headless' and 'interactive'.
+# NB 'interactive' mode is unavailable on MacOS. More details can be found at
+# https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode
+# If napari-imagej is launched on MacOS with this setting set to "interactive",
+# the setting will silently be reassigned to "headless"
+jvm_mode: 'interactive'
+
 # This can be used to identify whether transferred data between ImageJ2 and napari
 # should be selected via activation or by user selection via a dialog.
 # By default, the active layer/window is chosen for transfer between applications.

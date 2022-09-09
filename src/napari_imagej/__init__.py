@@ -17,10 +17,31 @@ of available plugins, including napari-imagej.
 napari-imagej is built upon the PyImageJ project:
 https://pyimagej.readthedocs.io/en/latest/
 """
+import os
+import sys
+
 import confuse
 
 __version__ = "0.0.1.dev0"
 
 # napari-imagej uses confuse (https://confuse.readthedocs.io/en/latest/) to configure
 # user settings.
-settings = confuse.Configuration(appname="napari-imagej", modname=__name__)
+
+
+class _NapariImageJSettings(confuse.Configuration):
+    def __init__(self, read=True, **kwargs):
+        super().__init__(appname="napari-imagej", modname=__name__, read=read)
+
+    def read(self, user: bool = True, defaults: bool = True):
+        # Don't use user settings during the tests
+        testing = os.environ.get("NAPARI_IMAGEJ_TESTING", "no") != "yes"
+        super().read(user=user and not testing, defaults=defaults)
+        # -- VALIDATE SETTINGS -- #
+
+        # Ensure that the jvm mode is valid
+        jvm_mode: str = self["jvm_mode"].as_choice(["interactive", "headless"])
+        if jvm_mode == "interactive" and sys.platform == "darwin":
+            self["jvm_mode"] = "headless"
+
+
+settings = _NapariImageJSettings()

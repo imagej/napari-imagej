@@ -13,10 +13,10 @@ from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
 
 @pytest.fixture(autouse=True)
-def confuse_settings():
-    """Fixture ensuring user settings are not used in tests"""
+def install_default_settings():
+    """Fixture ensuring any changes made earlier to the settings are reversed"""
     napari_imagej.settings.clear()
-    napari_imagej.settings.read(user=False)
+    napari_imagej.settings.read()
 
 
 @pytest.fixture(scope="session")

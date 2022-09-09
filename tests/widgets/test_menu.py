@@ -14,7 +14,6 @@ from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
-from napari_imagej.java import jvm_is_headless
 from napari_imagej.resources import resource_path
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
@@ -27,7 +26,7 @@ from napari_imagej.widgets.menu import (
 from tests.utils import jc
 
 # Determine whether we are testing headlessly
-TESTING_HEADLESS: bool = jvm_is_headless()
+TESTING_HEADLESS: bool = settings["jvm_mode"].get(str) == "headless"
 
 
 @pytest.fixture(autouse=True)

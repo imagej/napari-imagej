@@ -16,8 +16,8 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 import os
-import sys
 from multiprocessing.pool import AsyncResult, ThreadPool
+from threading import Lock
 from typing import Callable
 
 import imagej
@@ -35,25 +35,14 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return ij_future.get()
+    return imagej_init().get()
 
 
 def ensure_jvm_started() -> None:
     """
     Blocks until the ImageJ instance is ready.
     """
-    ij_future.wait()
-
-
-def _get_mode() -> str:
-    """
-    Returns the mode ImageJ will be run in
-    """
-    return "headless" if sys.platform == "darwin" else "interactive"
-
-
-def jvm_is_headless() -> bool:
-    return _get_mode() == "headless"
+    imagej_init().wait()
 
 
 def _imagej_init():
@@ -74,7 +63,7 @@ def _imagej_init():
     # Launch PyImageJ
     _ij = imagej.init(
         ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(str),
-        mode=_get_mode(),
+        mode=settings["jvm_mode"].get(str),
         add_legacy=settings["include_imagej_legacy"].get(bool),
     )
     log_debug(f"Initialized at version {_ij.getVersion()}")
@@ -83,21 +72,33 @@ def _imagej_init():
     return _ij
 
 
-# There is a good debate to be had whether to multithread or multiprocess.
-# From what I (Gabe) have read, it seems that threading is preferrable for
-# network / IO bottlenecking, while multiprocessing is preferrable for CPU
-# bottlenecking.
-# While multiprocessing might theoretically be a better choice for JVM startup,
-# there are two reasons we instead choose multithreading:
-# 1) Multiprocessing is not supported without additional libraries on MacOS.
-# See https://docs.python.org/3/library/multiprocessing.html#introduction
-# 2) JPype items cannot (currently) be passed between processes due to an
-# issue with pickling. See
-# https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
-threadpool: ThreadPool = ThreadPool(processes=1)
-# ij_future is not very pythonic, but we are dealing with a Java Object
-# and it better conveys the object's meaning than e.g. ij_result
-ij_future: AsyncResult = threadpool.apply_async(func=_imagej_init)
+init_lock = Lock()
+_ij_future: AsyncResult = None
+
+
+def imagej_init() -> AsyncResult:
+    """Function that"""
+    global _ij_future
+    if not _ij_future:
+        with init_lock:
+            if not _ij_future:
+                # There is a good debate to be had whether to multithread or
+                # multiprocess. From what I (Gabe) have read, it seems that threading
+                # is preferrable for network / IO bottlenecking, while multiprocessing
+                # is preferrable for CPU bottlenecking. While multiprocessing might
+                # theoretically be a better choice for JVM startup, there are two
+                # reasons we instead choose multithreading:
+                # 1) Multiprocessing is not supported without additional libraries on
+                # MacOS. See
+                # https://docs.python.org/3/library/multiprocessing.html#introduction
+                # 2) JPype items cannot (currently) be passed between processes due to
+                # an issue with pickling. See
+                # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
+                threadpool: ThreadPool = ThreadPool(processes=1)
+                # ij_future is not very pythonic, but we are dealing with a Java Object
+                # and it better conveys the object's meaning than e.g. ij_result
+                _ij_future = threadpool.apply_async(func=_imagej_init)
+    return _ij_future
 
 
 class JavaClasses(object):

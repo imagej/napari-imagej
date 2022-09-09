@@ -32,6 +32,7 @@ dependencies:
   - pyqt5-sip
   - pytest
   - pytest-cov
+  - pytest-env
   - pytest-qt
   - qtpy
   # Project from source
