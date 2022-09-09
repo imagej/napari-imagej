@@ -11,6 +11,10 @@
 # The default (null) will use the latest version of ImageJ2, downloading it if needed.
 imagej_directory_or_endpoint: 'net.imagej:imagej'
 
+# This can be used to include original ImageJ functionality.
+# Iff True, original ImageJ functionality (ij.* packages) will be available.
+include_imagej_legacy: false
+
 # This can be used to identify whether transferred data between ImageJ2 and napari
 # should be selected via activation or by user selection via a dialog.
 # By default, the active layer/window is chosen for transfer between applications.

@@ -14,7 +14,7 @@ from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
-from napari_imagej.java import running_headless
+from napari_imagej.java import jvm_is_headless
 from napari_imagej.resources import resource_path
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
@@ -25,6 +25,9 @@ from napari_imagej.widgets.menu import (
     ToIJButton,
 )
 from tests.utils import jc
+
+# Determine whether we are testing headlessly
+TESTING_HEADLESS: bool = jvm_is_headless()
 
 
 @pytest.fixture(autouse=True)
@@ -132,9 +135,7 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
     assert isinstance(subwidgets[4], SettingsButton)
 
 
-@pytest.mark.skipif(
-    running_headless(), reason="Only applies when not running headlessly"
-)
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
     """Tests headful-specific settings of GUIButton"""
     button: GUIButton = gui_widget.gui_button
@@ -155,9 +156,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
     asserter(ij.ui().isVisible)
 
 
-@pytest.mark.skipif(
-    not running_headless(), reason="Only applies when running headlessly"
-)
+@pytest.mark.skipif(not TESTING_HEADLESS, reason="Only applies when running headlessly")
 def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
     # Wait until the JVM starts to test settings
@@ -214,9 +213,7 @@ def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     assert runnable.passed()
 
 
-@pytest.mark.skipif(
-    running_headless(), reason="Only applies when not running headlessly"
-)
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
@@ -240,9 +237,7 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     assert "test_to" == active_display.getName()
 
 
-@pytest.mark.skipif(
-    running_headless(), reason="Only applies when not running headlessly"
-)
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: FromIJButton = gui_widget.from_ij
     assert not button.isEnabled()
@@ -267,9 +262,7 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     assert (10, 10, 10) == layer.data.shape
 
 
-@pytest.mark.skipif(
-    running_headless(), reason="Only applies when not running headlessly"
-)
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
     button_to: ToIJButton = gui_widget_chooser.to_ij
     button_from: FromIJButton = gui_widget_chooser.from_ij

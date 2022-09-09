@@ -15,7 +15,7 @@ from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
 from napari_imagej import settings
-from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug, running_headless
+from napari_imagej.java import ensure_jvm_started, ij, jc, jvm_is_headless, log_debug
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities._module_utils import _get_layers_hack
 
@@ -38,7 +38,7 @@ class NapariImageJMenu(QWidget):
         self.settings_button: SettingsButton = SettingsButton(viewer)
         self.layout().addWidget(self.settings_button)
 
-        if running_headless():
+        if jvm_is_headless():
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
             self.gui_button.clicked.connect(self._showUI)
@@ -241,12 +241,12 @@ class FromIJButton(QPushButton):
 class GUIButton(QPushButton):
     def __init__(self):
         super().__init__()
-        running_headful = not running_headless()
         self.setEnabled(False)
-        if running_headful:
-            self._setup_headful()
-        else:
+
+        if jvm_is_headless():
             self._setup_headless()
+        else:
+            self._setup_headful()
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))

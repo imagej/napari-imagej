@@ -6,10 +6,8 @@ Notable functions included in the module:
         - used to access the ImageJ instance
     * ensure_jvm_started()
         - used to block execution until the ImageJ instance is ready
-    * running_headless()
+    * jvm_is_headless()
         - reports whether the JVM is being run headlessly
-    * setting()
-        - used to obtain values of configuration settings
     * log_debug()
         - used for logging in a standardized way
 
@@ -47,15 +45,15 @@ def ensure_jvm_started() -> None:
     ij_future.wait()
 
 
-def get_mode() -> str:
+def _get_mode() -> str:
     """
     Returns the mode ImageJ will be run in
     """
     return "headless" if sys.platform == "darwin" else "interactive"
 
 
-def running_headless() -> bool:
-    return get_mode() == "headless"
+def jvm_is_headless() -> bool:
+    return _get_mode() == "headless"
 
 
 def _imagej_init():
@@ -73,15 +71,12 @@ def _imagej_init():
     config.endpoints.append("io.scif:scifio:0.43.1")
     log_debug("Completed JVM Configuration")
 
-    # Configure PyImageJ settings
-    ij_settings = {
-        "ij_dir_or_version_or_endpoint": settings["imagej_directory_or_endpoint"].get(),
-        "mode": get_mode(),
-        "add_legacy": False,
-    }
-
     # Launch PyImageJ
-    _ij = imagej.init(**ij_settings)
+    _ij = imagej.init(
+        ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(str),
+        mode=_get_mode(),
+        add_legacy=settings["include_imagej_legacy"].get(bool),
+    )
     log_debug(f"Initialized at version {_ij.getVersion()}")
 
     # Return the ImageJ gateway
