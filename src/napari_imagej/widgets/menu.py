@@ -3,7 +3,7 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from threading import Thread
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
@@ -275,17 +275,24 @@ class GUIButton(QPushButton):
         self.setToolTip("ImageJ2 GUI unavailable!")
 
     def disable_popup(self):
-        msg: QMessageBox = QMessageBox()
-        msg.setText(
-            "The ImageJ2 user interface cannot be opened "
+        RichTextPopup(
+            rich_message="The ImageJ2 user interface cannot be opened "
             "when running PyImageJ headlessly. Visit "
             '<a href="https://pyimagej.readthedocs.io/en/latest/'
             'Initialization.html#interactive-mode">this site</a> '
-            "for more information."
+            "for more information.",
+            exec=True,
         )
-        msg.setTextFormat(Qt.RichText)
-        msg.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        msg.exec()
+
+
+class RichTextPopup(QMessageBox):
+    def __init__(self, rich_message: str, exec: bool = False):
+        super().__init__()
+        self.setText(rich_message)
+        self.setTextFormat(Qt.RichText)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        if exec:
+            self.exec()
 
 
 class SettingsButton(QPushButton):
@@ -317,19 +324,48 @@ class SettingsButton(QPushButton):
         # the default file
         default_source = next(s for s in settings.sources if s.default)
         for setting in default_source:
-            args[setting] = dict(value=settings[setting].get())
+            self._register_setting_param(args, setting)
         # Use magicgui.request_values to allow user to configure settings
         choices = request_values(title="napari-imagej Settings", values=args)
         if choices is not None:
             # Update settings with user selections
             any_changed = False
-            for setting, v in choices.items():
-                if v != settings[setting].get():
-                    any_changed = True
-                    settings[setting] = v
+            for setting, value in choices.items():
+                any_changed |= self._apply_setting_param(setting, value)
 
             if any_changed:
                 self.setting_change.emit()
+
+    def _register_setting_param(self, args: Dict[Any, Any], setting: str):
+        # General: Set name, and current value as default
+        args[setting] = dict(value=settings[setting].get())
+
+        # Setting specific additions
+        if setting == "jvm_mode":
+            args[setting]["options"] = dict(choices=["headless", "interactive"])
+
+    def _apply_setting_param(self, setting: str, value: Any) -> bool:
+        """
+        Sets setting to value, and returns true iff value is different from before
+        """
+        # First, validate the new value
+        try:
+            settings._validate_setting(setting, value)
+        except Exception as exc:
+            # New value incompatible; report it to the user
+            RichTextPopup(
+                rich_message=f"<b>Ignoring selection for setting {setting}:</b> {exc}",
+                exec=True,
+            )
+            return False
+
+        # Record the old value
+        original = settings[setting].get()
+        # Set the new value
+        settings[setting] = value
+
+        # Report a change in value
+        return original != value
 
     def _notify_settings_change(self):
         """

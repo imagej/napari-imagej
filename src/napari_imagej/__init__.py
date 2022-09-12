@@ -19,6 +19,7 @@ https://pyimagej.readthedocs.io/en/latest/
 """
 import os
 import sys
+from typing import Any
 
 import confuse
 
@@ -34,14 +35,31 @@ class _NapariImageJSettings(confuse.Configuration):
 
     def read(self, user: bool = True, defaults: bool = True):
         # Don't use user settings during the tests
-        testing = os.environ.get("NAPARI_IMAGEJ_TESTING", "no") != "yes"
+        testing = os.environ.get("NAPARI_IMAGEJ_TESTING", "no") == "yes"
         super().read(user=user and not testing, defaults=defaults)
         # -- VALIDATE SETTINGS -- #
+        for key, value in self.items():
+            self._validate_setting(key, value.get(), strict=False)
 
-        # Ensure that the jvm mode is valid
-        jvm_mode: str = self["jvm_mode"].as_choice(["interactive", "headless"])
-        if jvm_mode == "interactive" and sys.platform == "darwin":
-            self["jvm_mode"] = "headless"
+    def _validate_setting(self, setting: str, value: Any, strict=True):
+        exc: Exception = None
+        if setting == "jvm_mode":
+            # Ensure a valid jvm mode choice
+            self["jvm_mode"].as_choice(["interactive", "headless"])
+            # Ensure headless chosen on MacOS
+            if value == "interactive" and sys.platform == "darwin":
+                if strict:  # Report the failure
+                    exc = ValueError(
+                        "ImageJ2 must be run headlessly on MacOS. Visit "
+                        '<a href="https://pyimagej.readthedocs.io/en/latest/'
+                        'Initialization.html#interactive-mode">this site</a> '
+                        "for more information."
+                    )
+                else:  # Assign a reasonable default
+                    self["jvm_mode"] = "headless"
+
+        if exc and strict:
+            raise exc
 
 
 settings = _NapariImageJSettings()
