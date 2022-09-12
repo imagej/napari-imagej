@@ -285,16 +285,6 @@ class GUIButton(QPushButton):
         )
 
 
-class RichTextPopup(QMessageBox):
-    def __init__(self, rich_message: str, exec: bool = False):
-        super().__init__()
-        self.setText(rich_message)
-        self.setTextFormat(Qt.RichText)
-        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        if exec:
-            self.exec()
-
-
 class SettingsButton(QPushButton):
 
     # Signal used to identify changes to user settings
@@ -322,7 +312,11 @@ class SettingsButton(QPushButton):
         # config-default.yaml. Secondly, it ensures that tampering with any user
         # setting files does not add settings to this popup that don't exist in
         # the default file
-        default_source = next(s for s in settings.sources if s.default)
+        default_source = next((s for s in settings.sources if s.default), None)
+        if not default_source:
+            raise ValueError(
+                "napari-imagej settings does not contain a default source!"
+            )
         for setting in default_source:
             self._register_setting_param(args, setting)
         # Use magicgui.request_values to allow user to configure settings
@@ -372,11 +366,11 @@ class SettingsButton(QPushButton):
         Notifies (using a popup) that a restart is required for settings changes
         to take effect
         """
-        msg: QMessageBox = QMessageBox()
-        msg.setText(
-            "Please restart napari for napari-imagej settings changes to take effect!"
+        RichTextPopup(
+            rich_message="Please restart napari for napari-imagej settings "
+            "changes to take effect!",
+            exec=True,
         )
-        msg.exec()
 
     def _write_settings(self):
         """
@@ -385,3 +379,15 @@ class SettingsButton(QPushButton):
         output = settings.dump()
         with open(settings.user_config_path(), "w") as f:
             f.write(output)
+
+
+class RichTextPopup(QMessageBox):
+    """A helper widget for creating (and immediately displaying) popups"""
+
+    def __init__(self, rich_message: str, exec: bool = False):
+        super().__init__()
+        self.setText(rich_message)
+        self.setTextFormat(Qt.RichText)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        if exec:
+            self.exec()
