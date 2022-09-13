@@ -7,7 +7,7 @@ This Widget is made accessible to napari through napari.yml
 from napari import Viewer
 from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 
-from napari_imagej.java import imagej_init
+from napari_imagej.java import ij_init
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree, SearchResultTreeItem
@@ -22,7 +22,7 @@ class NapariImageJWidget(QWidget):
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
-        imagej_init()
+        ij_init()
 
         # -- NapariImageJWidget construction -- #
 

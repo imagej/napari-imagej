@@ -2,12 +2,12 @@
 A module encapsulating access to Java functionality.
 
 Notable functions included in the module:
-    * ij()
-        - used to access the ImageJ instance
+    * ij_init()
+        - used to begin the creation of the ImageJ instance.
     * ensure_jvm_started()
         - used to block execution until the ImageJ instance is ready
-    * jvm_is_headless()
-        - reports whether the JVM is being run headlessly
+    * ij()
+        - used to access the ImageJ instance
     * log_debug()
         - used for logging in a standardized way
 
@@ -35,14 +35,14 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return imagej_init().get()
+    return ij_init().get()
 
 
 def ensure_jvm_started() -> None:
     """
     Blocks until the ImageJ instance is ready.
     """
-    imagej_init().wait()
+    ij_init().wait()
 
 
 def _imagej_init():
@@ -76,8 +76,20 @@ init_lock = Lock()
 _ij_future: AsyncResult = None
 
 
-def imagej_init() -> AsyncResult:
-    """Function that"""
+def ij_init() -> AsyncResult:
+    """
+    Initializes the singular ImageJ2 instance.
+    This function returns BEFORE the ImageJ2 instance has been created!
+    To block until the ImageJ2 instance is ready, use ij() instead.
+
+    This function will only create ONE ImageJ2 instance. This ImageJ2 instance
+    will be created in the first call to this function. Later calls to the function
+    will return the same AsyncResult generated from the first call to the function.
+    This function also tries to be thread-safe.
+
+    :return: An AsyncResult that will be populated with the ImageJ2
+    instance once it has been created.
+    """
     global _ij_future
     if not _ij_future:
         with init_lock:
