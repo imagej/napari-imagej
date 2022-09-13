@@ -23,6 +23,8 @@ from typing import Any
 
 import confuse
 
+from napari_imagej.utilities.logging import log_debug
+
 __version__ = "0.0.1.dev0"
 
 
@@ -64,6 +66,10 @@ class _NapariImageJSettings(confuse.Configuration):
                         "for more information."
                     )
                 else:  # Assign a reasonable default
+                    log_debug(
+                        "ImageJ2 must be run headlessly on MacOS. Reconfiguring "
+                        "jvm_mode to headless"
+                    )
                     self["jvm_mode"] = "headless"
 
 
