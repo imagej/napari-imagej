@@ -2,6 +2,9 @@
 A module testing napari_imagej.widgets.menu
 """
 
+import sys
+from typing import Callable
+
 import numpy
 import pytest
 import yaml
@@ -19,6 +22,7 @@ from napari_imagej.widgets.menu import (
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
+    RichTextPopup,
     SettingsButton,
     ToIJButton,
 )
@@ -61,6 +65,48 @@ def napari_mocker(viewer: Viewer):
     yield
 
     menu.request_values = oldfunc
+
+
+@pytest.fixture()
+def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
+    """Fixture used to handle RichTextPopups"""
+
+    def handle_popup(text: str, popup_generator: Callable[[], None]):
+        # # Start the handler in a new thread
+        class Handler(QRunnable):
+
+            # Test popup when running headlessly
+            def run(self) -> None:
+                asserter(lambda: isinstance(QApplication.activeWindow(), RichTextPopup))
+                msg = QApplication.activeWindow()
+                if text != msg.text():
+                    self._passed = False
+                    return
+                if Qt.RichText != msg.textFormat():
+                    self._passed = False
+                    return
+                if Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                    self._passed = False
+                    return
+
+                ok_button = msg.button(QMessageBox.Ok)
+                ok_button.clicked.emit()
+                asserter(lambda: QApplication.activeModalWidget() is not msg)
+                self._passed = True
+
+            def passed(self) -> bool:
+                return self._passed
+
+        runnable = Handler()
+        QThreadPool.globalInstance().start(runnable)
+
+        # Click the button
+        popup_generator()
+        # Wait for the popup to be handled
+        asserter(QThreadPool.globalInstance().waitForDone)
+        assert runnable.passed()
+
+    return handle_popup
 
 
 @pytest.fixture(autouse=True)
@@ -131,7 +177,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
 
 
 @pytest.mark.skipif(not TESTING_HEADLESS, reason="Only applies when running headlessly")
-def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
+def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
     # Wait until the JVM starts to test settings
     button: GUIButton = gui_widget.gui_button
@@ -145,46 +191,14 @@ def test_GUIButton_layout_headless(asserter, gui_widget: NapariImageJMenu):
     expected_text = "ImageJ2 GUI unavailable!"
     assert expected_text == button.toolTip()
 
-    # # Start the handler in a new thread
-    class Handler(QRunnable):
-
-        # Test popup when running headlessly
-        def run(self) -> None:
-            asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
-            msg = QApplication.activeWindow()
-            expected_text = (
-                "The ImageJ2 user interface cannot be opened "
-                "when running PyImageJ headlessly. Visit "
-                '<a href="https://pyimagej.readthedocs.io/en/latest/'
-                'Initialization.html#interactive-mode">this site</a> '
-                "for more information."
-            )
-            if expected_text != msg.text():
-                self._passed = False
-                return
-            if Qt.RichText != msg.textFormat():
-                self._passed = False
-                return
-            if Qt.TextBrowserInteraction != msg.textInteractionFlags():
-                self._passed = False
-                return
-
-            ok_button = msg.button(QMessageBox.Ok)
-            ok_button.clicked.emit()
-            asserter(lambda: QApplication.activeModalWidget() is not msg)
-            self._passed = True
-
-        def passed(self) -> bool:
-            return self._passed
-
-    runnable = Handler()
-    QThreadPool.globalInstance().start(runnable)
-
-    # Click the button
-    button.clicked.emit()
-    # Wait for the popup to be handled
-    asserter(QThreadPool.globalInstance().waitForDone)
-    assert runnable.passed()
+    expected_popup_text = (
+        "The ImageJ2 user interface cannot be opened "
+        "when running PyImageJ headlessly. Visit "
+        '<a href="https://pyimagej.readthedocs.io/en/latest/'
+        'Initialization.html#interactive-mode">this site</a> '
+        "for more information."
+    )
+    popup_handler(expected_popup_text, button.clicked.emit)
 
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
@@ -282,7 +296,7 @@ def test_settings_no_change(gui_widget: NapariImageJMenu):
     assert new_yaml == old_yaml
 
 
-def test_settings_change(asserter, gui_widget: NapariImageJMenu):
+def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     """Change imagej_directory_or_endpoint and ensure that the settings change"""
     button: SettingsButton = gui_widget.settings_button
 
@@ -312,37 +326,11 @@ def test_settings_change(asserter, gui_widget: NapariImageJMenu):
 
     menu.request_values = newfunc
 
-    # # Start the handler in a new thread
-    class Handler(QRunnable):
-
-        # Test popup when running headlessly
-        def run(self) -> None:
-            asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
-            msg = QApplication.activeWindow()
-            expected_text = (
-                "Please restart napari for napari-imagej settings "
-                "changes to take effect!"
-            )
-            if expected_text != msg.text():
-                self._passed = False
-                return
-            ok_button = msg.button(QMessageBox.Ok)
-            ok_button.clicked.emit()
-            asserter(lambda: QApplication.activeModalWidget() is not msg)
-            self._passed = True
-
-        def passed(self) -> bool:
-            return self._passed
-
-    runnable = Handler()
-    QThreadPool.globalInstance().start(runnable)
-
-    # Trigger the button
-    button._update_settings()
-
-    # Wait for the popup to be handled
-    asserter(QThreadPool.globalInstance().waitForDone)
-    assert runnable.passed()
+    # Handle the popup from button._update_settings
+    expected_text = (
+        "Please restart napari for napari-imagej settings " "changes to take effect!"
+    )
+    popup_handler(expected_text, button._update_settings)
 
     menu.request_values = oldfunc
 
@@ -350,3 +338,46 @@ def test_settings_change(asserter, gui_widget: NapariImageJMenu):
     assert settings[key].get() == new_value
     with open(settings.user_config_path(), "r") as stream:
         assert yaml.safe_load(stream)[key] == new_value
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="Only applies testing on MacOS")
+def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu):
+    """Change jvm_mode on mac from headless to interactive, ensure that is prevented"""
+    button: SettingsButton = gui_widget.settings_button
+
+    # REQUEST_VALUES MOCK
+    oldfunc = menu.request_values
+
+    assert settings["jvm_mode"].get() == "headless"
+
+    def newfunc(values={}, title="", **kwargs):
+        results = {}
+        # Solve each parameter
+        for name, options in values.items():
+            if name == "jvm_mode":
+                results[name] = "interactive"
+                continue
+            elif "value" in options:
+                results[name] = options["value"]
+                continue
+
+            # Otherwise, we don't know how to solve that parameter
+            raise NotImplementedError()
+        return results
+
+    menu.request_values = newfunc
+
+    # Handle the popup from button._update_settings
+    expected_text = (
+        "<b>Ignoring selection for setting jvm_mode:</b> "
+        "ImageJ2 must be run headlessly on MacOS. Visit "
+        '<a href="https://pyimagej.readthedocs.io/en/latest/'
+        'Initialization.html#interactive-mode">this site</a> '
+        "for more information."
+    )
+    popup_handler(expected_text, button._update_settings)
+
+    menu.request_values = oldfunc
+
+    # Assert no change in the settings
+    assert settings["jvm_mode"].get() == "headless"
