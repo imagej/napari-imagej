@@ -19,6 +19,31 @@ def install_default_settings():
     napari_imagej.settings.read()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def preserve_user_settings():
+    """Fixture allowing the saving settings without disrupting user's settings"""
+    # Obtain prior user settings
+    user_path = napari_imagej.settings.user_config_path()
+
+    if os.path.exists(user_path):
+        # If they existed, read in the settings and delete the file
+        with open(user_path, "r") as f:
+            existing_settings = f.read()
+        os.remove(user_path)
+
+        yield
+
+        # After the test, restore the file
+        with open(user_path, "w") as f:
+            f.write(existing_settings)
+    else:
+        yield
+
+        # After the test, remove the file
+        if os.path.exists(user_path):
+            os.remove(user_path)
+
+
 @pytest.fixture(scope="session")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
