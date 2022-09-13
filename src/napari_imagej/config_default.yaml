@@ -8,7 +8,8 @@
 # OR endpoint of another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
 # OR list of Maven artifacts to include (e.g.
 #   ['net.imagej:imagej:2.3.0', 'net.imagej:imagej-legacy', 'net.preibisch:BigStitcher']).
-# The default (null) will use the latest version of ImageJ2, downloading it if needed.
+# The default ('net.imagej:image') will use the latest version of ImageJ2,
+# downloading it if needed.
 imagej_directory_or_endpoint: 'net.imagej:imagej'
 
 # This can be used to include original ImageJ functionality.
