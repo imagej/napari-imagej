@@ -275,6 +275,7 @@ def test_settings_no_change(gui_widget: NapariImageJMenu):
     old_yaml = [(k, v.get()) for k, v in settings.items()]
 
     # Then update the settings, but select all defaults
+    # NB settings handling is done by napari_mocker above
     button._update_settings()
     # Then record the new settings and compare
     new_yaml = [(k, v.get()) for k, v in settings.items()]
