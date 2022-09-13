@@ -2,14 +2,12 @@
 A module encapsulating access to Java functionality.
 
 Notable functions included in the module:
-    * ij()
-        - used to access the ImageJ instance
+    * ij_init()
+        - used to begin the creation of the ImageJ instance.
     * ensure_jvm_started()
         - used to block execution until the ImageJ instance is ready
-    * running_headless()
-        - reports whether the JVM is being run headlessly
-    * setting()
-        - used to obtain values of configuration settings
+    * ij()
+        - used to access the ImageJ instance
     * log_debug()
         - used for logging in a standardized way
 
@@ -18,16 +16,15 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 import os
-import sys
-from functools import lru_cache
 from multiprocessing.pool import AsyncResult, ThreadPool
-from typing import Any, Callable, Dict
+from threading import Lock
+from typing import Callable
 
 import imagej
-import yaml
 from jpype import JClass
 from scyjava import config, jimport
 
+from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
@@ -38,36 +35,14 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return ij_future.get()
+    return ij_init().get()
 
 
 def ensure_jvm_started() -> None:
     """
     Blocks until the ImageJ instance is ready.
     """
-    ij_future.wait()
-
-
-def setting(name: str):
-    """Gets the value of setting name"""
-    return settings().get(name, None)
-
-
-@lru_cache(maxsize=None)
-def settings() -> Dict[Any, Any]:
-    """Gets all plugin settings as a dictionary"""
-    return yaml.safe_load(open("settings.yml", "r"))
-
-
-def get_mode() -> str:
-    """
-    Returns the mode ImageJ will be run in
-    """
-    return "headless" if sys.platform == "darwin" else "interactive"
-
-
-def running_headless() -> bool:
-    return get_mode() == "headless"
+    ij_init().wait()
 
 
 def _imagej_init():
@@ -85,36 +60,57 @@ def _imagej_init():
     config.endpoints.append("io.scif:scifio:0.43.1")
     log_debug("Completed JVM Configuration")
 
-    # Configure PyImageJ settings
-    settings = {
-        "ij_dir_or_version_or_endpoint": setting("imagej_installation"),
-        "mode": get_mode(),
-        "add_legacy": False,
-    }
-
     # Launch PyImageJ
-    _ij = imagej.init(**settings)
+    _ij = imagej.init(
+        ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(str),
+        mode=settings["jvm_mode"].get(str),
+        add_legacy=settings["include_imagej_legacy"].get(bool),
+    )
     log_debug(f"Initialized at version {_ij.getVersion()}")
 
     # Return the ImageJ gateway
     return _ij
 
 
-# There is a good debate to be had whether to multithread or multiprocess.
-# From what I (Gabe) have read, it seems that threading is preferrable for
-# network / IO bottlenecking, while multiprocessing is preferrable for CPU
-# bottlenecking.
-# While multiprocessing might theoretically be a better choice for JVM startup,
-# there are two reasons we instead choose multithreading:
-# 1) Multiprocessing is not supported without additional libraries on MacOS.
-# See https://docs.python.org/3/library/multiprocessing.html#introduction
-# 2) JPype items cannot (currently) be passed between processes due to an
-# issue with pickling. See
-# https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
-threadpool: ThreadPool = ThreadPool(processes=1)
-# ij_future is not very pythonic, but we are dealing with a Java Object
-# and it better conveys the object's meaning than e.g. ij_result
-ij_future: AsyncResult = threadpool.apply_async(func=_imagej_init)
+init_lock = Lock()
+_ij_future: AsyncResult = None
+
+
+def ij_init() -> AsyncResult:
+    """
+    Initializes the singular ImageJ2 instance.
+    This function returns BEFORE the ImageJ2 instance has been created!
+    To block until the ImageJ2 instance is ready, use ij() instead.
+
+    This function will only create ONE ImageJ2 instance. This ImageJ2 instance
+    will be created in the first call to this function. Later calls to the function
+    will return the same AsyncResult generated from the first call to the function.
+    This function also tries to be thread-safe.
+
+    :return: An AsyncResult that will be populated with the ImageJ2
+    instance once it has been created.
+    """
+    global _ij_future
+    if not _ij_future:
+        with init_lock:
+            if not _ij_future:
+                # There is a good debate to be had whether to multithread or
+                # multiprocess. From what I (Gabe) have read, it seems that threading
+                # is preferrable for network / IO bottlenecking, while multiprocessing
+                # is preferrable for CPU bottlenecking. While multiprocessing might
+                # theoretically be a better choice for JVM startup, there are two
+                # reasons we instead choose multithreading:
+                # 1) Multiprocessing is not supported without additional libraries on
+                # MacOS. See
+                # https://docs.python.org/3/library/multiprocessing.html#introduction
+                # 2) JPype items cannot (currently) be passed between processes due to
+                # an issue with pickling. See
+                # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
+                threadpool: ThreadPool = ThreadPool(processes=1)
+                # ij_future is not very pythonic, but we are dealing with a Java Object
+                # and it better conveys the object's meaning than e.g. ij_result
+                _ij_future = threadpool.apply_async(func=_imagej_init)
+    return _ij_future
 
 
 class JavaClasses(object):

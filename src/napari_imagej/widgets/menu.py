@@ -3,25 +3,20 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from threading import Thread
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
 from napari.layers import Layer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
-from napari_imagej.java import (
-    ensure_jvm_started,
-    ij,
-    jc,
-    log_debug,
-    running_headless,
-    setting,
-)
+from napari_imagej import settings
+from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug
+from napari_imagej.resources import resource_path
 from napari_imagej.utilities._module_utils import _get_layers_hack
 
 
@@ -40,7 +35,10 @@ class NapariImageJMenu(QWidget):
         self.gui_button: GUIButton = GUIButton()
         self.layout().addWidget(self.gui_button)
 
-        if running_headless():
+        self.settings_button: SettingsButton = SettingsButton(viewer)
+        self.layout().addWidget(self.settings_button)
+
+        if settings["jvm_mode"].get(str) == "headless":
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
             self.gui_button.clicked.connect(self._showUI)
@@ -133,10 +131,11 @@ class ToIJButton(QPushButton):
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Export active napari layer to ImageJ2")
-        if setting("choose_active_layer"):
+        if settings["choose_active_layer"].get():
+            self.setToolTip("Export active napari layer to ImageJ2")
             self.clicked.connect(self.send_active_layer)
         else:
+            self.setToolTip("Export napari layer to ImageJ2")
             self.clicked.connect(self.send_chosen_layer)
 
     def _set_icon(self, path: str):
@@ -178,10 +177,11 @@ class FromIJButton(QPushButton):
         self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        self.setToolTip("Import active ImageJ2 Dataset to napari")
-        if setting("choose_active_layer"):
+        if settings["choose_active_layer"].get():
+            self.setToolTip("Import active ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_active_layer)
         else:
+            self.setToolTip("Import ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_chosen_layer)
 
     def _set_icon(self, path: str):
@@ -241,12 +241,12 @@ class FromIJButton(QPushButton):
 class GUIButton(QPushButton):
     def __init__(self):
         super().__init__()
-        running_headful = not running_headless()
         self.setEnabled(False)
-        if running_headful:
-            self._setup_headful()
-        else:
+
+        if settings["jvm_mode"].get(str) == "headless":
             self._setup_headless()
+        else:
+            self._setup_headful()
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
@@ -259,30 +259,135 @@ class GUIButton(QPushButton):
         Thread(target=post_setup).start()
 
     def _setup_headful(self):
-        self._set_icon("resources/16x16-flat-disabled.png")
+        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("Display ImageJ2 GUI (loading)")
 
         def post_setup():
             ensure_jvm_started()
-            self._set_icon("resources/16x16-flat.png")
+            self._set_icon(resource_path("imagej2-16x16-flat"))
             self.setEnabled(True)
             self.setToolTip("Display ImageJ2 GUI")
 
         Thread(target=post_setup).start()
 
     def _setup_headless(self):
-        self._set_icon("resources/16x16-flat-disabled.png")
+        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("ImageJ2 GUI unavailable!")
 
     def disable_popup(self):
-        msg: QMessageBox = QMessageBox()
-        msg.setText(
-            "The ImageJ2 user interface cannot be opened "
+        RichTextPopup(
+            rich_message="The ImageJ2 user interface cannot be opened "
             "when running PyImageJ headlessly. Visit "
             '<a href="https://pyimagej.readthedocs.io/en/latest/'
             'Initialization.html#interactive-mode">this site</a> '
-            "for more information."
+            "for more information.",
+            exec=True,
         )
-        msg.setTextFormat(Qt.RichText)
-        msg.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        msg.exec()
+
+
+class SettingsButton(QPushButton):
+
+    # Signal used to identify changes to user settings
+    setting_change = Signal()
+
+    def __init__(self, viewer: Viewer):
+        super().__init__()
+        self.viewer = viewer
+
+        icon = QColoredSVGIcon(resource_path("gear"))
+        self.setIcon(icon.colored(theme=viewer.theme))
+
+        self.clicked.connect(self._update_settings)
+        self.setting_change.connect(self._notify_settings_change)
+        self.setting_change.connect(self._write_settings)
+
+    def _update_settings(self):
+        """
+        Spawns a popup allowing the user to configure napari-imagej settings.
+        """
+        args = {}
+        # Build values map by iterating over all default settings.
+        # NB grabbing settings and defaults has two benefits. Firstly, it
+        # ensures that settings ALWAYS appear in the order described in
+        # config-default.yaml. Secondly, it ensures that tampering with any user
+        # setting files does not add settings to this popup that don't exist in
+        # the default file
+        default_source = next((s for s in settings.sources if s.default), None)
+        if not default_source:
+            raise ValueError(
+                "napari-imagej settings does not contain a default source!"
+            )
+        for setting in default_source:
+            self._register_setting_param(args, setting)
+        # Use magicgui.request_values to allow user to configure settings
+        choices = request_values(title="napari-imagej Settings", values=args)
+        if choices is not None:
+            # Update settings with user selections
+            any_changed = False
+            for setting, value in choices.items():
+                any_changed |= self._apply_setting_param(setting, value)
+
+            if any_changed:
+                self.setting_change.emit()
+
+    def _register_setting_param(self, args: Dict[Any, Any], setting: str):
+        # General: Set name, and current value as default
+        args[setting] = dict(value=settings[setting].get())
+
+        # Setting specific additions
+        if setting == "jvm_mode":
+            args[setting]["options"] = dict(choices=["headless", "interactive"])
+
+    def _apply_setting_param(self, setting: str, value: Any) -> bool:
+        """
+        Sets setting to value, and returns true iff value is different from before
+        """
+        # First, validate the new value
+        try:
+            settings._validate_setting(setting, value)
+        except Exception as exc:
+            # New value incompatible; report it to the user
+            RichTextPopup(
+                rich_message=f"<b>Ignoring selection for setting {setting}:</b> {exc}",
+                exec=True,
+            )
+            return False
+
+        # Record the old value
+        original = settings[setting].get()
+        # Set the new value
+        settings[setting] = value
+
+        # Report a change in value
+        return original != value
+
+    def _notify_settings_change(self):
+        """
+        Notifies (using a popup) that a restart is required for settings changes
+        to take effect
+        """
+        RichTextPopup(
+            rich_message="Please restart napari for napari-imagej settings "
+            "changes to take effect!",
+            exec=True,
+        )
+
+    def _write_settings(self):
+        """
+        Writes settings to a local configuration YAML file
+        """
+        output = settings.dump()
+        with open(settings.user_config_path(), "w") as f:
+            f.write(output)
+
+
+class RichTextPopup(QMessageBox):
+    """A helper widget for creating (and immediately displaying) popups"""
+
+    def __init__(self, rich_message: str, exec: bool = False):
+        super().__init__()
+        self.setText(rich_message)
+        self.setTextFormat(Qt.RichText)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        if exec:
+            self.exec()
