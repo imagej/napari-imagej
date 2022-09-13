@@ -25,15 +25,15 @@ import confuse
 
 __version__ = "0.0.1.dev0"
 
-# napari-imagej uses confuse (https://confuse.readthedocs.io/en/latest/) to configure
-# user settings.
-
 
 class _NapariImageJSettings(confuse.Configuration):
+    """Napari-ImageJ Settings object"""
+
     def __init__(self, read=True, **kwargs):
         super().__init__(appname="napari-imagej", modname=__name__, read=read)
 
     def read(self, user: bool = True, defaults: bool = True):
+        """Override of Configuration.read(), performs validation on each setting"""
         # Don't use user settings during the tests
         testing = os.environ.get("NAPARI_IMAGEJ_TESTING", "no") == "yes"
         super().read(user=user and not testing, defaults=defaults)
@@ -42,14 +42,22 @@ class _NapariImageJSettings(confuse.Configuration):
             self._validate_setting(key, value.get(), strict=False)
 
     def _validate_setting(self, setting: str, value: Any, strict=True):
-        exc: Exception = None
+        """
+        Helper function to perform validation on a particular setting.
+        By and large, this validation consists of an if block for each setting,
+        checking the specifics of that setting.
+
+        :param setting: The setting (key) to check
+        :param value: The value assigned to a particular setting
+        :param strict: If true, raise an Error. If false, assign a reasonable default.
+        """
         if setting == "jvm_mode":
             # Ensure a valid jvm mode choice
             self["jvm_mode"].as_choice(["interactive", "headless"])
             # Ensure headless chosen on MacOS
             if value == "interactive" and sys.platform == "darwin":
                 if strict:  # Report the failure
-                    exc = ValueError(
+                    raise ValueError(
                         "ImageJ2 must be run headlessly on MacOS. Visit "
                         '<a href="https://pyimagej.readthedocs.io/en/latest/'
                         'Initialization.html#interactive-mode">this site</a> '
@@ -58,8 +66,7 @@ class _NapariImageJSettings(confuse.Configuration):
                 else:  # Assign a reasonable default
                     self["jvm_mode"] = "headless"
 
-        if exc and strict:
-            raise exc
 
-
+# napari-imagej uses confuse (https://confuse.readthedocs.io/en/latest/) to configure
+# user settings.
 settings = _NapariImageJSettings()
