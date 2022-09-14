@@ -4,6 +4,10 @@ that are useful within napari-imagej
 
 All submodules within this module are DYNAMICALLY IMPORTED; this allows
 automatic discovery of all Converters.
+
+Notable functions included in the module:
+    * install_converters()
+        - used to add the napari-imagej Converters to scyjava's conversion framework.
 """
 import pkgutil
 from importlib.util import module_from_spec
@@ -86,10 +90,12 @@ for loader, module_name, is_pkg in pkgutil.walk_packages(__path__):
 
 
 def install_converters():
-    for converter in JAVA_TO_PY_CONVERTERS:
-        add_py_converter(converter)
-    for converter in PY_TO_JAVA_CONVERTERS:
-        add_java_converter(converter)
+    """Installs napari-imagej specific converters"""
 
+    def _install_converters():
+        for converter in JAVA_TO_PY_CONVERTERS:
+            add_py_converter(converter)
+        for converter in PY_TO_JAVA_CONVERTERS:
+            add_java_converter(converter)
 
-when_jvm_starts(install_converters)
+    when_jvm_starts(_install_converters)

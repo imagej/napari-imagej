@@ -54,6 +54,8 @@ def python_type_of(module_item: "jc.ModuleItem"):
     ):
         converted = converter(module_item)
         if converted is not None:
+            if not module_item.isRequired():
+                return Optional[converted]
             return converted
     raise ValueError(
         (

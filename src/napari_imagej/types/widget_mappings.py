@@ -6,7 +6,7 @@ Notable functions included in the module:
         - finds the best widget (as a str) for a ModuleItem
         and corresponding python type
 """
-from typing import Dict, Optional, Union
+from typing import Dict, ForwardRef, Optional, Union, get_args, get_origin
 
 from napari_imagej.java import jc
 
@@ -36,8 +36,13 @@ def preferred_widget_for(
     :param type_hint: The PYTHON type for the parameter
     :return: The best magicgui widget type, if it is known
     """
-    if type_hint == "napari.layers.Image" and item.isInput() and item.isOutput():
-        return "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
+    if item.isInput() and item.isOutput():
+        if get_origin(type_hint) is Union and type(None) in get_args(type_hint):
+            type_hint = get_args(type_hint)[0]
+            if isinstance(type_hint, ForwardRef):
+                type_hint = type_hint.__forward_arg__
+        if type_hint == "napari.layers.Image":
+            return "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
 
     style: str = item.getWidgetStyle()
     if style not in _supported_scijava_styles:

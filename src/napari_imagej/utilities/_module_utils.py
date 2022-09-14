@@ -28,24 +28,6 @@ from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
 
 
-def _widget_return_type(
-    module_info: "jc.Module", user_resolved_inputs: List["jc.ModuleItem"]
-) -> type:
-    """
-    Determines the return type of execute_module within functionify_module_execution.
-    If there are "layer" outputs not delegated to the user, the output will be
-    a List of Layer. If there are no such outputs, the return will be
-    None.
-    """
-    for output_item in module_info.outputs():
-        # If the user passed the output, we shouldn't return it.
-        if output_item in user_resolved_inputs:
-            continue
-        if type_displayable_in_napari(output_item.getType()):
-            return List[Layer]
-    return None
-
-
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     """
     Uses all preprocessors up to the InputHarvesters.
@@ -163,11 +145,11 @@ def _filter_unresolved_inputs(
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
     unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
-    # Delegate optional output construction to the module
-    # We will leave those unresolved
-    unresolved = list(
-        filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved)
-    )
+    # # Delegate optional output construction to the module
+    # # We will leave those unresolved
+    # unresolved = list(
+    #     filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved)
+    # )
     # Only leave in the optional parameters that we know how to resolve
     unresolved = list(filter(_resolvable_or_required, unresolved))
 
@@ -314,10 +296,7 @@ def _modify_function_signature(
         for i in _napari_module_param_additions(module_info).items()
     ]
     all_params = module_params + other_params
-    return_type = _widget_return_type(module_info, inputs)
-    function.__signature__ = sig.replace(
-        parameters=all_params, return_annotation=return_type
-    )
+    function.__signature__ = sig.replace(parameters=all_params)
 
 
 def _pure_module_outputs(
@@ -334,10 +313,11 @@ def _pure_module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        # Ignore outputs that are also required inputs
+        # Ignore outputs that were provided by the user
         output_name = ij().py.from_java(output_entry.getKey())
         if module.getInfo().getInput(output_name) in user_inputs:
-            continue
+            if module.getInput(output_name):
+                continue
         output = ij().py.from_java(output_entry.getValue())
         # Add arraylike outputs as images
         if ij().py._is_arraylike(output):
@@ -422,7 +402,7 @@ def _add_napari_metadata(
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
 
-    type_hints["return"] = _widget_return_type(info, unresolved_inputs)
+    type_hints["return"] = List[Layer]
 
     execute_module._info = info  # type: ignore
     execute_module.__annotation__ = type_hints  # type: ignore
@@ -499,12 +479,9 @@ def functionify_module_execution(
         unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
         # Package the rest of the execution into a widget
-        # TODO: Ideally, we'd have a return type hint List[Layer] here,
-        # and we wouldn't need _widget_return_type. This won't work when we return
-        # no layers, however: see https://github.com/napari/napari/issues/4571.
         def module_execute(
             *user_resolved_inputs,
-        ):
+        ) -> List[Layer]:
             """
             A function designed to execute module.
             :param user_resolved_inputs: Inputs passed from magicgui
