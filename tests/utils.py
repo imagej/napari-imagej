@@ -125,6 +125,7 @@ class DummyModuleItem:
         self._isInput = isInput
         self._isOutput = isOutput
         self._default = default
+        self._style = ""
 
     def getName(self):
         return self._name
