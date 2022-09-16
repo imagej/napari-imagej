@@ -308,17 +308,14 @@ def _pure_module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        # Ignore outputs that were provided by the user
-        output_name = ij().py.from_java(output_entry.getKey())
-        if module.getInfo().getInput(output_name) in user_inputs:
-            if module.getInput(output_name):
-                continue
+        name = str(output_entry.getKey())
+        # Ignore preallocated outputs if they were provided by the user
+        if module.getInfo().getInput(name) in user_inputs and module.getInput(name):
+            continue
         output = ij().py.from_java(output_entry.getValue())
         # Add arraylike outputs as images
         if ij().py._is_arraylike(output):
-            layer = Layer.create(
-                data=output, meta={"name": output_name}, layer_type="image"
-            )
+            layer = Layer.create(data=output, meta={"name": name}, layer_type="image")
             layer_outputs.append(layer)
         # Add Layers directly
         elif isinstance(output, Layer):
@@ -329,7 +326,7 @@ def _pure_module_outputs(
 
         # Otherwise, it can't be displayed in napari.
         else:
-            widget_outputs.append((output_name, output))
+            widget_outputs.append((name, output))
 
     # napari cannot handle empty List[Layer], so we return None if empty
     if not len(layer_outputs):
