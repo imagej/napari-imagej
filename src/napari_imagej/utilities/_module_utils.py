@@ -145,11 +145,6 @@ def _filter_unresolved_inputs(
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
     unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
-    # # Delegate optional output construction to the module
-    # # We will leave those unresolved
-    # unresolved = list(
-    #     filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved)
-    # )
     # Only leave in the optional parameters that we know how to resolve
     unresolved = list(filter(_resolvable_or_required, unresolved))
 
