@@ -10,7 +10,7 @@ There are a few functions that are designed for use by graphical widgets, namely
     * info_for(searchResult)
         - converts a SciJava SearchResult to a ModuleInfo
 """
-from inspect import Parameter, Signature, _empty, signature
+from inspect import Parameter, Signature, _empty, isclass, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException
@@ -394,7 +394,7 @@ def _add_napari_metadata(
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
 
-    type_hints["return"] = List[Layer]
+    type_hints["return"] = signature(execute_module).return_annotation
 
     execute_module._info = info  # type: ignore
     execute_module.__annotation__ = type_hints  # type: ignore
@@ -565,13 +565,10 @@ def _request_values_args(
     func: Callable, param_options: Dict[str, Dict]
 ) -> Dict[str, Dict]:
     """Gets the arguments for request_values from a function"""
-    import inspect
-
-    signature = inspect.signature(func)
 
     # Convert function parameters and param_options to a dictionary
     args = {}
-    for param in signature.parameters.values():
+    for param in signature(func).parameters.values():
         args[param.name] = {}
         # Add type to dict
         args[param.name]["annotation"] = param.annotation
@@ -579,12 +576,10 @@ def _request_values_args(
         if param.name in param_options:
             args[param.name]["options"] = param_options[param.name]
         # Add default value, if we have one, to dict
-        if param.default is not inspect._empty:
+        if param.default is not _empty:
             args[param.name]["value"] = param.default
         # Add layer choices, if relevant
-        if (
-            inspect.isclass(param.annotation) and issubclass(param.annotation, Layer)
-        ) or (
+        if (isclass(param.annotation) and issubclass(param.annotation, Layer)) or (
             type(param.annotation) is str
             and param.annotation.startswith("napari.layers")
         ):
