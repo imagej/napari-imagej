@@ -2,6 +2,7 @@
 The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
+from pathlib import Path
 from threading import Thread
 from typing import Any, Dict, Optional
 
@@ -337,12 +338,20 @@ class SettingsButton(QPushButton):
         # Setting specific additions
         if setting == "jvm_mode":
             args[setting]["options"] = dict(choices=["headless", "interactive"])
+        if setting == "imagej_base_directory":
+            args[setting]["annotation"] = Path
+            args[setting]["value"] = settings[setting].as_path()
+            args[setting]["options"] = dict(mode="d")
 
     def _apply_setting_param(self, setting: str, value: Any) -> bool:
         """
         Sets setting to value, and returns true iff value is different from before
         """
-        # First, validate the new value
+        # First, any postprocessing
+        if isinstance(value, Path):
+            value = str(value)
+
+        # Then, validate the new value
         try:
             settings._validate_setting(setting, value)
         except Exception as exc:

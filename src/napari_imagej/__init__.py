@@ -71,6 +71,20 @@ class _NapariImageJSettings(confuse.Configuration):
                         "jvm_mode to headless"
                     )
                     self["jvm_mode"] = "headless"
+        if setting == "imagej_base_directory":
+            # Overwrite default setting with the current directory
+            if value == ".":
+                self["imagej_base_directory"] = os.getcwd()
+            # Ensure a valid directory
+            if not os.path.exists(value):
+                if strict:
+                    raise ValueError("ImageJ base directory must be a valid path.")
+                else:
+                    log_debug(
+                        "ImageJ base directory must be a valid path. Reconfiguring "
+                        "imagej_base_directory to the current working directory."
+                    )
+                    self["imagej_base_directory"] = os.getcwd()
 
 
 # napari-imagej uses confuse (https://confuse.readthedocs.io/en/latest/) to configure

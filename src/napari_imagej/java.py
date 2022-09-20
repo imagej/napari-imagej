@@ -15,7 +15,6 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-import os
 from multiprocessing.pool import AsyncResult, ThreadPool
 from threading import Lock
 from typing import Callable
@@ -56,7 +55,7 @@ def _imagej_init():
     config.add_repositories(
         {"scijava.public": "https://maven.scijava.org/content/groups/public"}
     )
-    config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
+    config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
     log_debug("Completed JVM Configuration")
 
     # Add converters

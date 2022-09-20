@@ -12,6 +12,10 @@
 # downloading it if needed.
 imagej_directory_or_endpoint: 'net.imagej:imagej'
 
+# Path to the ImageJ base directory on your local machine.
+# Defaults to the current working directory
+imagej_base_directory: '.'
+
 # This can be used to include original ImageJ functionality.
 # Iff True, original ImageJ functionality (ij.* packages) will be available.
 include_imagej_legacy: false
