@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
-from napari.layers import Labels, Points, Shapes, Surface
+from napari.layers import Image, Labels, Points, Shapes, Surface
 
 from napari_imagej.types.converters.labels import _labeling_to_layer, _layer_to_labeling
 from napari_imagej.types.enum_likes import OutOfBoundsFactory
@@ -755,3 +755,10 @@ def test_OutOfBoundsFactory_conversion(ij):
     assert isinstance(
         ij.py.to_java(OutOfBoundsFactory.PERIODIC), jc.OutOfBoundsPeriodicFactory
     )
+
+
+# -- Images -- #
+def test_image_layer_to_img(ij):
+    image = Image(data=np.ones((10, 10)))
+    j_img = ij.py.to_java(image)
+    assert isinstance(j_img, jc.Img)

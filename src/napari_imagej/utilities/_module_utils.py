@@ -10,7 +10,7 @@ There are a few functions that are designed for use by graphical widgets, namely
     * info_for(searchResult)
         - converts a SciJava SearchResult to a ModuleInfo
 """
-from inspect import Parameter, Signature, _empty, signature
+from inspect import Parameter, Signature, _empty, isclass, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException
@@ -26,24 +26,6 @@ from napari_imagej.types.type_conversions import python_type_of
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
-
-
-def _widget_return_type(
-    module_info: "jc.Module", user_resolved_inputs: List["jc.ModuleItem"]
-) -> type:
-    """
-    Determines the return type of execute_module within functionify_module_execution.
-    If there are "layer" outputs not delegated to the user, the output will be
-    a List of Layer. If there are no such outputs, the return will be
-    None.
-    """
-    for output_item in module_info.outputs():
-        # If the user passed the output, we shouldn't return it.
-        if output_item in user_resolved_inputs:
-            continue
-        if type_displayable_in_napari(output_item.getType()):
-            return List[Layer]
-    return None
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
@@ -163,11 +145,6 @@ def _filter_unresolved_inputs(
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
     unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
-    # Delegate optional output construction to the module
-    # We will leave those unresolved
-    unresolved = list(
-        filter(lambda i: not (i.isOutput() and not i.isRequired()), unresolved)
-    )
     # Only leave in the optional parameters that we know how to resolve
     unresolved = list(filter(_resolvable_or_required, unresolved))
 
@@ -314,10 +291,7 @@ def _modify_function_signature(
         for i in _napari_module_param_additions(module_info).items()
     ]
     all_params = module_params + other_params
-    return_type = _widget_return_type(module_info, inputs)
-    function.__signature__ = sig.replace(
-        parameters=all_params, return_annotation=return_type
-    )
+    function.__signature__ = sig.replace(parameters=all_params)
 
 
 def _pure_module_outputs(
@@ -334,16 +308,14 @@ def _pure_module_outputs(
 
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        # Ignore outputs that are also required inputs
-        output_name = ij().py.from_java(output_entry.getKey())
-        if module.getInfo().getInput(output_name) in user_inputs:
+        name = str(output_entry.getKey())
+        # Ignore preallocated outputs if they were provided by the user
+        if module.getInfo().getInput(name) in user_inputs and module.getInput(name):
             continue
         output = ij().py.from_java(output_entry.getValue())
         # Add arraylike outputs as images
         if ij().py._is_arraylike(output):
-            layer = Layer.create(
-                data=output, meta={"name": output_name}, layer_type="image"
-            )
+            layer = Layer.create(data=output, meta={"name": name}, layer_type="image")
             layer_outputs.append(layer)
         # Add Layers directly
         elif isinstance(output, Layer):
@@ -354,7 +326,7 @@ def _pure_module_outputs(
 
         # Otherwise, it can't be displayed in napari.
         else:
-            widget_outputs.append((output_name, output))
+            widget_outputs.append((name, output))
 
     # napari cannot handle empty List[Layer], so we return None if empty
     if not len(layer_outputs):
@@ -422,7 +394,7 @@ def _add_napari_metadata(
     # Without this, magicgui doesn't pick up on the types.
     type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
 
-    type_hints["return"] = _widget_return_type(info, unresolved_inputs)
+    type_hints["return"] = signature(execute_module).return_annotation
 
     execute_module._info = info  # type: ignore
     execute_module.__annotation__ = type_hints  # type: ignore
@@ -499,12 +471,9 @@ def functionify_module_execution(
         unresolved_inputs = _sink_optional_inputs(unresolved_inputs)
 
         # Package the rest of the execution into a widget
-        # TODO: Ideally, we'd have a return type hint List[Layer] here,
-        # and we wouldn't need _widget_return_type. This won't work when we return
-        # no layers, however: see https://github.com/napari/napari/issues/4571.
         def module_execute(
             *user_resolved_inputs,
-        ):
+        ) -> List[Layer]:
             """
             A function designed to execute module.
             :param user_resolved_inputs: Inputs passed from magicgui
@@ -596,13 +565,10 @@ def _request_values_args(
     func: Callable, param_options: Dict[str, Dict]
 ) -> Dict[str, Dict]:
     """Gets the arguments for request_values from a function"""
-    import inspect
-
-    signature = inspect.signature(func)
 
     # Convert function parameters and param_options to a dictionary
     args = {}
-    for param in signature.parameters.values():
+    for param in signature(func).parameters.values():
         args[param.name] = {}
         # Add type to dict
         args[param.name]["annotation"] = param.annotation
@@ -610,12 +576,10 @@ def _request_values_args(
         if param.name in param_options:
             args[param.name]["options"] = param_options[param.name]
         # Add default value, if we have one, to dict
-        if param.default is not inspect._empty:
+        if param.default is not _empty:
             args[param.name]["value"] = param.default
         # Add layer choices, if relevant
-        if (
-            inspect.isclass(param.annotation) and issubclass(param.annotation, Layer)
-        ) or (
+        if (isclass(param.annotation) and issubclass(param.annotation, Layer)) or (
             type(param.annotation) is str
             and param.annotation.startswith("napari.layers")
         ):

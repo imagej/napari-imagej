@@ -1,7 +1,10 @@
 """
 A module testing napari_imagej.types.widget_mappings
 """
+from typing import Optional
+
 import magicgui
+import napari
 import pytest
 from magicgui.widgets import (
     FloatSlider,
@@ -11,6 +14,7 @@ from magicgui.widgets import (
     Slider,
     SpinBox,
 )
+from napari.layers import Image
 
 from napari_imagej.types.widget_mappings import (
     _supported_scijava_styles,
@@ -60,13 +64,16 @@ def test_preferred_widget_for(style, type_hint, widget_type, widget_class):
     assert isinstance(widget._list[0], widget_class)
 
 
-def test_preferred_widget_for_parameter_widgets():
+@pytest.mark.parametrize(
+    "type_hint",
+    ["napari.layers.Image", Image, Optional["napari.layers.Image"], Optional[Image]],
+)
+def test_preferred_widget_for_parameter_widgets(type_hint):
 
     # MutableOutputWidget
     item: DummyModuleItem = DummyModuleItem(
         jtype=jc.ArrayImg, isInput=True, isOutput=True
     )
-    type_hint = "napari.layers.Image"
     actual = preferred_widget_for(item, type_hint)
     assert "napari_imagej.widgets.parameter_widgets.MutableOutputWidget" == actual
 

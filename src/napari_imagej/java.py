@@ -57,8 +57,15 @@ def _imagej_init():
         {"scijava.public": "https://maven.scijava.org/content/groups/public"}
     )
     config.add_option(f"-Dimagej2.dir={os.getcwd()}")  # TEMP
-    config.endpoints.append("io.scif:scifio:0.43.1")
+    # TODO: Remove once this version (or greater) is the default.
+    # See https://github.com/imagej/napari-imagej/issues/105
+    config.endpoints.append("net.imagej:imagej-ops:0.49.0")
     log_debug("Completed JVM Configuration")
+
+    # Add converters
+    from napari_imagej.types.converters import install_converters
+
+    install_converters()
 
     # Launch PyImageJ
     _ij = imagej.init(
@@ -318,6 +325,10 @@ class JavaClasses(object):
     @blocking_import
     def ComplexType(self):
         return "net.imglib2.type.numeric.ComplexType"
+
+    @blocking_import
+    def Img(self):
+        return "net.imglib2.img.Img"
 
     @blocking_import
     def IntegerType(self):

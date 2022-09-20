@@ -1,7 +1,8 @@
 """
 A module testing napari_imagej.utilities._module_utils
 """
-from inspect import Parameter, _empty
+from collections import OrderedDict
+from inspect import Parameter, _empty, signature
 from typing import Any, Dict, List, Optional
 
 import numpy
@@ -330,8 +331,8 @@ def test_modify_functional_signature():
         out.setIOType(jc.ItemIO.OUTPUT)
         info.addOutput(out)
 
-    def func(*inputs):
-        print("This is a function")
+    def func(*inputs) -> str:
+        return "This is a function"
 
     _module_utils._modify_function_signature(func, inputs, info)
     sig = func.__signature__
@@ -358,8 +359,8 @@ def test_modify_functional_signature():
 
     assert len(sig_params) == len(expected_names) + len(napari_param_map)
 
-    # assert return annotation is None
-    assert sig.return_annotation is None
+    # assert return annotation is str
+    assert sig.return_annotation is str
 
 
 def run_module_from_script(ij, tmp_path, script, args):
@@ -495,7 +496,7 @@ widget_parameterizations = [
     # No layers returned, the required BOTH is just updated
     (script_both_but_required, 0, 0, [jc.ArrayImgs.bytes(10, 10)]),
     # One layer returned as we create the optional input internally
-    (script_both_but_optional, 1, 0, []),
+    (script_both_but_optional, 1, 0, [None]),
 ]
 
 
@@ -511,28 +512,6 @@ def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget, args
         for layer in layer_outputs:
             assert isinstance(layer, Layer)
     assert num_widget == len(widget_outputs)
-
-
-out_type_params = [
-    (script_zero_layer_one_widget, None),
-    (script_one_layer_one_widget, List[Layer]),
-    (script_two_layer_one_widget, List[Layer]),
-    (script_both_but_optional, List[Layer]),
-    (script_both_but_required, None),
-]
-
-
-@pytest.mark.parametrize(argnames="script, type", argvalues=out_type_params)
-def test_module_output_type(ij, tmp_path, script, type):
-    # Write the script to a file
-    p = tmp_path / "script.py"
-    p.write_text(script)
-
-    info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
-    module = info.createModule()
-    unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
-    unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
-    assert _module_utils._widget_return_type(info, unresolved_inputs) == type
 
 
 def test_non_layer_widget():
@@ -653,6 +632,39 @@ def test_execute_function_with_params(make_napari_viewer, ij):
 
     _module_utils._execute_function_with_params(viewer, params, func)
     assert len(viewer.layers) == 1
+
+
+def test_functionify_module_execution_result_regression(make_napari_viewer, ij):
+    viewer: Viewer = make_napari_viewer()
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    func, _ = _module_utils.functionify_module_execution(
+        viewer, info.createModule(), info
+    )
+    sig = signature(func)
+    expected_params = OrderedDict()
+    expected_params["input"] = Parameter(
+        "input", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation="napari.layers.Image"
+    )
+
+    expected_params["doGauss"] = Parameter(
+        "doGauss", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=bool, default=False
+    )
+    expected_params["spacingString"] = Parameter(
+        "spacingString",
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=str,
+        default="1, 1",
+    )
+    expected_params["scaleString"] = Parameter(
+        "scaleString",
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=str,
+        default="2, 5",
+    )
+    assert expected_params == sig.parameters
+    assert sig.return_annotation == List[Layer]
 
 
 def test_convert_searchResult_to_info(imagej_widget: NapariImageJWidget, ij):
