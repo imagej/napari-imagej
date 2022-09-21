@@ -92,6 +92,53 @@ Once napari-imagej has successfully started ImageJ, the ImageJ2 button at the to
 
 ![Launching the ImageJ2 GUI and transferring data between interfaces](resources/napari_imagej_gui_and_data_transfer.gif)
 
+## Configuration
+
+napari-imagej's settings can be configured directly through the user interface. Clicking the settings button (with the gear icon) in the napari-imagej's menu bar will launch a popup allowing the configuration of all settings.
+
+**Alterations to napari-imagej settings will not take effect until a full restart of napari.**
+
+### imagej_directory_or_endpoint
+
+Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
+OR version of net.imagej:imagej artifact to launch (e.g. 2.3.0),
+OR endpoint of another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
+OR list of Maven artifacts to include (e.g.
+  ['net.imagej:imagej:2.3.0', 'net.imagej:imagej-legacy', 'net.preibisch:BigStitcher']).
+Defaults to 'net.imagej:imagej', which will use the latest version of ImageJ2,
+downloading it if needed.
+
+### imagej_base_directory
+
+Path to the ImageJ base directory on your local machine.
+Defaults to the current working directory.
+
+### include_imagej_legacy
+
+This can be used to include original ImageJ functionality.
+Iff true, original ImageJ functionality (ij.* packages) will be available.
+Defaults to false.
+
+### jvm_mode
+
+Designates the mode of execution for ImageJ2.
+Allowed options are 'headless' and 'interactive'.
+NB 'interactive' mode is unavailable on MacOS. More details can be found at
+https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode
+If napari-imagej is launched on MacOS with this setting set to "interactive",
+the setting will silently be reassigned to "headless".
+Defaults to 'interactive'.
+
+### choose_active_layer
+
+This can be used to identify whether transferred data between ImageJ2 and napari
+should be selected via activation or by user selection via a dialog.
+Iff true, the active layer/window is chosen for transfer between applications.
+Iff false, a popup will be shown instead, prompting the user to select data for transfer.
+Defaults to true.
+
+![Launching the napari-imagej settings dialog, including imagej-legacy](resources/napari_imagej_gui_settings.gif)
+
 ## Troubleshooting
 
 ### napari-imagej does not appear in the Plugins menu of napari!
