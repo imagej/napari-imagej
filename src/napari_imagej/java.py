@@ -439,6 +439,10 @@ class JavaClasses(object):
         return "net.imagej.roi.DefaultROITree"
 
     @blocking_import
+    def ImageDisplay(self):
+        return "net.imagej.display.ImageDisplay"
+
+    @blocking_import
     def Mesh(self):
         return "net.imagej.mesh.Mesh"
 

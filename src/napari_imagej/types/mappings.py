@@ -88,6 +88,8 @@ def images() -> Dict[Any, Any]:
         jc.RandomAccessible: "napari.layers.Image",
         jc.IterableInterval: "napari.layers.Image",
         jc.Img: "napari.layers.Image",
+        jc.ImageDisplay: "napari.layers.Image",
+        jc.DatasetView: "napari.layers.Image",
         # TODO: remove 'add_legacy=False' -> struggles with LegacyService
         # This change is waiting on a new pyimagej release
         # java_import('ij.ImagePlus'):
