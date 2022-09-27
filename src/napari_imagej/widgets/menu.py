@@ -205,36 +205,30 @@ class FromIJButton(QPushButton):
             # grab the chosen name
             name = choices["data"]
             # grab the chosen image
-            i = names.index(name)
-            image = ij().py.from_java(images[i])
-            # if the conversion is already a layer, add it directly
-            if isinstance(image, Layer):
-                image.name = name
-                self.viewer.add_layer(image)
-            # otherwise, try to coerce it into an Image layer
-            elif ij().py._is_arraylike(image):
-                self.viewer.add_image(data=image, name=name)
-            # if we can't coerce it, give up
-            else:
-                raise ValueError(f"{image} cannot be displayed in napari!")
+            view = (
+                ij().get("org.scijava.display.DisplayService").getDisplay(name).get(0)
+            )
+            self._add_image_from_display_view(view)
 
     def get_active_layer(self) -> None:
-        # Choose the active Dataset
-        image = ij().get("net.imagej.display.ImageDisplayService").getActiveDataset()
-        if image is None:
+        # Choose the active DatasetView
+        view = ij().get("net.imagej.display.ImageDisplayService").getActiveDatasetView()
+        if view is None:
             log_debug("There is no active window to export to napari")
             return
+        self._add_image_from_display_view(view)
+
+    def _add_image_from_display_view(self, view: "jc.DatasetView"):
         # Get the stuff needed for a new layer
-        py_image = ij().py.from_java(image)
-        name = ij().object().getName(image)
+        py_image = ij().py.from_java(view)
         # Create and add the layer
         if isinstance(py_image, Layer):
-            py_image.name = name
             self.viewer.add_layer(py_image)
         elif ij().py._is_arraylike(py_image):
+            name = ij().object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
         else:
-            raise ValueError(f"{image} cannot be displayed in napari!")
+            raise ValueError(f"{view} cannot be displayed in napari!")
 
 
 class GUIButton(QPushButton):

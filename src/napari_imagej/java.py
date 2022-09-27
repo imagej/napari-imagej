@@ -443,12 +443,20 @@ class JavaClasses(object):
         return "net.imagej.Dataset"
 
     @blocking_import
+    def DatasetView(self):
+        return "net.imagej.display.DatasetView"
+
+    @blocking_import
     def DefaultROITree(self):
         return "net.imagej.roi.DefaultROITree"
 
     @blocking_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
+
+    @blocking_import
+    def ImgPlus(self):
+        return "net.imagej.ImgPlus"
 
     @blocking_import
     def Mesh(self):
