@@ -758,7 +758,9 @@ def test_OutOfBoundsFactory_conversion(ij):
 
 
 # -- Images -- #
+
+
 def test_image_layer_to_img(ij):
     image = Image(data=np.ones((10, 10)))
     j_img = ij.py.to_java(image)
-    assert isinstance(j_img, jc.Img)
+    assert isinstance(j_img, jc.Dataset)

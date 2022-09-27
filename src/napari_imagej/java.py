@@ -319,6 +319,10 @@ class JavaClasses(object):
         return "net.imglib2.display.ColorTable"
 
     @blocking_import
+    def ColorTable8(self):
+        return "net.imglib2.display.ColorTable8"
+
+    @blocking_import
     def ComplexType(self):
         return "net.imglib2.type.numeric.ComplexType"
 
@@ -433,6 +437,10 @@ class JavaClasses(object):
         return "net.imglib2.roi.geom.real.SuperEllipsoid"
 
     # ImageJ2 Types
+
+    @blocking_import
+    def Dataset(self):
+        return "net.imagej.Dataset"
 
     @blocking_import
     def DefaultROITree(self):
