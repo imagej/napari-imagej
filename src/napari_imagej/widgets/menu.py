@@ -146,8 +146,6 @@ class ToIJButton(QPushButton):
     def send_active_layer(self):
         active_layer: Optional[Layer] = self.viewer.layers.selection.active
         if active_layer:
-            # name = active_layer.name
-            # data = ij().py.to_java(active_layer.data)
             ij().ui().show(ij().py.to_java(active_layer))
         else:
             log_debug("There is no active layer to export to ImageJ2")
