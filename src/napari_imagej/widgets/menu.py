@@ -4,7 +4,7 @@ The top-level menu for the napari-imagej widget.
 from enum import Enum
 from pathlib import Path
 from threading import Thread
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
@@ -202,11 +202,14 @@ class FromIJButton(QPushButton):
         if choices is not None:
             # grab the chosen name
             name = choices["data"]
-            # grab the chosen image
-            view = (
-                ij().get("org.scijava.display.DisplayService").getDisplay(name).get(0)
-            )
-            self._add_image_from_display_view(view)
+            display = ij().display().getDisplay(name)
+            # if the image is displayed, convert the DatasetView
+            if display:
+                self._add_image(display.get(0))
+            # Otherwise, just convert the object
+            else:
+                image = images[names.index(name)]
+                self._add_image(image)
 
     def get_active_layer(self) -> None:
         # Choose the active DatasetView
@@ -214,9 +217,9 @@ class FromIJButton(QPushButton):
         if view is None:
             log_debug("There is no active window to export to napari")
             return
-        self._add_image_from_display_view(view)
+        self._add_image(view)
 
-    def _add_image_from_display_view(self, view: "jc.DatasetView"):
+    def _add_image(self, view: Union["jc.Dataset", "jc.DatasetView"]):
         # Get the stuff needed for a new layer
         py_image = ij().py.from_java(view)
         # Create and add the layer

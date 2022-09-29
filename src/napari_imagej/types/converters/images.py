@@ -28,7 +28,8 @@ def _dataset_view_to_image(image: Any) -> Image:
         name=view.getData().getName(),
     )
     if view.getColorTables().size() > 0:
-        kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
+        if not jc.ColorTables.isGrayColorTable(view.getColorTables().get(0)):
+            kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
     return Image(**kwargs)
 
 
@@ -47,7 +48,7 @@ def _dataset_to_image(image: Any) -> Image:
         name=imp.getName(),
     )
     if imp.getColorTableCount():
-        kwargs["colormap"] = imp.getColorTable(0)
+        kwargs["colormap"] = _color_table_to_colormap(imp.getColorTable(0))
     return Image(**kwargs)
 
 

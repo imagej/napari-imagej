@@ -323,6 +323,10 @@ class JavaClasses(object):
         return "net.imglib2.display.ColorTable8"
 
     @blocking_import
+    def ColorTables(self):
+        return "net.imagej.display.ColorTables"
+
+    @blocking_import
     def ComplexType(self):
         return "net.imglib2.type.numeric.ComplexType"
 
