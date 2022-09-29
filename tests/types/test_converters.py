@@ -758,7 +758,89 @@ def test_OutOfBoundsFactory_conversion(ij):
 
 
 # -- Images -- #
-def test_image_layer_to_img(ij):
-    image = Image(data=np.ones((10, 10)))
+
+
+@pytest.fixture
+def test_dataset(ij) -> "jc.Dataset":
+    name = "test.foo"
+    dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((10, 10))))
+    dataset.setName(name)
+    return dataset
+
+
+@pytest.fixture
+def test_dataset_view(ij, test_dataset) -> "jc.DatasetView":
+    view: jc.DatasetView = ij.get(
+        "net.imagej.display.ImageDisplayService"
+    ).createDataView(test_dataset)
+    view.rebuild()
+    view.resetColorTables(True)
+    yield view
+    # dispose of the view so it does not affect later tests
+    view.dispose()
+
+
+def _assert_equal_color_maps(j_map: "jc.ColorTable", p_map):
+    p_color = p_map.map([x / 255 for x in range(256)])
+    # Assert color table "equality"
+    for i in range(j_map.getLength()):
+        for j in range(j_map.getComponentCount()):
+            assert j_map.get(j, i) == int(round(p_color[i, j] * 255))
+
+
+def test_image_layer_to_dataset(ij):
+    """Test conversion of an Image layer with a default colormap"""
+    name = "test_foo"
+    image = Image(data=np.ones((10, 10)), name=name)
     j_img = ij.py.to_java(image)
-    assert isinstance(j_img, jc.Img)
+    assert isinstance(j_img, jc.Dataset)
+    assert name == j_img.getName()
+    assert 0 == j_img.getColorTableCount()
+
+
+def test_colormap_image_layer_to_dataset(ij):
+    """Test conversion of an Image layer with a chosen colormap"""
+    name = "test_foo"
+    image = Image(data=np.ones((10, 10)), name=name, colormap="red")
+    j_img = ij.py.to_java(image)
+    assert isinstance(j_img, jc.Dataset)
+    assert name == j_img.getName()
+    assert 1 == j_img.getColorTableCount()
+    _assert_equal_color_maps(j_img.getColorTable(0), image.colormap)
+
+
+def test_dataset_to_image_layer(ij, test_dataset):
+    """Test conversion of a Dataset with no colormap"""
+    p_img = ij.py.from_java(test_dataset)
+    assert isinstance(p_img, Image)
+    assert test_dataset.getName() == p_img.name
+    assert "gray" == p_img.colormap.name
+
+
+def test_colormap_dataset_to_image_layer(ij, test_dataset):
+    """Test conversion of a Dataset with a colormap"""
+    test_dataset.initializeColorTables(1)
+    test_dataset.setColorTable(jc.ColorTables.CYAN, 0)
+    p_img = ij.py.from_java(test_dataset)
+    assert isinstance(p_img, Image)
+    assert test_dataset.getName() == p_img.name
+    assert "gray" != p_img.colormap.name
+    _assert_equal_color_maps(test_dataset.getColorTable(0), p_img.colormap)
+
+
+def test_dataset_view_to_image_layer(ij, test_dataset_view):
+    """Test conversion of a Dataset with no colormap"""
+    p_img = ij.py.from_java(test_dataset_view)
+    assert isinstance(p_img, Image)
+    assert test_dataset_view.getData().getName() == p_img.name
+    assert "gray" == p_img.colormap.name
+
+
+def test_colormap_dataset_view_to_image_layer(ij, test_dataset_view):
+    """Test conversion of a Dataset with a colormap"""
+    test_dataset_view.setColorTable(jc.ColorTables.CYAN, 0)
+    p_img = ij.py.from_java(test_dataset_view)
+    assert isinstance(p_img, Image)
+    assert test_dataset_view.getData().getName() == p_img.name
+    assert "gray" != p_img.colormap.name
+    _assert_equal_color_maps(test_dataset_view.getColorTables().get(0), p_img.colormap)

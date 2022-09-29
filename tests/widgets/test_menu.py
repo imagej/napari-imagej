@@ -271,8 +271,7 @@ def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
     button_to.clicked.emit()
 
     # Assert that the data is now in ImageJ2
-    asserter(lambda: isinstance(ij.display().getActiveDisplay(), jc.ImageDisplay))
-    assert "test_to" == ij.display().getActiveDisplay().getName()
+    asserter(lambda: isinstance(ij.display().getDisplay("test_to"), jc.ImageDisplay))
 
     # Use the chooser to transfer that data back
     button_from.clicked.emit()

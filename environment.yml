@@ -18,6 +18,7 @@ dependencies:
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
   - napari
+  - numpy
   - openjdk=8
   - pyimagej >= 1.2.0
   # Project from source

@@ -4,7 +4,7 @@ The top-level menu for the napari-imagej widget.
 from enum import Enum
 from pathlib import Path
 from threading import Thread
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
@@ -146,9 +146,7 @@ class ToIJButton(QPushButton):
     def send_active_layer(self):
         active_layer: Optional[Layer] = self.viewer.layers.selection.active
         if active_layer:
-            name = active_layer.name
-            data = ij().py.to_java(active_layer.data)
-            ij().ui().show(name, data)
+            ij().ui().show(ij().py.to_java(active_layer))
         else:
             log_debug("There is no active layer to export to ImageJ2")
 
@@ -165,9 +163,7 @@ class ToIJButton(QPushButton):
             layer = choices["layer"]
             if isinstance(layer, Layer):
                 # Pass the relevant data to ImageJ2
-                name = layer.name
-                data = ij().py.to_java(layer.data)
-                ij().ui().show(name, data)
+                ij().ui().show(ij().py.to_java(layer))
 
 
 class FromIJButton(QPushButton):
@@ -206,37 +202,34 @@ class FromIJButton(QPushButton):
         if choices is not None:
             # grab the chosen name
             name = choices["data"]
-            # grab the chosen image
-            i = names.index(name)
-            image = ij().py.from_java(images[i])
-            # if the conversion is already a layer, add it directly
-            if isinstance(image, Layer):
-                image.name = name
-                self.viewer.add_layer(image)
-            # otherwise, try to coerce it into an Image layer
-            elif ij().py._is_arraylike(image):
-                self.viewer.add_image(data=image, name=name)
-            # if we can't coerce it, give up
+            display = ij().display().getDisplay(name)
+            # if the image is displayed, convert the DatasetView
+            if display:
+                self._add_image(display.get(0))
+            # Otherwise, just convert the object
             else:
-                raise ValueError(f"{image} cannot be displayed in napari!")
+                image = images[names.index(name)]
+                self._add_image(image)
 
     def get_active_layer(self) -> None:
-        # Choose the active Dataset
-        image = ij().get("net.imagej.display.ImageDisplayService").getActiveDataset()
-        if image is None:
+        # Choose the active DatasetView
+        view = ij().get("net.imagej.display.ImageDisplayService").getActiveDatasetView()
+        if view is None:
             log_debug("There is no active window to export to napari")
             return
+        self._add_image(view)
+
+    def _add_image(self, view: Union["jc.Dataset", "jc.DatasetView"]):
         # Get the stuff needed for a new layer
-        py_image = ij().py.from_java(image)
-        name = ij().object().getName(image)
+        py_image = ij().py.from_java(view)
         # Create and add the layer
         if isinstance(py_image, Layer):
-            py_image.name = name
             self.viewer.add_layer(py_image)
         elif ij().py._is_arraylike(py_image):
+            name = ij().object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
         else:
-            raise ValueError(f"{image} cannot be displayed in napari!")
+            raise ValueError(f"{view} cannot be displayed in napari!")
 
 
 class GUIButton(QPushButton):

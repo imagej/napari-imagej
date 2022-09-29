@@ -319,6 +319,14 @@ class JavaClasses(object):
         return "net.imglib2.display.ColorTable"
 
     @blocking_import
+    def ColorTable8(self):
+        return "net.imglib2.display.ColorTable8"
+
+    @blocking_import
+    def ColorTables(self):
+        return "net.imagej.display.ColorTables"
+
+    @blocking_import
     def ComplexType(self):
         return "net.imglib2.type.numeric.ComplexType"
 
@@ -435,8 +443,24 @@ class JavaClasses(object):
     # ImageJ2 Types
 
     @blocking_import
+    def Dataset(self):
+        return "net.imagej.Dataset"
+
+    @blocking_import
+    def DatasetView(self):
+        return "net.imagej.display.DatasetView"
+
+    @blocking_import
     def DefaultROITree(self):
         return "net.imagej.roi.DefaultROITree"
+
+    @blocking_import
+    def ImageDisplay(self):
+        return "net.imagej.display.ImageDisplay"
+
+    @blocking_import
+    def ImgPlus(self):
+        return "net.imagej.ImgPlus"
 
     @blocking_import
     def Mesh(self):
