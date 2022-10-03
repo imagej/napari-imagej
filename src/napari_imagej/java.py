@@ -331,6 +331,10 @@ class JavaClasses(object):
         return "net.imglib2.type.numeric.ComplexType"
 
     @blocking_import
+    def DoubleType(self):
+        return "net.imglib2.type.numeric.real.DoubleType"
+
+    @blocking_import
     def Img(self):
         return "net.imglib2.img.Img"
 
@@ -341,6 +345,14 @@ class JavaClasses(object):
     @blocking_import
     def IterableInterval(self):
         return "net.imglib2.IterableInterval"
+
+    @blocking_import
+    def LongType(self):
+        return "net.imglib2.type.numeric.integer.LongType"
+
+    @blocking_import
+    def NumericType(self):
+        return "net.imglib2.type.numeric.NumericType"
 
     @blocking_import
     def OutOfBoundsFactory(self):

@@ -21,8 +21,14 @@ from napari.utils._magicgui import get_layers
 from napari_imagej.java import jc
 
 
-def _real_type_widget_for(cls: type):
+def real_type_widget_for(cls: type):
+    # Set sensible defaults for interfaces
+    if cls == jc.RealType or cls == jc.NumericType:
+        cls = jc.DoubleType.class_
+    elif cls == jc.IntegerType:
+        cls = jc.LongType.class_
 
+    # Return a SpinBox implementation for integer types
     if issubclass(cls, jc.IntegerType):
 
         class Widget(SpinBox):
@@ -41,6 +47,7 @@ def _real_type_widget_for(cls: type):
                 return real_type
 
         return Widget
+    # Return a FloatSpinBox implementation for floating point types
     if issubclass(cls, jc.RealType):
 
         class Widget(FloatSpinBox):
@@ -56,6 +63,8 @@ def _real_type_widget_for(cls: type):
                 return real_type
 
         return Widget
+    # otherwise, we don't (yet!) know how to deal with this type
+    return None
 
 
 class MutableOutputWidget(Container):

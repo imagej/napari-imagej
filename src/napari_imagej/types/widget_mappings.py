@@ -11,7 +11,7 @@ from typing import Callable, Dict, Optional, Union
 from napari.layers import Image
 
 from napari_imagej.java import jc
-from napari_imagej.widgets.parameter_widgets import _real_type_widget_for
+from napari_imagej.widgets.parameter_widgets import real_type_widget_for
 
 PREFERENCE_FUNCTIONS = []
 
@@ -56,7 +56,7 @@ def _real_type_preference(
             # Use some sort of checkbox instead
             return None
         if issubclass(item.getType(), jc.RealType):
-            return _real_type_widget_for(item.getType())
+            return real_type_widget_for(item.getType())
 
 
 @_widget_preference

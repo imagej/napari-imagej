@@ -12,7 +12,7 @@ from napari.layers import Image
 
 from napari_imagej.widgets.parameter_widgets import (
     MutableOutputWidget,
-    _real_type_widget_for,
+    real_type_widget_for,
 )
 from tests.utils import jc
 
@@ -147,7 +147,7 @@ real_type_widget_params = [
 @pytest.mark.parametrize(argnames="realtype", argvalues=real_type_widget_params)
 def test_realType(realtype):
     type_instance = realtype.class_.newInstance()
-    widget = _real_type_widget_for(realtype.class_)()
+    widget = real_type_widget_for(realtype.class_)()
     min_val = type_instance.getMinValue()
     max_val = type_instance.getMaxValue()
     # Integer widget has a bound on the minimum and maximum values
@@ -157,3 +157,21 @@ def test_realType(realtype):
     assert min_val == widget.min
     assert max_val == widget.max
     assert isinstance(widget.value, realtype)
+
+
+real_type_iface_widget_params = [
+    (jc.RealType, jc.DoubleType),
+    (jc.IntegerType, jc.LongType),
+    (jc.NumericType, jc.DoubleType),
+]
+
+
+@pytest.mark.parametrize(
+    argnames=["iface", "realtype"], argvalues=real_type_iface_widget_params
+)
+def test_realType_ifaces(iface, realtype):
+    widget_iface = real_type_widget_for(iface.class_)()
+    widget_impl = real_type_widget_for(realtype.class_)()
+    assert widget_iface.min == widget_impl.min
+    assert widget_iface.max == widget_impl.max
+    assert isinstance(widget_iface.value, realtype)

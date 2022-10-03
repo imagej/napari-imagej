@@ -72,6 +72,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.type.numeric.integer.LongType"
 
     @JavaClasses.blocking_import
+    def NumericType(self):
+        return "net.imglib2.type.numeric.NumericType"
+
+    @JavaClasses.blocking_import
     def ScriptInfo(self):
         return "org.scijava.script.ScriptInfo"
 
