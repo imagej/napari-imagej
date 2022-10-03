@@ -63,6 +63,7 @@ def numbers() -> Dict[Any, Any]:
         jc.IntegerType: int,
         jc.RealType: float,
         jc.ComplexType: complex,
+        jc.NumericType: float,
     }
 
 

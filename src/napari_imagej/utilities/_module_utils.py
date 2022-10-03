@@ -19,7 +19,7 @@ from magicgui.widgets._bases import CategoricalWidget
 from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import find_viewer_ancestor
-from scyjava import JavaIterable, JavaMap, JavaSet, jstacktrace
+from scyjava import JavaIterable, JavaMap, JavaSet, isjava, jstacktrace
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.type_conversions import python_type_of
@@ -413,7 +413,7 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
     if value is None:
         return
     try:
-        py_value = ij().py.from_java(value)
+        py_value = ij().py.from_java(value) if isjava(value) else value
         if isinstance(py_value, JavaMap):
             py_value = dict(py_value)
         elif isinstance(py_value, JavaSet):

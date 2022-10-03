@@ -10,7 +10,11 @@ from magicgui.widgets import ComboBox, PushButton
 from napari import current_viewer
 from napari.layers import Image
 
-from napari_imagej.widgets.parameter_widgets import MutableOutputWidget
+from napari_imagej.widgets.parameter_widgets import (
+    MutableOutputWidget,
+    _real_type_widget_for,
+)
+from tests.utils import jc
 
 
 @pytest.fixture
@@ -124,3 +128,32 @@ def test_mutable_output_add_new_image(
     assert foo in input_widget.choices
     assert foo in output_widget.choices
     assert foo is output_widget.value
+
+
+real_type_widget_params = [
+    (jc.ByteType),
+    (jc.UnsignedByteType),
+    (jc.ShortType),
+    (jc.UnsignedShortType),
+    (jc.IntType),
+    (jc.UnsignedIntType),
+    (jc.LongType),
+    (jc.UnsignedLongType),
+    (jc.FloatType),
+    (jc.DoubleType),
+]
+
+
+@pytest.mark.parametrize(argnames="realtype", argvalues=real_type_widget_params)
+def test_realType(realtype):
+    type_instance = realtype.class_.newInstance()
+    widget = _real_type_widget_for(realtype.class_)()
+    min_val = type_instance.getMinValue()
+    max_val = type_instance.getMaxValue()
+    # Integer widget has a bound on the minimum and maximum values
+    if issubclass(realtype.class_, jc.IntegerType):
+        min_val = max(type_instance.getMinValue(), -(2**31))
+        max_val = min(type_instance.getMaxValue(), (2**31 - 1))
+    assert min_val == widget.min
+    assert max_val == widget.max
+    assert isinstance(widget.value, realtype)

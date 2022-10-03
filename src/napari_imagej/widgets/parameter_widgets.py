@@ -6,10 +6,56 @@ import importlib
 from typing import Any, List
 
 from magicgui.types import ChoicesType
-from magicgui.widgets import ComboBox, Container, PushButton, request_values
+from magicgui.widgets import (
+    ComboBox,
+    Container,
+    FloatSpinBox,
+    PushButton,
+    SpinBox,
+    request_values,
+)
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
+
+from napari_imagej.java import jc
+
+
+def _real_type_widget_for(cls: type):
+
+    if issubclass(cls, jc.IntegerType):
+
+        class Widget(SpinBox):
+            def __init__(self, **kwargs):
+                min_val = max(cls.newInstance().getMinValue(), -(2**31))
+                kwargs.setdefault("min", min_val)
+                # Spinboxes cannot go higer than (2^31) - 1
+                max_val = min(cls.newInstance().getMaxValue(), 2**31 - 1)
+                kwargs.setdefault("max", max_val)
+                super().__init__(**kwargs)
+
+            @property
+            def value(self):
+                real_type = cls.newInstance()
+                real_type.set(super().value)
+                return real_type
+
+        return Widget
+    if issubclass(cls, jc.RealType):
+
+        class Widget(FloatSpinBox):
+            def __init__(self, **kwargs):
+                kwargs.setdefault("min", cls.newInstance().getMinValue())
+                kwargs.setdefault("max", cls.newInstance().getMaxValue())
+                super().__init__(**kwargs)
+
+            @property
+            def value(self):
+                real_type = cls.newInstance()
+                real_type.set(super().value)
+                return real_type
+
+        return Widget
 
 
 class MutableOutputWidget(Container):
