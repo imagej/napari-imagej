@@ -3,6 +3,7 @@ A collection of QWidgets, each designed to conveniently harvest a particular inp
 They should align with a SciJava ModuleItem that satisfies some set of conditions.
 """
 import importlib
+from functools import lru_cache
 from typing import Any, List
 
 from magicgui.types import ChoicesType
@@ -21,6 +22,7 @@ from napari.utils._magicgui import get_layers
 from napari_imagej.java import jc
 
 
+@lru_cache(maxsize=None)
 def real_type_widget_for(cls: type):
     # Set sensible defaults for interfaces
     if cls == jc.RealType or cls == jc.NumericType:
