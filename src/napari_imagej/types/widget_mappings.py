@@ -51,10 +51,6 @@ def _numeric_type_preference(
 ) -> Optional[Union[type, str]]:
     # We only care about mutable outputs
     if item.isInput() and not item.isOutput():
-        # This is the best place for all RealTypes EXCEPT BooleanType
-        if issubclass(item.getType(), jc.BooleanType):
-            # Use some sort of checkbox instead
-            return None
         if issubclass(item.getType(), jc.NumericType):
             return numeric_type_widget_for(item.getType())
 

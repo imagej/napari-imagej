@@ -20,6 +20,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.img.array.ArrayImgs"
 
     @JavaClasses.blocking_import
+    def BoolType(self):
+        return "net.imglib2.type.logic.BoolType"
+
+    @JavaClasses.blocking_import
     def ByteType(self):
         return "net.imglib2.type.numeric.integer.ByteType"
 

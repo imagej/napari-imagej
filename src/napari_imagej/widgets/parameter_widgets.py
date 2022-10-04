@@ -8,6 +8,7 @@ from typing import Any, List
 
 from magicgui.types import ChoicesType
 from magicgui.widgets import (
+    CheckBox,
     ComboBox,
     Container,
     FloatSpinBox,
@@ -29,44 +30,39 @@ def numeric_type_widget_for(cls: type):
         cls = jc.DoubleType.class_
     elif cls == jc.IntegerType:
         cls = jc.LongType.class_
+    elif cls == jc.BooleanType:
+        cls = jc.BitType.class_
 
-    # Return a SpinBox implementation for integer types
-    if issubclass(cls, jc.IntegerType):
+    instance = cls.newInstance()
+    # Case logic for implementation-specific attributes
+    extra_args = {}
+    if issubclass(cls, jc.BooleanType):
+        parent = CheckBox
+    elif issubclass(cls, jc.IntegerType):
+        parent = SpinBox
+        extra_args["min"] = max(instance.getMinValue(), -(2**31))
+        extra_args["max"] = min(instance.getMaxValue(), (2**31) - 1)
+    elif issubclass(cls, jc.RealType):
+        parent = FloatSpinBox
+        extra_args["min"] = instance.getMinValue()
+        extra_args["max"] = instance.getMaxValue()
+    else:
+        return None
 
-        class Widget(SpinBox):
-            def __init__(self, **kwargs):
-                min_val = max(cls.newInstance().getMinValue(), -(2**31))
-                kwargs.setdefault("min", min_val)
-                # Spinboxes cannot go higer than (2^31) - 1
-                max_val = min(cls.newInstance().getMaxValue(), 2**31 - 1)
-                kwargs.setdefault("max", max_val)
-                super().__init__(**kwargs)
+    # Define the new widget
+    class Widget(parent):
+        def __init__(self, **kwargs):
+            for k, v in extra_args.items():
+                kwargs.setdefault(k, v)
+            super().__init__(**kwargs)
 
-            @property
-            def value(self):
-                real_type = cls.newInstance()
-                real_type.set(super().value)
-                return real_type
+        @property
+        def value(self):
+            real_type = cls.newInstance()
+            real_type.set(super().value)
+            return real_type
 
-        return Widget
-    # Return a FloatSpinBox implementation for floating point types
-    if issubclass(cls, jc.RealType):
-
-        class Widget(FloatSpinBox):
-            def __init__(self, **kwargs):
-                kwargs.setdefault("min", cls.newInstance().getMinValue())
-                kwargs.setdefault("max", cls.newInstance().getMaxValue())
-                super().__init__(**kwargs)
-
-            @property
-            def value(self):
-                real_type = cls.newInstance()
-                real_type.set(super().value)
-                return real_type
-
-        return Widget
-    # otherwise, we don't (yet!) know how to deal with this type
-    return None
+    return Widget
 
 
 class MutableOutputWidget(Container):

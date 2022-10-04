@@ -311,6 +311,10 @@ class JavaClasses(object):
     # ImgLib2 Types
 
     @blocking_import
+    def BitType(self):
+        return "net.imglib2.type.logic.BitType"
+
+    @blocking_import
     def BooleanType(self):
         return "net.imglib2.type.BooleanType"
 
