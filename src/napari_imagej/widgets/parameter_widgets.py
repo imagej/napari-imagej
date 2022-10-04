@@ -3,13 +3,66 @@ A collection of QWidgets, each designed to conveniently harvest a particular inp
 They should align with a SciJava ModuleItem that satisfies some set of conditions.
 """
 import importlib
+from functools import lru_cache
 from typing import Any, List
 
 from magicgui.types import ChoicesType
-from magicgui.widgets import ComboBox, Container, PushButton, request_values
+from magicgui.widgets import (
+    CheckBox,
+    ComboBox,
+    Container,
+    FloatSpinBox,
+    PushButton,
+    SpinBox,
+    request_values,
+)
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
+
+from napari_imagej.java import jc
+
+
+@lru_cache(maxsize=None)
+def numeric_type_widget_for(cls: type):
+    # Set sensible defaults for interfaces
+    if cls == jc.RealType or cls == jc.NumericType:
+        cls = jc.DoubleType.class_
+    elif cls == jc.IntegerType:
+        cls = jc.LongType.class_
+    elif cls == jc.BooleanType:
+        cls = jc.BitType.class_
+
+    instance = cls.newInstance()
+    # Case logic for implementation-specific attributes
+    extra_args = {}
+    if issubclass(cls, jc.BooleanType):
+        parent = CheckBox
+    elif issubclass(cls, jc.IntegerType):
+        parent = SpinBox
+        extra_args["min"] = max(instance.getMinValue(), -(2**31))
+        extra_args["max"] = min(instance.getMaxValue(), (2**31) - 1)
+    elif issubclass(cls, jc.RealType):
+        parent = FloatSpinBox
+        extra_args["min"] = instance.getMinValue()
+        extra_args["max"] = instance.getMaxValue()
+    else:
+        return None
+
+    # Define the new widget
+    class Widget(parent):
+        def __init__(self, **kwargs):
+            for k, v in extra_args.items():
+                kwargs.setdefault(k, v)
+            super().__init__(**kwargs)
+
+        @property
+        def value(self):
+            real_type = cls.newInstance()
+            real_type.set(super().value)
+            return real_type
+
+    return Widget
 
 
 class MutableOutputWidget(Container):

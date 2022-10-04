@@ -20,6 +20,14 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.img.array.ArrayImgs"
 
     @JavaClasses.blocking_import
+    def BoolType(self):
+        return "net.imglib2.type.logic.BoolType"
+
+    @JavaClasses.blocking_import
+    def ByteType(self):
+        return "net.imglib2.type.numeric.integer.ByteType"
+
+    @JavaClasses.blocking_import
     def ClassSearchResult(self):
         return "org.scijava.search.classes.ClassSearchResult"
 
@@ -40,8 +48,16 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.EuclideanSpace"
 
     @JavaClasses.blocking_import
+    def FloatType(self):
+        return "net.imglib2.type.numeric.real.FloatType"
+
+    @JavaClasses.blocking_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
+
+    @JavaClasses.blocking_import
+    def IntType(self):
+        return "net.imglib2.type.numeric.integer.IntType"
 
     @JavaClasses.blocking_import
     def ItemIO(self):
@@ -56,8 +72,28 @@ class JavaClassesTest(JavaClasses):
         return "org.scijava.script.ScriptInfo"
 
     @JavaClasses.blocking_import
+    def ShortType(self):
+        return "net.imglib2.type.numeric.integer.ShortType"
+
+    @JavaClasses.blocking_import
     def System(self):
         return "java.lang.System"
+
+    @JavaClasses.blocking_import
+    def UnsignedByteType(self):
+        return "net.imglib2.type.numeric.integer.UnsignedByteType"
+
+    @JavaClasses.blocking_import
+    def UnsignedShortType(self):
+        return "net.imglib2.type.numeric.integer.UnsignedShortType"
+
+    @JavaClasses.blocking_import
+    def UnsignedIntType(self):
+        return "net.imglib2.type.numeric.integer.UnsignedIntType"
+
+    @JavaClasses.blocking_import
+    def UnsignedLongType(self):
+        return "net.imglib2.type.numeric.integer.UnsignedLongType"
 
 
 jc = JavaClassesTest()

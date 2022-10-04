@@ -11,6 +11,7 @@ from typing import Callable, Dict, Optional, Union
 from napari.layers import Image
 
 from napari_imagej.java import jc
+from napari_imagej.widgets.parameter_widgets import numeric_type_widget_for
 
 PREFERENCE_FUNCTIONS = []
 
@@ -25,7 +26,7 @@ def _widget_preference(
 def preferred_widget_for(
     item: "jc.ModuleItem",
     type_hint: Union[type, str],
-) -> Optional[str]:
+) -> Optional[Union[type, str]]:
     """
     Finds the best MAGICGUI widget for a given SciJava ModuleItem,
     and its corresponding Python type
@@ -45,9 +46,19 @@ def preferred_widget_for(
 
 
 @_widget_preference
+def _numeric_type_preference(
+    item: "jc.ModuleItem", type_hint: Union[type, str]
+) -> Optional[Union[type, str]]:
+    # We only care about mutable outputs
+    if item.isInput() and not item.isOutput():
+        if issubclass(item.getType(), jc.NumericType):
+            return numeric_type_widget_for(item.getType())
+
+
+@_widget_preference
 def _mutable_output_preference(
     item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[str]:
+) -> Optional[Union[type, str]]:
     # We only care about mutable outputs
     if item.isInput() and item.isOutput():
         # If the type hint is an (optional) Image, use MutableOutputWidget
