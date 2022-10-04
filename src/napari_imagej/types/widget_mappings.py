@@ -11,7 +11,7 @@ from typing import Callable, Dict, Optional, Union
 from napari.layers import Image
 
 from napari_imagej.java import jc
-from napari_imagej.widgets.parameter_widgets import real_type_widget_for
+from napari_imagej.widgets.parameter_widgets import numeric_type_widget_for
 
 PREFERENCE_FUNCTIONS = []
 
@@ -46,7 +46,7 @@ def preferred_widget_for(
 
 
 @_widget_preference
-def _real_type_preference(
+def _numeric_type_preference(
     item: "jc.ModuleItem", type_hint: Union[type, str]
 ) -> Optional[Union[type, str]]:
     # We only care about mutable outputs
@@ -55,8 +55,8 @@ def _real_type_preference(
         if issubclass(item.getType(), jc.BooleanType):
             # Use some sort of checkbox instead
             return None
-        if issubclass(item.getType(), jc.RealType):
-            return real_type_widget_for(item.getType())
+        if issubclass(item.getType(), jc.NumericType):
+            return numeric_type_widget_for(item.getType())
 
 
 @_widget_preference

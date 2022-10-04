@@ -23,7 +23,7 @@ from napari_imagej.java import jc
 
 
 @lru_cache(maxsize=None)
-def real_type_widget_for(cls: type):
+def numeric_type_widget_for(cls: type):
     # Set sensible defaults for interfaces
     if cls == jc.RealType or cls == jc.NumericType:
         cls = jc.DoubleType.class_
