@@ -44,10 +44,6 @@ class JavaClassesTest(JavaClasses):
         return "org.scijava.util.DoubleArray"
 
     @JavaClasses.blocking_import
-    def DoubleType(self):
-        return "net.imglib2.type.numeric.real.DoubleType"
-
-    @JavaClasses.blocking_import
     def EuclideanSpace(self):
         return "net.imglib2.EuclideanSpace"
 
@@ -70,14 +66,6 @@ class JavaClassesTest(JavaClasses):
     @JavaClasses.blocking_import
     def ItemVisibility(self):
         return "org.scijava.ItemVisibility"
-
-    @JavaClasses.blocking_import
-    def LongType(self):
-        return "net.imglib2.type.numeric.integer.LongType"
-
-    @JavaClasses.blocking_import
-    def NumericType(self):
-        return "net.imglib2.type.numeric.NumericType"
 
     @JavaClasses.blocking_import
     def ScriptInfo(self):
