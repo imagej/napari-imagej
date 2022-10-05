@@ -486,6 +486,12 @@ class JavaClasses(object):
     def ROITree(self):
         return "net.imagej.roi.ROITree"
 
+    # ImageJ Types
+
+    @blocking_import
+    def ImagePlus(self):
+        return "net.imagej.ops.Initializable"
+
     # ImageJ-Ops Types
 
     @blocking_import

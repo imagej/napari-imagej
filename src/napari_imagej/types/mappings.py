@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 
+from napari_imagej import settings
 from napari_imagej.java import jc
 
 MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
@@ -84,7 +85,7 @@ def labels() -> Dict[Any, Any]:
 
 @map_category
 def images() -> Dict[Any, Any]:
-    return {
+    ij2_map = {
         jc.RandomAccessibleInterval: "napari.layers.Image",
         jc.RandomAccessible: "napari.layers.Image",
         jc.IterableInterval: "napari.layers.Image",
@@ -92,11 +93,10 @@ def images() -> Dict[Any, Any]:
         jc.ImageDisplay: "napari.layers.Image",
         jc.Dataset: "napari.layers.Image",
         jc.DatasetView: "napari.layers.Image",
-        # TODO: remove 'add_legacy=False' -> struggles with LegacyService
-        # This change is waiting on a new pyimagej release
-        # java_import('ij.ImagePlus'):
-        # 'napari.types.ImageData'
     }
+    if settings["include_imagej_legacy"].get(bool):
+        ij2_map[jc.ImagePlus] = "napari.layers.Image"
+    return ij2_map
 
 
 @map_category

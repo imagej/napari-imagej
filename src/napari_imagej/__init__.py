@@ -39,6 +39,7 @@ class _NapariImageJSettings(confuse.Configuration):
         # Don't use user settings during the tests
         testing = os.environ.get("NAPARI_IMAGEJ_TESTING", "no") == "yes"
         super().read(user=user and not testing, defaults=defaults)
+        super().set_env(prefix="NAPARI_IMAGEJ_")
         # -- VALIDATE SETTINGS -- #
         for key, value in self.items():
             self._validate_setting(key, value.get(), strict=False)
