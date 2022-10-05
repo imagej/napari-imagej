@@ -76,7 +76,7 @@ jobs:
         with:
           run: |
             python -m pytest -s -p no:faulthandler --color=yes
-
+    
   ensure-clean-code:
     runs-on: ubuntu-latest
     steps:
@@ -95,6 +95,42 @@ jobs:
         uses: isort/isort-action@master
         with:
           configuration: --check-only
+
+  test-imagej-legacy:
+    name: Test legacy inclusion
+    runs-on: ubuntu-latest
+    defaults:
+      # Steps that rely on the activated environment must be run with this shell setup.
+      # See https://github.com/marketplace/actions/setup-miniconda#important
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          # Create env with dev packages
+          auto-update-conda: true
+          python-version: 3.9
+          environment-file: dev-environment.yml
+          # Activate napari-imagej-dev environment
+          activate-environment: napari-imagej-dev
+          auto-activate-base: false
+          # Use mamba for faster setup
+          use-mamba: true
+          mamba-version: "*"
+
+      - name: Setup Qt libraries
+        uses: tlambert03/setup-qt-libs@v1
+
+      - name: Setup Testing Environment Variables
+        run: |
+          echo "NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=true" >> $GITHUB_ENV
+
+      - name: Test napari-imagej
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: |
+            conda run -n napari-imagej-dev --no-capture-output python -m pytest -s -p no:faulthandler --color=yes --cov-report=xml --cov=.
 
   conda-dev-test:
     name: Conda Setup & Code Coverage
@@ -121,13 +157,6 @@ jobs:
 
       - name: Setup Qt libraries
         uses: tlambert03/setup-qt-libs@v1
-
-      # strategy borrowed from vispy for installing opengl libs on windows
-      - name: Install Windows OpenGL
-        if: runner.os == 'Windows'
-        run: |
-          git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
-          powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
       - name: Test napari-imagej
         uses: GabrielBB/xvfb-action@v1
