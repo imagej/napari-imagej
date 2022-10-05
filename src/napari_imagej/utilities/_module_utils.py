@@ -569,7 +569,7 @@ def _request_values_args(
         if param.name in param_options:
             args[param.name]["options"] = param_options[param.name]
         # Add default value, if we have one, to dict
-        if param.default is not _empty:
+        if param.default not in [None, _empty]:
             args[param.name]["value"] = param.default
         # Add layer choices, if relevant
         if (isclass(param.annotation) and issubclass(param.annotation, Layer)) or (
