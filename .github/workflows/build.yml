@@ -76,7 +76,7 @@ jobs:
         with:
           run: |
             python -m pytest -s -p no:faulthandler --color=yes
-    
+
   ensure-clean-code:
     runs-on: ubuntu-latest
     steps:

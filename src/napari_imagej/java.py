@@ -490,7 +490,7 @@ class JavaClasses(object):
 
     @blocking_import
     def ImagePlus(self):
-        return "net.imagej.ops.Initializable"
+        return "ij.ImagePlus"
 
     # ImageJ-Ops Types
 
