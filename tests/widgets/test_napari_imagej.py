@@ -93,3 +93,15 @@ def test_searchbar_results_transitions(
     # See https://doc.qt.io/qt-5/qwidget.html#setFocus
     asserter(lambda: not imagej_widget.search.bar.isVisible())
     asserter(lambda: QApplication.focusWidget() is None)
+
+
+def test_search_tree_ordering(imagej_widget, asserter):
+    """
+    Ensures that the Searchers appear in priority order in
+    the search tree
+    """
+    results = imagej_widget.result_tree
+    results.search("F")
+    asserter(lambda: results.topLevelItemCount() > 2)
+    for i in range(results.topLevelItemCount() - 1):
+        assert results.topLevelItem(i).priority >= results.topLevelItem(i + 1).priority

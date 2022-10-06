@@ -43,10 +43,17 @@ class SearcherTreeItem(QTreeWidgetItem):
         super().__init__()
         self.title = ij().py.from_java(searcher.title())
         self._searcher = searcher
+        # Finding the priority is tricky - Searchers don't know their priority
+        # To find it we have to ask the pluginService.
+        plugin_info = ij().plugin().getPlugin(searcher.getClass())
+        self.priority = plugin_info.getPriority() if plugin_info else 0.0
 
         # Set QtPy properties
         self.setText(0, self.title)
         self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+
+    def __lt__(self, other):
+        return self.priority > other.priority
 
     def update(self, results: List[SearchResultTreeItem]):
         """
