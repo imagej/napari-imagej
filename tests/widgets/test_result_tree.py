@@ -9,7 +9,7 @@ from napari_imagej.widgets.result_tree import (
     SearchResultTree,
     SearchResultTreeItem,
 )
-from tests.utils import DummySearcher, DummySearchEvent, jc
+from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult, jc
 from tests.widgets.widget_utils import _populate_tree
 
 
@@ -68,10 +68,6 @@ def test_searchers_disappear(results_tree: SearchResultTree, asserter):
 
 
 def test_resultTreeItem_regression():
-    class DummySearchResult(object):
-        def name(self):
-            return "This is not a Search Result"
-
     dummy = DummySearchResult()
     item = SearchResultTreeItem(dummy)
     assert item.result == dummy
@@ -79,11 +75,7 @@ def test_resultTreeItem_regression():
 
 
 def test_searcherTreeItem_regression():
-    class DummySearcher(object):
-        def title(self):
-            return "This is not a Searcher"
-
-    dummy = DummySearcher()
+    dummy = DummySearcher("This is not a Searcher")
     item = SearcherTreeItem(dummy)
     assert item._searcher == dummy
     assert (

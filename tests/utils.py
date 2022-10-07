@@ -28,6 +28,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.type.numeric.integer.ByteType"
 
     @JavaClasses.blocking_import
+    def ClassesSearcher(self):
+        return "org.scijava.search.classes.ClassesSearcher"
+
+    @JavaClasses.blocking_import
     def ClassSearchResult(self):
         return "org.scijava.search.classes.ClassSearchResult"
 
@@ -66,6 +70,10 @@ class JavaClassesTest(JavaClasses):
     @JavaClasses.blocking_import
     def ItemVisibility(self):
         return "org.scijava.ItemVisibility"
+
+    @JavaClasses.blocking_import
+    def ModuleSearcher(self):
+        return "org.scijava.search.module.ModuleSearcher"
 
     @JavaClasses.blocking_import
     def ScriptInfo(self):
@@ -109,6 +117,9 @@ class DummySearcher:
     def title(self):
         return self._title
 
+    def getClass(self):
+        return jc.Searcher.class_
+
 
 class DummySearchEvent:
     """
@@ -124,6 +135,11 @@ class DummySearchEvent:
 
     def results(self):
         return self._results
+
+
+class DummySearchResult(object):
+    def name(self):
+        return "This is not a Search Result"
 
 
 class DummyModuleInfo:
