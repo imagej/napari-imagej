@@ -265,10 +265,6 @@ class JavaClasses(object):
         return "org.scijava.module.ModuleItem"
 
     @blocking_import
-    def ModuleSearcher(self):
-        return "org.scijava.search.module.ModuleSearcher"
-
-    @blocking_import
     def PostprocessorPlugin(self):
         return "org.scijava.module.process.PostprocessorPlugin"
 

@@ -614,9 +614,11 @@ def execute_function_modally(
     _execute_function_with_params(viewer, params, func)
 
 
-def info_for(search_result: "jc.SearchResult") -> "jc.ModuleInfo":
-    info = search_result.info()
-    # There is an extra step for Ops - we actually need the CommandInfo
-    if isinstance(info, jc.OpInfo):
-        info = info.cInfo()
-    return info
+def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
+    if hasattr(search_result, "info"):
+        info = search_result.info()
+        # There is an extra step for Ops - we actually need the CommandInfo
+        if isinstance(info, jc.OpInfo):
+            info = info.cInfo()
+        return info
+    return None

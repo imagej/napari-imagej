@@ -1,6 +1,8 @@
 """
 A module testing napari_imagej.widgets.results
 """
+from sys import platform
+
 import pytest
 from qtpy.QtCore import Qt
 
@@ -18,53 +20,66 @@ def results_tree():
     return SearchResultTree()
 
 
-def test_results_widget_layout(results_tree: SearchResultTree):
+@pytest.fixture
+def fixed_tree(ij, asserter):
+    """Creates a "fake" ResultsTree with deterministic results"""
+    # Create a default SearchResultTree
+    tree = SearchResultTree()
+    tree.wait_for_setup()
+    # NB The following check has issues on MacOS on CI;
+    # the signals do not reach the tree.
+    # TODO: Make this test run on MacOS
+    if platform == "darwin":
+        pytest.skip("This test has trouble on mac")
+    # Waits until all Searchers available
+    scijava_searchers = ij.plugin().createInstancesOfType(jc.Searcher)
+    asserter(lambda: tree.topLevelItemCount() == len(scijava_searchers))
+    # Remove all SciJava Searchers, use our own ones instead
+    tree.invisibleRootItem().takeChildren()
+    _populate_tree(tree, asserter)
+
+    return tree
+
+
+def test_results_widget_layout(fixed_tree: SearchResultTree):
     """Tests the number and expected order of results widget children"""
-    assert results_tree.columnCount() == 1
-    assert results_tree.headerItem().text(0) == "Search"
+    assert fixed_tree.columnCount() == 1
+    assert fixed_tree.headerItem().text(0) == "Search"
 
 
-def test_arrow_key_selection(results_tree: SearchResultTree, qtbot, asserter):
-    # Set up the tree
-    _populate_tree(results_tree, asserter)
+def test_arrow_key_selection(fixed_tree: SearchResultTree, qtbot, asserter):
     # Start by selecting the first item in the tree
-    results_tree.setCurrentItem(results_tree.topLevelItem(0))
-    asserter(lambda: results_tree.currentItem() is results_tree.topLevelItem(0))
+    fixed_tree.setCurrentItem(fixed_tree.topLevelItem(0))
+    asserter(lambda: fixed_tree.currentItem() is fixed_tree.topLevelItem(0))
     # HACK: For some reason, they are not expanded in the tests!
-    results_tree.topLevelItem(0).setExpanded(True)
+    fixed_tree.topLevelItem(0).setExpanded(True)
     for i in range(3):
-        qtbot.keyPress(results_tree, Qt.Key_Down)
+        qtbot.keyPress(fixed_tree, Qt.Key_Down)
         asserter(
-            lambda: results_tree.currentItem() is results_tree.topLevelItem(0).child(i)
+            lambda: fixed_tree.currentItem() is fixed_tree.topLevelItem(0).child(i)
         )
-    qtbot.keyPress(results_tree, Qt.Key_Down)
-    asserter(lambda: results_tree.currentItem() is results_tree.topLevelItem(1))
+    qtbot.keyPress(fixed_tree, Qt.Key_Down)
+    asserter(lambda: fixed_tree.currentItem() is fixed_tree.topLevelItem(1))
     # HACK: For some reason, they are not expanded in the tests!
-    results_tree.topLevelItem(1).setExpanded(True)
+    fixed_tree.topLevelItem(1).setExpanded(True)
     for i in range(2):
-        qtbot.keyPress(results_tree, Qt.Key_Down)
+        qtbot.keyPress(fixed_tree, Qt.Key_Down)
         asserter(
-            lambda: results_tree.currentItem() is results_tree.topLevelItem(1).child(i)
+            lambda: fixed_tree.currentItem() is fixed_tree.topLevelItem(1).child(i)
         )
-    qtbot.keyPress(results_tree, Qt.Key_Down)
-    asserter(
-        lambda: results_tree.currentItem() is results_tree.topLevelItem(1).child(1)
-    )
+    qtbot.keyPress(fixed_tree, Qt.Key_Down)
+    asserter(lambda: fixed_tree.currentItem() is fixed_tree.topLevelItem(1).child(1))
 
 
-def test_searchers_disappear(results_tree: SearchResultTree, asserter):
-    # Wait for the searchers to be ready
-    results_tree.wait_for_setup()
-    # Update the Tree with some search results
-    searcher = DummySearcher("foo")
-    results = [jc.ClassSearchResult(c, "") for c in (jc.Float, jc.Double)]
-    results_tree.process.emit(DummySearchEvent(searcher, results))
-    asserter(lambda: results_tree.topLevelItemCount() == 1)
-    asserter(lambda: results_tree.topLevelItem(0).childCount() == 2)
-
-    # Update the tree with no search results, ensure that the searcher disappears
-    results_tree.process.emit(DummySearchEvent(searcher, []))
-    asserter(lambda: results_tree.topLevelItemCount() == 0)
+def test_searchers_persist(fixed_tree: SearchResultTree, asserter):
+    # Find the first searcher, and remove its children
+    searcher = fixed_tree.topLevelItem(0)._searcher
+    asserter(lambda: fixed_tree.topLevelItem(0).childCount() > 0)
+    fixed_tree.process.emit(DummySearchEvent(searcher, []))
+    # Ensure that the children disappear, but the searcher remains
+    asserter(lambda: fixed_tree.topLevelItem(0).childCount() == 0)
+    asserter(lambda: fixed_tree.topLevelItemCount() == 2)
+    asserter(lambda: not fixed_tree.topLevelItem(0).isExpanded())
 
 
 def test_resultTreeItem_regression():
@@ -88,29 +103,47 @@ def test_searcherTreeItem_regression():
     assert item.text(0) == dummy.title()
 
 
-def test_arrow_key_expansion(results_tree: SearchResultTree, qtbot, asserter):
-    # Wait for the searchers to be ready
-    results_tree.wait_for_setup()
-    _populate_tree(results_tree, asserter)
-    results_tree.setCurrentItem(results_tree.topLevelItem(0))
-    expanded = results_tree.currentItem().isExpanded()
+def test_arrow_key_expansion(fixed_tree: SearchResultTree, qtbot, asserter):
+    fixed_tree.setCurrentItem(fixed_tree.topLevelItem(0))
+    expanded = fixed_tree.currentItem().isExpanded()
     # Part 1: toggle with Enter
-    qtbot.keyPress(results_tree, Qt.Key_Return)
-    assert results_tree.currentItem().isExpanded() is not expanded
-    qtbot.keyPress(results_tree, Qt.Key_Return)
-    assert results_tree.currentItem().isExpanded() is expanded
+    qtbot.keyPress(fixed_tree, Qt.Key_Return)
+    assert fixed_tree.currentItem().isExpanded() is not expanded
+    qtbot.keyPress(fixed_tree, Qt.Key_Return)
+    assert fixed_tree.currentItem().isExpanded() is expanded
     # Part 2: test arrow keys
-    results_tree.currentItem().setExpanded(True)
+    fixed_tree.currentItem().setExpanded(True)
     # Part 2.1: Expanded + Left hides children
-    qtbot.keyPress(results_tree, Qt.Key_Left)
-    assert results_tree.currentItem().isExpanded() is False
+    qtbot.keyPress(fixed_tree, Qt.Key_Left)
+    assert fixed_tree.currentItem().isExpanded() is False
     # Part 2.2: Hidden + Right shows children
-    qtbot.keyPress(results_tree, Qt.Key_Right)
-    assert results_tree.currentItem().isExpanded() is True
+    qtbot.keyPress(fixed_tree, Qt.Key_Right)
+    assert fixed_tree.currentItem().isExpanded() is True
     # Part 2.3: Expanded + Right selects first child
-    parent = results_tree.currentItem()
-    qtbot.keyPress(results_tree, Qt.Key_Right)
-    asserter(lambda: results_tree.currentItem() is parent.child(0))
+    parent = fixed_tree.currentItem()
+    qtbot.keyPress(fixed_tree, Qt.Key_Right)
+    asserter(lambda: fixed_tree.currentItem() is parent.child(0))
     # Part 2.4: Child + Left returns to parent
-    qtbot.keyPress(results_tree, Qt.Key_Left)
-    asserter(lambda: results_tree.currentItem() is parent)
+    qtbot.keyPress(fixed_tree, Qt.Key_Left)
+    asserter(lambda: fixed_tree.currentItem() is parent)
+
+
+def test_search_tree_disable(fixed_tree: SearchResultTree, asserter):
+    # Grab an arbitratry enabled Searcher
+    searcher_item = fixed_tree.topLevelItem(0)
+    # Assert GUI start
+    asserter(lambda: searcher_item.text(0) == searcher_item._searcher.title() + " (3)")
+    asserter(lambda: searcher_item.checkState(0) == Qt.Checked)
+    asserter(lambda: searcher_item.isExpanded())
+
+    # Disable the searcher, assert the proper GUI response
+    searcher_item.setCheckState(0, Qt.Unchecked)
+    asserter(lambda: searcher_item.text(0) == searcher_item._searcher.title())
+    asserter(lambda: not searcher_item.isExpanded())
+    asserter(lambda: searcher_item.childCount() == 0)
+
+    # Enable the searcher, assert the proper GUI response
+    searcher_item.setCheckState(0, Qt.Checked)
+    asserter(lambda: searcher_item.text(0) == searcher_item._searcher.title())
+    asserter(lambda: not searcher_item.isExpanded())
+    asserter(lambda: searcher_item.childCount() == 0)

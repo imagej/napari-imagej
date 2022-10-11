@@ -9,7 +9,7 @@ from typing import List, Optional
 from jpype import JArray, JImplements, JOverride
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
-from scyjava import when_jvm_stops
+from scyjava import Priority, when_jvm_stops
 
 from napari_imagej.java import ensure_jvm_started, ij, jc
 from napari_imagej.utilities.logging import log_debug
@@ -39,20 +39,38 @@ class SearcherTreeItem(QTreeWidgetItem):
     ResultTreeItem children.
     """
 
-    def __init__(self, searcher: "jc.Searcher"):
+    def __init__(
+        self,
+        searcher: "jc.Searcher",
+        checked: bool = True,
+        priority: float = Priority.LAST,
+        expanded: bool = False,
+    ):
+        """
+        Creates a new SearcherTreeItem
+        :param searcher: the backing SciJava Searcher
+        :param checked: Determines whether this SearcherTreeItem starts out checked.
+        :param priority: Determines the position of this Searcher in the tree
+        :param expanded: Indicates whether this SearcherTreeItem should start expanded
+        """
         super().__init__()
         self.title = ij().py.from_java(searcher.title())
         self._searcher = searcher
         # Finding the priority is tricky - Searchers don't know their priority
         # To find it we have to ask the pluginService.
         plugin_info = ij().plugin().getPlugin(searcher.getClass())
-        self.priority = plugin_info.getPriority() if plugin_info else 0.0
+        self.priority = plugin_info.getPriority() if plugin_info else priority
 
         # Set QtPy properties
         self.setText(0, self.title)
-        self.setFlags(self.flags() & ~Qt.ItemIsSelectable)
+        self.setFlags((self.flags() & ~Qt.ItemIsSelectable) | Qt.ItemIsUserCheckable)
+        self.setExpanded(expanded)
+        self.setCheckState(0, Qt.Checked if checked else Qt.Unchecked)
 
     def __lt__(self, other):
+        """
+        Provides an ordering for SearcherTreeItems.
+        """
         return self.priority > other.priority
 
     def update(self, results: List[SearchResultTreeItem]):
@@ -61,10 +79,13 @@ class SearcherTreeItem(QTreeWidgetItem):
         :param results: the future children of this node
         """
         self.takeChildren()
-        if results and len(results):
-            self.addChildren(results)
-        self.setText(0, f"{self.title} ({len(results)})")
-        self.setExpanded(len(results) < 10)
+        self.setExpanded(0 < len(results) < 10)
+        if self.checkState(0) == Qt.Checked:
+            self.setText(0, self.title + f" ({len(results)})")
+            if results and len(results):
+                self.addChildren(results)
+        else:
+            self.setText(0, self.title)
 
 
 class SearchResultTree(QTreeWidget):
@@ -76,6 +97,7 @@ class SearchResultTree(QTreeWidget):
     # the instantiation of this signal until we'd have that class. So,
     # without a better option, we declare the type as object.
     process = Signal(object)
+    insert = Signal(SearcherTreeItem)
     floatAbove = Signal()
 
     def __init__(
@@ -93,16 +115,31 @@ class SearchResultTree(QTreeWidget):
         self._producer_initializer.start()
         self.process.connect(self.update)
 
+        # Ensure that once the JVM starts, Searchers are added
+        self._searcher_initializer = Thread(target=self._init_searchers)
+        self._searcher_initializer.start()
+        self.insert.connect(self._add_searcher_tree_item)
+        self.itemChanged.connect(self._register_item_change)
+
     def wait_for_setup(self):
         """
         This object does some setup asynchronously.
         This function can be used to ensure all that is done
         """
-        return self._producer_initializer.join()
+        self._producer_initializer.join()
+        self._searcher_initializer.join()
 
     def search(self, text: str):
         self.wait_for_setup()
         self._searchOperation.search(text)
+
+    @Slot(SearcherTreeItem)
+    def _add_searcher_tree_item(self, item: SearcherTreeItem):
+        """
+        Slot designed for custom insertion of SearcherTreeItems
+        """
+        self.addTopLevelItem(item)
+        self.sortItems(0, Qt.AscendingOrder)
 
     @Slot(object)
     def update(self, event: "jc.SearchEvent"):
@@ -113,13 +150,11 @@ class SearchResultTree(QTreeWidget):
         returned by the org.scijava.search.SearchService
         """
         header = self._get_matching_item(event.searcher())
-        if self._valid_results(event):
-            if header is None:
-                header = self._add_new_searcher(event.searcher())
-                self.sortItems(0, Qt.AscendingOrder)
-            header.update([SearchResultTreeItem(r) for r in event.results()])
-        elif header is not None:
-            self.invisibleRootItem().removeChild(header)
+        result_items = self._generate_result_items(event)
+        if header:
+            header.update(result_items)
+        else:
+            log_debug(f"Searcher {event.searcher()} not found!")
 
     # -- QWidget Overrides -- #
 
@@ -181,6 +216,23 @@ class SearchResultTree(QTreeWidget):
         # Otherwise the Java threads like to continue
         when_jvm_stops(self._searchOperation.terminate)
 
+    def _init_searchers(self):
+        # First, wait for the JVM to start up
+        ensure_jvm_started()
+
+        # Add SearcherTreeItems for each Searcher
+        searchers = ij().plugin().createInstancesOfType(jc.Searcher)
+        for searcher in searchers:
+            self.insert.emit(
+                SearcherTreeItem(
+                    searcher,
+                    checked=ij()
+                    .get("org.scijava.search.SearchService")
+                    .enabled(searcher),
+                    expanded=False,
+                )
+            )
+
     def _first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
             searcher = self.topLevelItem(i)
@@ -188,11 +240,15 @@ class SearchResultTree(QTreeWidget):
                 return searcher.child(0).result
         return None
 
-    def _add_new_searcher(self, searcher: "jc.Searcher") -> SearcherTreeItem:
-        tree_item = SearcherTreeItem(searcher)
-        tree_item.setExpanded(True)
-        self.addTopLevelItem(tree_item)
-        return tree_item
+    def _register_item_change(self, item: QTreeWidgetItem, column: int):
+        if column == 0:
+            if isinstance(item, SearcherTreeItem):
+                checked = item.checkState(0) == Qt.Checked
+                ij().get("org.scijava.search.SearchService").setEnabled(
+                    item._searcher, checked
+                )
+                if not checked:
+                    item.update([])
 
     def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
         name: str = ij().py.from_java(searcher.title())
@@ -204,17 +260,17 @@ class SearchResultTree(QTreeWidget):
         else:
             raise ValueError(f"Multiple Search Result Items matching name {name}")
 
-    def _valid_results(self, event: "jc.SearchEvent"):
+    def _generate_result_items(
+        self, event: "jc.SearchEvent"
+    ) -> List[SearchResultTreeItem]:
         results = event.results()
-        # Return False for results == null
+        # Handle null results
         if not results:
-            return False
-        # Return False for empty results
-        if not len(results):
-            return False
+            return []
+        # Handle empty searches
         # Return False for search errors
         if len(results) == 1:
             if str(results[0].name()) == "<error>":
                 log_debug(f"Failed Search: {str(results[0].properties().get(None))}")
-                return False
-        return True
+                return []
+        return [SearchResultTreeItem(r) for r in event.results()]

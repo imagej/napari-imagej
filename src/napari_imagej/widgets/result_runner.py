@@ -128,6 +128,10 @@ class ResultRunner(QWidget):
 
             name = str(result.name())
             moduleInfo = info_for(result)
+            if not moduleInfo:
+                log_debug(f"Search Result {result} cannot be run!")
+                return []
+
             module = ij().module().createModule(moduleInfo)
 
             # preprocess using napari GUI
