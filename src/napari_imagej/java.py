@@ -21,7 +21,7 @@ from typing import Callable
 
 import imagej
 from jpype import JClass
-from scyjava import config, jimport
+from scyjava import config, jimport, jvm_started
 
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
@@ -131,8 +131,12 @@ class JavaClasses(object):
 
         @property
         def inner(self):
-            ensure_jvm_started()
-            return jimport(func(self))
+            if not jvm_started():
+                raise Exception()
+            try:
+                return jimport(func(self))
+            except TypeError:
+                return None
 
         return inner
 

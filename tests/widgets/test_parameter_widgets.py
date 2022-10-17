@@ -130,60 +130,54 @@ def test_mutable_output_add_new_image(
     assert foo is output_widget.value
 
 
-real_type_widget_params = [
-    (jc.BitType),
-    (jc.BoolType),
-    (jc.ByteType),
-    (jc.UnsignedByteType),
-    (jc.ShortType),
-    (jc.UnsignedShortType),
-    (jc.IntType),
-    (jc.UnsignedIntType),
-    (jc.LongType),
-    (jc.UnsignedLongType),
-    (jc.FloatType),
-    (jc.DoubleType),
-]
+def test_realType():
+    real_types = [
+        (jc.BitType),
+        (jc.BoolType),
+        (jc.ByteType),
+        (jc.UnsignedByteType),
+        (jc.ShortType),
+        (jc.UnsignedShortType),
+        (jc.IntType),
+        (jc.UnsignedIntType),
+        (jc.LongType),
+        (jc.UnsignedLongType),
+        (jc.FloatType),
+        (jc.DoubleType),
+    ]
+    for real_type in real_types:
+        type_instance = real_type.class_.newInstance()
+        widget = numeric_type_widget_for(real_type.class_)()
+        min_val = type_instance.getMinValue()
+        max_val = type_instance.getMaxValue()
+        # If the type is not a boolean, it will have min and max values
+        if issubclass(real_type.class_, jc.BooleanType):
+            assert not hasattr(widget, "min")
+            assert not hasattr(widget, "min")
+        else:
+            # Integer widget has a bound on the minimum and maximum values
+            if issubclass(real_type.class_, jc.IntegerType):
+                min_val = max(type_instance.getMinValue(), -(2**31))
+                max_val = min(type_instance.getMaxValue(), (2**31 - 1))
+            assert min_val == widget.min
+            assert max_val == widget.max
+        assert isinstance(widget.value, real_type)
 
 
-@pytest.mark.parametrize(argnames="realtype", argvalues=real_type_widget_params)
-def test_realType(realtype):
-    type_instance = realtype.class_.newInstance()
-    widget = numeric_type_widget_for(realtype.class_)()
-    min_val = type_instance.getMinValue()
-    max_val = type_instance.getMaxValue()
-    # If the type is not a boolean, it will have min and max values
-    if issubclass(realtype.class_, jc.BooleanType):
-        assert not hasattr(widget, "min")
-        assert not hasattr(widget, "min")
-    else:
-        # Integer widget has a bound on the minimum and maximum values
-        if issubclass(realtype.class_, jc.IntegerType):
-            min_val = max(type_instance.getMinValue(), -(2**31))
-            max_val = min(type_instance.getMaxValue(), (2**31 - 1))
-        assert min_val == widget.min
-        assert max_val == widget.max
-    assert isinstance(widget.value, realtype)
-
-
-real_type_iface_widget_params = [
-    (jc.RealType, jc.DoubleType),
-    (jc.IntegerType, jc.LongType),
-    (jc.NumericType, jc.DoubleType),
-    (jc.BooleanType, jc.BitType),
-]
-
-
-@pytest.mark.parametrize(
-    argnames=["iface", "realtype"], argvalues=real_type_iface_widget_params
-)
-def test_realType_ifaces(iface, realtype):
-    widget_iface = numeric_type_widget_for(iface.class_)()
-    widget_impl = numeric_type_widget_for(realtype.class_)()
-    if issubclass(iface.class_, jc.BooleanType):
-        assert not hasattr(widget_iface, "min")
-        assert not hasattr(widget_iface, "max")
-    else:
-        assert widget_iface.min == widget_impl.min
-        assert widget_iface.max == widget_impl.max
-    assert isinstance(widget_iface.value, realtype)
+def test_realType_ifaces():
+    iface_impl_tuples = [
+        (jc.RealType, jc.DoubleType),
+        (jc.IntegerType, jc.LongType),
+        (jc.NumericType, jc.DoubleType),
+        (jc.BooleanType, jc.BitType),
+    ]
+    for iface, impl in iface_impl_tuples:
+        widget_iface = numeric_type_widget_for(iface.class_)()
+        widget_impl = numeric_type_widget_for(impl.class_)()
+        if issubclass(iface.class_, jc.BooleanType):
+            assert not hasattr(widget_iface, "min")
+            assert not hasattr(widget_iface, "max")
+        else:
+            assert widget_iface.min == widget_impl.min
+            assert widget_iface.max == widget_impl.max
+        assert isinstance(widget_iface.value, impl)

@@ -9,15 +9,23 @@ from typing import Any, Callable, Dict, List
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 
-from napari_imagej import settings
 from napari_imagej.java import jc
 
 MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
 
 
 def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, Any]]:
-    MAP_GENERATORS.append(func)
-    return func
+    @lru_cache(maxsize=None)
+    def inner() -> Dict[Any, Any]:
+        # We want the map returned by func...
+        original = func()
+        # ...but without any None keys.
+        # NB the second None avoids the KeyError
+        original.pop(None, None)
+        return original
+
+    MAP_GENERATORS.append(inner)
+    return inner
 
 
 @lru_cache(maxsize=None)
@@ -85,7 +93,7 @@ def labels() -> Dict[Any, Any]:
 
 @map_category
 def images() -> Dict[Any, Any]:
-    ij2_map = {
+    return {
         jc.RandomAccessibleInterval: "napari.layers.Image",
         jc.RandomAccessible: "napari.layers.Image",
         jc.IterableInterval: "napari.layers.Image",
@@ -93,10 +101,8 @@ def images() -> Dict[Any, Any]:
         jc.ImageDisplay: "napari.layers.Image",
         jc.Dataset: "napari.layers.Image",
         jc.DatasetView: "napari.layers.Image",
+        jc.ImagePlus: "napari.layers.Image",
     }
-    if settings["include_imagej_legacy"].get(bool):
-        ij2_map[jc.ImagePlus] = "napari.layers.Image"
-    return ij2_map
 
 
 @map_category

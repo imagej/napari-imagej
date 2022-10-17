@@ -179,14 +179,14 @@ class DummyModuleItem:
     def __init__(
         self,
         name="",
-        jtype=jc.String,
+        jtype=None,
         isRequired=True,
         isInput=True,
         isOutput=False,
         default=None,
     ):
         self._name = name
-        self._jtype = jtype
+        self._jtype = jtype if jtype is not None else jc.String
         self._isRequired = isRequired
         self._isInput = isInput
         self._isOutput = isOutput

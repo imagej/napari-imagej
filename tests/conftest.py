@@ -8,6 +8,7 @@ import pytest
 from napari import Viewer
 
 import napari_imagej
+from napari_imagej.java import ensure_jvm_started, ij_init
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -42,6 +43,14 @@ def preserve_user_settings():
         # After the test, remove the file
         if os.path.exists(user_path):
             os.remove(user_path)
+
+
+@pytest.fixture(autouse=True)
+def launch_imagej():
+    """Fixture ensuring any changes made earlier to the settings are reversed"""
+    ij_init()
+    ensure_jvm_started()
+    yield
 
 
 @pytest.fixture(scope="session")

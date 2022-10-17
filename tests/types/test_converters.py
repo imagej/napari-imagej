@@ -235,9 +235,9 @@ def test_ellipse_layer_to_mask(ij, ellipse_layer):
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
     # Assert center position
-    center = j_mask.center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
-    assert center == [30, 30]
+    j_center = j_mask.center().positionAsDoubleArray()
+    py_center = ij.py.from_java(j_center)
+    assert np.array_equal(j_center, py_center)
     # Assert semi-axis lengths
     assert j_mask.semiAxisLength(0) == 10
     assert j_mask.semiAxisLength(1) == 10
@@ -298,9 +298,9 @@ def test_rectangle_layer_to_mask_box(ij, rectangle_layer_axis_aligned):
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
     # Assert center position
-    center = j_mask.center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
-    assert center == [20, 20]
+    j_center = j_mask.center().positionAsDoubleArray()
+    py_center = ij.py.from_java(j_center)
+    assert np.array_equal(j_center, py_center)
     # Assert side lengths
     assert j_mask.sideLength(0) == 20
     assert j_mask.sideLength(1) == 20
@@ -422,9 +422,9 @@ def test_line_layer_to_mask(ij, line_layer):
     # Assert endpoints
     arr = JArray(JDouble)(2)
     j_mask.endpointOne().localize(arr)
-    assert ij.py.from_java(arr) == [0, 0]
+    assert np.array_equal(ij.py.from_java(arr), arr)
     j_mask.endpointTwo().localize(arr)
-    assert ij.py.from_java(arr) == [4, -4]
+    assert np.array_equal(ij.py.from_java(arr), arr)
     # Test some points
     _point_assertion(j_mask, [0, 0], True)
     _point_assertion(j_mask, [4, -4], True)
@@ -489,7 +489,7 @@ def test_path_layer_to_mask(ij, path_layer):
     actual = j_mask.vertices()
     for e, a in zip(expected, actual):
         a.localize(arr)
-        assert ij.py.from_java(arr) == e
+        assert np.array_equal(ij.py.from_java(arr), e)
     # Test some points
     _point_assertion(j_mask, [0, 0], True)
     _point_assertion(j_mask, [2, -2], True)
@@ -563,9 +563,9 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     # Assert dimensionality
     assert rois[0].numDimensions() == 2
     # Assert center position
-    center = rois[0].center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
-    assert center == [30, 30]
+    j_center = rois[0].center().positionAsDoubleArray()
+    py_center = ij.py.from_java(j_center)
+    assert np.array_equal(py_center, j_center)
     # Assert semi-axis lengths
     assert rois[0].semiAxisLength(0) == 10
     assert rois[0].semiAxisLength(1) == 10
@@ -574,9 +574,9 @@ def test_multiple_layer_to_masks(ij, multiple_layer):
     # Assert dimensionality
     assert rois[1].numDimensions() == 2
     # Assert center position
-    center = rois[1].center().positionAsDoubleArray()
-    center = ij.py.from_java(center)
-    assert center == [20, 20]
+    j_center = rois[1].center().positionAsDoubleArray()
+    py_center = ij.py.from_java(j_center)
+    assert np.array_equal(py_center, j_center)
     # Assert side lengths
     assert rois[1].sideLength(0) == 20
     assert rois[1].sideLength(1) == 20
