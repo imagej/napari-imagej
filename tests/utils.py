@@ -3,6 +3,8 @@ A module containing testing utilities
 """
 from typing import List
 
+from jpype import JImplements, JOverride
+
 from napari_imagej.java import JavaClasses
 
 
@@ -72,8 +74,12 @@ class JavaClassesTest(JavaClasses):
         return "org.scijava.ItemVisibility"
 
     @JavaClasses.blocking_import
-    def ModuleSearcher(self):
-        return "org.scijava.search.module.ModuleSearcher"
+    def ModuleSearchResult(self):
+        return "org.scijava.search.module.ModuleSearchResult"
+
+    @JavaClasses.blocking_import
+    def OpSearchResult(self):
+        return "net.imagej.ops.search.OpSearchResult"
 
     @JavaClasses.blocking_import
     def ScriptInfo(self):
@@ -107,18 +113,26 @@ class JavaClassesTest(JavaClasses):
 jc = JavaClassesTest()
 
 
+@JImplements("org.scijava.search.Searcher", deferred=True)
 class DummySearcher:
+    """
+    Implementation of org.scijava.search.Searcher used for testing
+    """
+
     def __init__(self, title: str):
         self._title = title
 
+    @JOverride
     def search(self, text: str, fuzzy: bool):
         pass
 
-    def title(self):
+    @JOverride
+    def title(self) -> str:
         return self._title
 
+    @JOverride
     def getClass(self):
-        return jc.Searcher.class_
+        return jc.Searcher
 
 
 class DummySearchEvent:

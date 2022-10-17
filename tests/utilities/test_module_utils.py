@@ -14,7 +14,6 @@ from napari.layers import Image, Layer
 from napari_imagej.types.mappings import ptypes
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
-from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 from tests.utils import DummyModuleItem, jc
 
 
@@ -667,9 +666,19 @@ def test_functionify_module_execution_result_regression(make_napari_viewer, ij):
     assert sig.return_annotation == List[Layer]
 
 
-def test_convert_searchResult_to_info(imagej_widget: NapariImageJWidget, ij):
-    for i in range(imagej_widget.result_tree.topLevelItemCount()):
-        searcher = imagej_widget.result_tree.topLevelItem(i)._searcher
-        result = searcher.search("f", True)[0]
-        info = _module_utils.info_for(result)
-        assert isinstance(info, jc.ModuleInfo)
+def test_info_for(ij):
+    # Case 1: An OpSearchResult
+    op_infos = ij.op().infos()
+    assert len(op_infos)
+    result = jc.OpSearchResult(ij.context(), list(op_infos)[0], "")
+    assert isinstance(_module_utils.info_for(result), jc.ModuleInfo)
+
+    # Case 2: A ModuleSearchResult
+    module_infos = ij.module().getModules()
+    assert len(module_infos)
+    result = jc.ModuleSearchResult(module_infos.get(0), "")
+    assert isinstance(_module_utils.info_for(result), jc.ModuleInfo)
+
+    # Case 3: A ClassSearchResult (no info)
+    result = jc.ClassSearchResult(jc.Double, "")
+    assert _module_utils.info_for(result) is None
