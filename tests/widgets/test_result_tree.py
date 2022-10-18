@@ -1,7 +1,6 @@
 """
 A module testing napari_imagej.widgets.results
 """
-from sys import platform
 
 import pytest
 from qtpy.QtCore import Qt
@@ -26,14 +25,17 @@ def fixed_tree(ij, asserter):
     # Create a default SearchResultTree
     tree = SearchResultTree()
     tree.wait_for_setup()
-    # NB The following check has issues on MacOS on CI;
-    # the signals do not reach the tree.
-    # TODO: Make this test run on MacOS
-    if platform == "darwin":
-        pytest.skip("This test has trouble on mac")
     # Waits until all Searchers available
     scijava_searchers = ij.plugin().createInstancesOfType(jc.Searcher)
-    asserter(lambda: tree.topLevelItemCount() == len(scijava_searchers))
+    try:
+        asserter(lambda: tree.topLevelItemCount() == len(scijava_searchers))
+    except Exception:
+        # HACK: Sometimes (especially on CI), not all Searchers make it into
+        # the tree.
+        # For our purposes of removing those items, though, we don't care how
+        # many make it in. All that matters is that no more will be added.
+        # So, if we timeout, we assume no more will be added, and carry on.
+        pass
     # Remove all SciJava Searchers, use our own ones instead
     tree.invisibleRootItem().takeChildren()
     _populate_tree(tree, asserter)
