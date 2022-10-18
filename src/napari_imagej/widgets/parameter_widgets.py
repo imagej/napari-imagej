@@ -11,6 +11,7 @@ from magicgui.widgets import (
     CheckBox,
     ComboBox,
     Container,
+    FileEdit,
     FloatSpinBox,
     PushButton,
     SpinBox,
@@ -269,3 +270,33 @@ class MutableOutputWidget(Container):
     @choices.setter
     def choices(self, choices: ChoicesType):
         self.layer_select.choices = choices
+
+
+class SaveFileWidget(FileEdit):
+    """
+    A magicgui FileEdit that saves a new file
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "w"
+        super().__init__(**kwargs)
+
+
+class OpenFileWidget(FileEdit):
+    """
+    A magicgui FileEdit that opens an existing file
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "r"
+        super().__init__(**kwargs)
+
+
+class DirectoryWidget(FileEdit):
+    """
+    A magicgui FileEdit that opens a directory
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "d"
+        super().__init__(**kwargs)

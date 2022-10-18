@@ -153,7 +153,6 @@ def _filter_unresolved_inputs(
 
 def _initialize_module(module: "jc.Module"):
     """Initializes the passed module."""
-    module.initialize()
     # HACK: module.initialize() does not seem to call
     # Initializable.initialize()
     if isinstance(module.getDelegateObject(), jc.Initializable):
