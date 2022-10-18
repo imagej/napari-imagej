@@ -47,7 +47,7 @@ def preserve_user_settings():
 
 @pytest.fixture(autouse=True)
 def launch_imagej():
-    """Fixture ensuring any changes made earlier to the settings are reversed"""
+    """Fixture ensuring that ImageJ is running before any tests run"""
     ij_init()
     ensure_jvm_started()
     yield
