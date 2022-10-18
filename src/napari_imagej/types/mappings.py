@@ -15,8 +15,17 @@ MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
 
 
 def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, Any]]:
-    MAP_GENERATORS.append(func)
-    return func
+    @lru_cache(maxsize=None)
+    def inner() -> Dict[Any, Any]:
+        # We want the map returned by func...
+        original = func()
+        # ...but without any None keys.
+        # NB the second None avoids the KeyError
+        original.pop(None, None)
+        return original
+
+    MAP_GENERATORS.append(inner)
+    return inner
 
 
 @lru_cache(maxsize=None)
@@ -92,10 +101,7 @@ def images() -> Dict[Any, Any]:
         jc.ImageDisplay: "napari.layers.Image",
         jc.Dataset: "napari.layers.Image",
         jc.DatasetView: "napari.layers.Image",
-        # TODO: remove 'add_legacy=False' -> struggles with LegacyService
-        # This change is waiting on a new pyimagej release
-        # java_import('ij.ImagePlus'):
-        # 'napari.types.ImageData'
+        jc.ImagePlus: "napari.layers.Image",
     }
 
 

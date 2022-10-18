@@ -98,38 +98,36 @@ def test_preprocess_remaining_inputs(preresolved_module):
         assert preresolved_module.isInputResolved(input.getName())
 
 
-example_inputs = [
+def test_resolvable_or_required():
     # Resolvable, required
-    (DummyModuleItem(), True),
+    assert _module_utils._resolvable_or_required(DummyModuleItem(jtype=jc.String))
     # Resolvable, not required
-    (DummyModuleItem(isRequired=False), True),
+    assert _module_utils._resolvable_or_required(
+        DummyModuleItem(jtype=jc.String, isRequired=False)
+    )
     # Not resolvable, required
-    (DummyModuleItem(jtype=jc.System), True),
+    assert _module_utils._resolvable_or_required(DummyModuleItem(jtype=jc.System))
     # Not resolvable, not required
-    (DummyModuleItem(jtype=jc.System, isRequired=False), False),
-]
+    assert not _module_utils._resolvable_or_required(
+        DummyModuleItem(jtype=jc.System, isRequired=False)
+    )
 
 
-@pytest.mark.parametrize("input, expected", example_inputs)
-def test_resolvable_or_required(input, expected):
-    assert expected == _module_utils._resolvable_or_required(input)
-
-
-is_non_default_example_inputs = [
+def test_is_required_arg():
     # default, required
-    (DummyModuleItem(default="foo"), False),
+    assert not _module_utils._is_required_arg(
+        DummyModuleItem(jtype=jc.String, default="foo")
+    )
     # default, not required
-    (DummyModuleItem(default="foo", isRequired=False), False),
+    assert not _module_utils._is_required_arg(
+        DummyModuleItem(jtype=jc.String, default="foo", isRequired=False)
+    )
     # not default, required
-    (DummyModuleItem(), True),
+    assert _module_utils._is_required_arg(DummyModuleItem(jtype=jc.String))
     # not default, not required
-    (DummyModuleItem(isRequired=False), False),
-]
-
-
-@pytest.mark.parametrize("input, expected", is_non_default_example_inputs)
-def test_is_non_default(input, expected):
-    assert expected == _module_utils._is_optional_arg(input)
+    assert not _module_utils._is_required_arg(
+        DummyModuleItem(jtype=jc.String, isRequired=False)
+    )
 
 
 def test_sink_optional_inputs():
@@ -180,39 +178,35 @@ def test_param_annotation(imagej_widget):
     assert_item_annotation(jc.String, Optional[str], False)
 
 
-module_param_inputs = [
-    # required, no default
-    (
-        DummyModuleItem(name="foo"),
-        Parameter(name="foo", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
-    ),
-    # not required, default
-    (
-        DummyModuleItem(name="foo", default="bar", isRequired=False),
-        Parameter(
-            name="foo",
-            default="bar",
-            kind=Parameter.POSITIONAL_OR_KEYWORD,
-            annotation=Optional[str],
-        ),
-    ),
-    # not required, no default
-    (
-        DummyModuleItem(name="foo", isRequired=False),
-        Parameter(
-            name="foo",
-            default=None,
-            kind=Parameter.POSITIONAL_OR_KEYWORD,
-            annotation=Optional[str],
-        ),
-    ),
-]
+def test_module_param():
+    # required, non default parameter
+    module_item = DummyModuleItem(jtype=jc.String, name="foo")
+    expected = Parameter(
+        name="foo", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str
+    )
+    assert expected == _module_utils._module_param(module_item)
 
+    # not required, default parameter
+    module_item = DummyModuleItem(
+        jtype=jc.String, name="foo", default="bar", isRequired=False
+    )
+    expected = Parameter(
+        name="foo",
+        default="bar",
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=Optional[str],
+    )
+    assert expected == _module_utils._module_param(module_item)
 
-@pytest.mark.parametrize("input, expected", module_param_inputs)
-def test_module_param(input, expected):
-    actual = _module_utils._module_param(input)
-    assert actual == expected
+    # not required, non default parameter
+    module_item = DummyModuleItem(jtype=jc.String, name="foo", isRequired=False)
+    expected = Parameter(
+        name="foo",
+        default=None,
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=Optional[str],
+    )
+    assert expected == _module_utils._module_param(module_item)
 
 
 def test_add_param_metadata():
@@ -493,7 +487,7 @@ widget_parameterizations = [
     (script_one_layer_two_widget, 1, 2, []),
     (script_two_layer_two_widget, 2, 2, []),
     # No layers returned, the required BOTH is just updated
-    (script_both_but_required, 0, 0, [jc.ArrayImgs.bytes(10, 10)]),
+    (script_both_but_required, 0, 0, [numpy.zeros((10, 10), dtype=numpy.int8)]),
     # One layer returned as we create the optional input internally
     (script_both_but_optional, 1, 0, [None]),
 ]
