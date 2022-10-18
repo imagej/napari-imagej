@@ -206,21 +206,14 @@ def _napari_module_param_additions(
     return additional_params
 
 
-def _is_optional_arg(input: "jc.ModuleItem") -> bool:
+def _is_required_arg(input: "jc.ModuleItem") -> bool:
     """
-    Determines whether the ModuleInfo input is optional,
+    Determines whether the ModuleInfo input is required,
     as far as a python arg would be concerned.
-    For the python argument to be optional, we would need
-    EITHER a declaration of optionality by input.isRequired() == False,
-    OR a default value.
+    For the python argument to be required, we would need
+    BOTH input.isRequired() == True AND no default value.
     """
-    # TODO: I think this could be
-    # return input.isRequired() and input.getDefaultValue() is None
-    if not input.isRequired():
-        return False
-    if input.getDefaultValue() is not None:
-        return False
-    return True
+    return input.isRequired() and input.getDefaultValue() is None
 
 
 def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
@@ -230,7 +223,7 @@ def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"
     """
 
     def sort_key(x):
-        return -1 if _is_optional_arg(x) else 1
+        return -1 if _is_required_arg(x) else 1
 
     return sorted(inputs, key=sort_key)
 

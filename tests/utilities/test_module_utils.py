@@ -113,19 +113,19 @@ def test_resolvable_or_required():
     )
 
 
-def test_is_non_default():
+def test_is_required_arg():
     # default, required
-    assert not _module_utils._is_optional_arg(
+    assert not _module_utils._is_required_arg(
         DummyModuleItem(jtype=jc.String, default="foo")
     )
     # default, not required
-    assert not _module_utils._is_optional_arg(
+    assert not _module_utils._is_required_arg(
         DummyModuleItem(jtype=jc.String, default="foo", isRequired=False)
     )
     # not default, required
-    assert _module_utils._is_optional_arg(DummyModuleItem(jtype=jc.String))
+    assert _module_utils._is_required_arg(DummyModuleItem(jtype=jc.String))
     # not default, not required
-    assert not _module_utils._is_optional_arg(
+    assert not _module_utils._is_required_arg(
         DummyModuleItem(jtype=jc.String, isRequired=False)
     )
 
