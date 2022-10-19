@@ -20,7 +20,13 @@ from napari_imagej.types.widget_mappings import (
     _supported_scijava_styles,
     preferred_widget_for,
 )
-from napari_imagej.widgets.parameter_widgets import MutableOutputWidget
+from napari_imagej.utilities._module_utils import python_type_of
+from napari_imagej.widgets.parameter_widgets import (
+    DirectoryWidget,
+    MutableOutputWidget,
+    OpenFileWidget,
+    SaveFileWidget,
+)
 from tests.utils import DummyModuleItem, jc
 
 parameterizations = [
@@ -100,3 +106,23 @@ def test_all_styles_in_parameterizations():
         for type_hint, widget_type in _supported_scijava_styles[style].items():
             all_styles.append((style, type_hint, widget_type))
     assert all_styles == _parameterizations
+
+
+def test_file_widgets():
+    # FileWidget.OPEN_STYLE
+    item = DummyModuleItem(jtype=jc.File)
+    item.setWidgetStyle(jc.FileWidget.OPEN_STYLE)
+    type_hint = python_type_of(item)
+    assert preferred_widget_for(item, type_hint) == OpenFileWidget
+
+    # FileWidget.SAVE_STYLE
+    item = DummyModuleItem(jtype=jc.File)
+    item.setWidgetStyle(jc.FileWidget.SAVE_STYLE)
+    type_hint = python_type_of(item)
+    assert preferred_widget_for(item, type_hint) == SaveFileWidget
+
+    # FileWidget.DIRECTORY_STYLE
+    item = DummyModuleItem(jtype=jc.File)
+    item.setWidgetStyle(jc.FileWidget.DIRECTORY_STYLE)
+    type_hint = python_type_of(item)
+    assert preferred_widget_for(item, type_hint) == DirectoryWidget

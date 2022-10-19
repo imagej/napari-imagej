@@ -12,9 +12,7 @@ from napari.layers import Image
 
 from napari_imagej.java import jc
 from napari_imagej.widgets.parameter_widgets import (
-    DirectoryWidget,
-    OpenFileWidget,
-    SaveFileWidget,
+    file_widget_for,
     numeric_type_widget_for,
 )
 
@@ -116,10 +114,4 @@ def _scijava_path_preference(
     item: "jc.ModuleItem", type_hint: Union[type, str]
 ) -> Optional[str]:
     if "pathlib.PosixPath" == str(type_hint):
-        style: str = item.getWidgetStyle()
-        if style == "open":
-            return OpenFileWidget
-        elif style == "save":
-            return SaveFileWidget
-        elif style == "directory":
-            return DirectoryWidget
+        return file_widget_for(item)

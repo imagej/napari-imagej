@@ -6,12 +6,16 @@ import importlib
 import napari
 import numpy as np
 import pytest
+from magicgui.types import FileDialogMode
 from magicgui.widgets import ComboBox, PushButton
 from napari import current_viewer
 from napari.layers import Image
 
 from napari_imagej.widgets.parameter_widgets import (
+    DirectoryWidget,
     MutableOutputWidget,
+    OpenFileWidget,
+    SaveFileWidget,
     numeric_type_widget_for,
 )
 from tests.utils import jc
@@ -181,3 +185,18 @@ def test_realType_ifaces():
             assert widget_iface.min == widget_impl.min
             assert widget_iface.max == widget_impl.max
         assert isinstance(widget_iface.value, impl)
+
+
+def test_save_file_widget():
+    widget = SaveFileWidget()
+    assert widget.mode == FileDialogMode.OPTIONAL_FILE
+
+
+def test_open_file_widget():
+    widget = OpenFileWidget()
+    assert widget.mode == FileDialogMode.EXISTING_FILE
+
+
+def test_directory_file_widget():
+    widget = DirectoryWidget()
+    assert widget.mode == FileDialogMode.EXISTING_DIRECTORY

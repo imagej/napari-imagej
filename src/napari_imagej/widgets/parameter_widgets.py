@@ -272,9 +272,22 @@ class MutableOutputWidget(Container):
         self.layer_select.choices = choices
 
 
+# -- FILE WIDGETS -- #
+
+
+def file_widget_for(item: "jc.ModuleItem"):
+    style: str = item.getWidgetStyle()
+    if style == jc.FileWidget.OPEN_STYLE:
+        return OpenFileWidget
+    elif style == jc.FileWidget.SAVE_STYLE:
+        return SaveFileWidget
+    elif style == jc.FileWidget.DIRECTORY_STYLE:
+        return DirectoryWidget
+
+
 class SaveFileWidget(FileEdit):
     """
-    A magicgui FileEdit that saves a new file
+    A magicgui FileEdit matching SciJava's FileWidget.SAVE_STYLE
     """
 
     def __init__(self, **kwargs):
@@ -284,7 +297,7 @@ class SaveFileWidget(FileEdit):
 
 class OpenFileWidget(FileEdit):
     """
-    A magicgui FileEdit that opens an existing file
+    A magicgui FileEdit matching SciJava's FileWidget.OPEN_STYLE
     """
 
     def __init__(self, **kwargs):
@@ -294,7 +307,7 @@ class OpenFileWidget(FileEdit):
 
 class DirectoryWidget(FileEdit):
     """
-    A magicgui FileEdit that opens a directory
+    A magicgui FileEdit matching SciJava's FileWidget.DIRECTORY_STYLE
     """
 
     def __init__(self, **kwargs):
