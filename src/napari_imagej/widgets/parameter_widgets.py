@@ -11,6 +11,7 @@ from magicgui.widgets import (
     CheckBox,
     ComboBox,
     Container,
+    FileEdit,
     FloatSpinBox,
     PushButton,
     SpinBox,
@@ -269,3 +270,46 @@ class MutableOutputWidget(Container):
     @choices.setter
     def choices(self, choices: ChoicesType):
         self.layer_select.choices = choices
+
+
+# -- FILE WIDGETS -- #
+
+
+def file_widget_for(item: "jc.ModuleItem"):
+    style: str = item.getWidgetStyle()
+    if style == jc.FileWidget.OPEN_STYLE:
+        return OpenFileWidget
+    elif style == jc.FileWidget.SAVE_STYLE:
+        return SaveFileWidget
+    elif style == jc.FileWidget.DIRECTORY_STYLE:
+        return DirectoryWidget
+
+
+class SaveFileWidget(FileEdit):
+    """
+    A magicgui FileEdit matching SciJava's FileWidget.SAVE_STYLE
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "w"
+        super().__init__(**kwargs)
+
+
+class OpenFileWidget(FileEdit):
+    """
+    A magicgui FileEdit matching SciJava's FileWidget.OPEN_STYLE
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "r"
+        super().__init__(**kwargs)
+
+
+class DirectoryWidget(FileEdit):
+    """
+    A magicgui FileEdit matching SciJava's FileWidget.DIRECTORY_STYLE
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["mode"] = "d"
+        super().__init__(**kwargs)

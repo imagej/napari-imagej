@@ -20,6 +20,7 @@ dependencies:
   - napari
   - openjdk=8
   - pyimagej >= 1.2.0
+  - scyjava >= 1.7.0
   # Test dependencies
   - numpy
   # Developer tools

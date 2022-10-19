@@ -253,6 +253,10 @@ class JavaClasses(object):
         return "org.scijava.module.process.PostprocessorPlugin"
 
     @blocking_import
+    def FileWidget(self):
+        return "org.scijava.widget.FileWidget"
+
+    @blocking_import
     def InputHarvester(self):
         return "org.scijava.widget.InputHarvester"
 

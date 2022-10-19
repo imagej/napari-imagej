@@ -11,7 +11,10 @@ from typing import Callable, Dict, Optional, Union
 from napari.layers import Image
 
 from napari_imagej.java import jc
-from napari_imagej.widgets.parameter_widgets import numeric_type_widget_for
+from napari_imagej.widgets.parameter_widgets import (
+    file_widget_for,
+    numeric_type_widget_for,
+)
 
 PREFERENCE_FUNCTIONS = []
 
@@ -104,3 +107,11 @@ def _scijava_style_preference(
     for k, v in style_options.items():
         if issubclass(type_hint, k):
             return v
+
+
+@_widget_preference
+def _scijava_path_preference(
+    item: "jc.ModuleItem", type_hint: Union[type, str]
+) -> Optional[str]:
+    if "pathlib.PosixPath" == str(type_hint):
+        return file_widget_for(item)

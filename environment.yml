@@ -21,6 +21,7 @@ dependencies:
   - numpy
   - openjdk=8
   - pyimagej >= 1.2.0
+  - scyjava >= 1.7.0
   # Project from source
   - pip
   - pip:
