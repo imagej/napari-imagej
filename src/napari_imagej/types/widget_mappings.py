@@ -66,10 +66,8 @@ def preferred_widget_for(
 def _numeric_type_preference(
     item: "jc.ModuleItem", type_hint: Union[type, str]
 ) -> Optional[Union[type, str]]:
-    # We only care about mutable outputs
-    if item.isInput() and not item.isOutput():
-        if issubclass(item.getType(), jc.NumericType):
-            return numeric_type_widget_for(item.getType())
+    if issubclass(item.getType(), jc.NumericType):
+        return numeric_type_widget_for(item.getType())
 
 
 @_widget_preference

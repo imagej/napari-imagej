@@ -50,6 +50,47 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
         preprocessor.process(module)
 
 
+NAPARI_IMAGEJ_PREPROCESSORS: List[Callable[["jc.Module"], None]] = []
+
+
+def preprocessor(func: Callable[["jc.Module"], None]) -> Callable[["jc.Module"], None]:
+    NAPARI_IMAGEJ_PREPROCESSORS.append(func)
+    return func
+
+
+@preprocessor
+def optional_preallocated_output_real_type_preprocessor(module: "jc.Module"):
+    """
+    Optional Preallocated RealType Outputs are annoying, since we can't resolve them
+    in napari. So we resolve them here
+    """
+    for input in module.getInfo().inputs():
+        # We don't care about resolved inputs
+        if module.isInputResolved(input.getName()):
+            continue
+        # We don't care about pure inputs
+        if not input.isOutput():
+            continue
+        # We don't care about required inputs
+        if input.isRequired():
+            continue
+        # We only care about RealType/Number inputs
+        if issubclass(input.getType(), (jc.RealType, jc.Number)):
+            module.resolveInput(input.getName())
+
+
+def _preprocess_napari_imagej(module: "jc.Module"):
+    """
+    Runs various PreprocessorPlugin-like functions to resolve Module inputs.
+    Ideally, we'd make these functions PreprocessorPlugins, but that turns out
+    to be a little tricky.
+    :param module: The module to be resolved
+    :param info: The ModuleInfo creating the module
+    """
+    for preprocessor in NAPARI_IMAGEJ_PREPROCESSORS:
+        preprocessor(module)
+
+
 def _mutable_layers(
     unresolved_inputs: List["jc.ModuleItem"], user_resolved_inputs: List[Any]
 ) -> List[Layer]:
@@ -73,7 +114,7 @@ def _resolvable_or_required(input: "jc.ModuleItem"):
     if input.isRequired():
         return True
     # Return true if resolvable
-    # The ModuleItem is resolvable iff python_type_of
+    # The ModuleItem is resolvable iff type_hint_for
     # does not throw a ValueError.
     try:
         type_hint_for(input)
@@ -152,23 +193,13 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
         return default
 
 
-def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
-    """
-    Gets the (Python) type hint for a (Java) input
-    """
-    type = type_hint_for(input)
-    if not input.isRequired():
-        type = Optional[type]
-    return type
-
-
 def _module_param(input: "jc.ModuleItem") -> Parameter:
     """Converts a java ModuleItem into a python Parameter"""
     # NB ModuleInfo.py_name() defined using JImplementationFor
     name = input.py_name()
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
-    type_hint = _type_hint_for_module_item(input)
+    type_hint = type_hint_for(input)
 
     return Parameter(name=name, kind=kind, default=default, annotation=type_hint)
 
@@ -209,25 +240,29 @@ def _pure_module_outputs(
     # Elements could be anything, but should not be "layer" types.
     widget_outputs = []
 
+    # Partition outputs into layer and widget outputs
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
-        name = str(output_entry.getKey())
-        # Ignore preallocated outputs if they were provided by the user
-        if module.getInfo().getInput(name) in user_inputs and module.getInput(name):
-            continue
-        output = ij().py.from_java(output_entry.getValue())
-        # Add arraylike outputs as images
-        if is_arraylike(output):
-            layer = Layer.create(data=output, meta={"name": name}, layer_type="image")
-            layer_outputs.append(layer)
-        # Add Layers directly
-        elif isinstance(output, Layer):
-            layer_outputs.append(output)
         # Ignore None outputs
-        elif output is None:
+        if output_entry.getValue() is None:
             continue
-
-        # Otherwise, it can't be displayed in napari.
+        # Get relevant output parameters
+        name = str(output_entry.getKey())
+        output = ij().py.from_java(output_entry.getValue())
+        # If the output is layer data, add it as a layer output
+        if is_arraylike(output) or isinstance(output, Layer):
+            # If the layer was also an input, it came from a napari layer. We
+            # don't want duplicate layers, so skip this one.
+            if module.getInfo().getInput(name) in user_inputs and module.getInput(name):
+                continue
+            # Convert layer data into a layer
+            if is_arraylike(output):
+                output = Layer.create(
+                    data=output, meta={"name": name}, layer_type="image"
+                )
+            # Add the layer to the layer output list
+            layer_outputs.append(output)
+        # Otherwise, this output needs to go in a widget
         else:
             widget_outputs.append((name, output))
 
@@ -387,6 +422,8 @@ def functionify_module_execution(
     try:
         # Run preprocessors until we hit input harvesting
         remaining_preprocessors = _preprocess_to_harvester(module)
+        # Then, perform napari-imagej specific preprocessing
+        _preprocess_napari_imagej(module)
 
         # Determine which inputs must be resolved by the user
         unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
