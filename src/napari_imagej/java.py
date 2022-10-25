@@ -346,6 +346,10 @@ class JavaClasses(object):
         return "java.lang.Long"
 
     @blocking_import
+    def Number(self):
+        return "java.lang.Number"
+
+    @blocking_import
     def Short(self):
         return "java.lang.Short"
 
