@@ -5,9 +5,10 @@ graphical access to ImageJ functionality.
 This Widget is made accessible to napari through napari.yml
 """
 from napari import Viewer
-from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtCore import Signal
+from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 
-from napari_imagej.java import ij_init
+from napari_imagej.java import ij_init, when_pyimagej_errors
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree, SearchResultTreeItem
@@ -17,11 +18,15 @@ from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
+    error_handler: Signal = Signal(Exception)
+
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
+        self.error_handler.connect(self._handle_error)
+        when_pyimagej_errors(lambda exc: self.error_handler.emit(exc))
         ij_init()
 
         # -- NapariImageJWidget construction -- #
@@ -95,3 +100,8 @@ class NapariImageJWidget(QWidget):
 
         # Put the focus on the search bar
         self.search.bar.setFocus()
+
+    def _handle_error(self, exc: Exception):
+        msg: QMessageBox = QMessageBox()
+        msg.setText(str(exc))
+        msg.exec()

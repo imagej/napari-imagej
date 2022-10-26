@@ -17,16 +17,22 @@ Notable fields included in the module:
 """
 from multiprocessing.pool import AsyncResult, ThreadPool
 from threading import Lock
-from typing import Callable
+from typing import Callable, List, Tuple
 
 import imagej
 from jpype import JClass
-from scyjava import config, jimport, jvm_started
+from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
+
+STARTUP_ERROR_HANDLERS: List[Callable[[Exception], None]] = []
+
+
+def when_pyimagej_errors(handler: Callable[[Exception], None]):
+    STARTUP_ERROR_HANDLERS.append(handler)
 
 
 def ij():
@@ -45,34 +51,80 @@ def ensure_jvm_started() -> None:
 
 
 def _imagej_init():
-    # Initialize ImageJ
-    log_debug("Initializing ImageJ2")
+    try:
+        # Initialize ImageJ
+        log_debug("Initializing ImageJ2")
 
-    # -- IMAGEJ CONFIG -- #
+        # -- IMAGEJ CONFIG -- #
 
-    # TEMP: Avoid issues caused by
-    # https://github.com/imagej/pyimagej/issues/160
-    config.add_repositories(
-        {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-    )
-    config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
-    log_debug("Completed JVM Configuration")
+        # TEMP: Avoid issues caused by
+        # https://github.com/imagej/pyimagej/issues/160
+        config.add_repositories(
+            {"scijava.public": "https://maven.scijava.org/content/groups/public"}
+        )
+        config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+        log_debug("Completed JVM Configuration")
 
-    # Add converters
-    from napari_imagej.types.converters import install_converters
+        # Add converters
+        from napari_imagej.types.converters import install_converters
 
-    install_converters()
+        install_converters()
 
-    # Launch PyImageJ
-    _ij = imagej.init(
-        ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(str),
-        mode=settings["jvm_mode"].get(str),
-        add_legacy=settings["include_imagej_legacy"].get(bool),
-    )
-    log_debug(f"Initialized at version {_ij.getVersion()}")
+        # Launch PyImageJ
+        _ij = imagej.init(
+            ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(
+                str
+            ),
+            mode=settings["jvm_mode"].get(str),
+            add_legacy=settings["include_imagej_legacy"].get(bool),
+        )
+        log_debug(f"Initialized at version {_ij.getVersion()}")
 
-    # Return the ImageJ gateway
-    return _ij
+        # Ensure that the ImageJ instance is compatible with napari-imagej
+        _check_java_component_validity()
+
+        # Return the ImageJ gateway
+        return _ij
+    except Exception as exc:
+        for handler in STARTUP_ERROR_HANDLERS:
+            handler(exc)
+
+
+def _check_java_component_validity():
+    """
+    Helper function to ensure minimum requirements on java component versions
+    """
+    # If we want to require a minimum version for a java component, we need to
+    # be able to find our current version. We do that by querying a Java class
+    # within that component. Thus for each component-version pair, we also need
+    # a class to query
+    component_requirements: List[Tuple[JClass, str, str]] = [
+        (jc.Dataset, "net.imagej:imagej-common", "0.35.0"),
+        (jc.Module, "org.scijava:scijava-common", "2.89.0"),
+        (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
+    ]
+
+    # Find version that violate the minimum
+    violations = []
+    for cls, component, min_version in component_requirements:
+        # Get component's version
+        component_version = get_version(cls)
+        # Compare
+        if not is_version_at_least(component_version, min_version):
+            violations.append(
+                f"{component} : {min_version} (Installed: {component_version})"
+            )
+
+    # If there are version requirements, throw an error
+    if len(violations):
+        failure_str = "napari-imagej requires the following component versions:"
+        violations.insert(0, failure_str)
+        failure_str = "\n\t".join(violations)
+        failure_str = (
+            failure_str
+            + "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
+        )
+        raise RuntimeError(failure_str)
 
 
 init_lock = Lock()

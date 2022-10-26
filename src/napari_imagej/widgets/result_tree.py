@@ -192,6 +192,8 @@ class SearchResultTree(QTreeWidget):
     def _init_producer(self):
         # First, wait for the JVM to start up
         ensure_jvm_started()
+        if not ij():
+            return
 
         # Then, define our SearchListener
         @JImplements("org.scijava.search.SearchListener")
@@ -219,6 +221,8 @@ class SearchResultTree(QTreeWidget):
     def _init_searchers(self):
         # First, wait for the JVM to start up
         ensure_jvm_started()
+        if not ij():
+            return
 
         # Add SearcherTreeItems for each Searcher
         searchers = ij().plugin().createInstancesOfType(jc.Searcher)

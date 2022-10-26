@@ -248,7 +248,8 @@ class GUIButton(QPushButton):
 
         def post_setup():
             ensure_jvm_started()
-            self.setEnabled(True)
+            if ij():
+                self.setEnabled(True)
 
         Thread(target=post_setup).start()
 
@@ -258,9 +259,10 @@ class GUIButton(QPushButton):
 
         def post_setup():
             ensure_jvm_started()
-            self._set_icon(resource_path("imagej2-16x16-flat"))
-            self.setEnabled(True)
-            self.setToolTip("Display ImageJ2 GUI")
+            if ij():
+                self._set_icon(resource_path("imagej2-16x16-flat"))
+                self.setEnabled(True)
+                self.setToolTip("Display ImageJ2 GUI")
 
         Thread(target=post_setup).start()
 

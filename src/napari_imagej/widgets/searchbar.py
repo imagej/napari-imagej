@@ -9,7 +9,7 @@ from threading import Thread
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.java import ensure_jvm_started
+from napari_imagej.java import ensure_jvm_started, ij
 
 
 class JVMEnabledSearchbar(QWidget):
@@ -56,4 +56,5 @@ class JLineEdit(QLineEdit):
         # Once the JVM is ready, allow editing
         ensure_jvm_started()
         self.setText("")
-        self.setEnabled(True)
+        if ij():
+            self.setEnabled(True)
