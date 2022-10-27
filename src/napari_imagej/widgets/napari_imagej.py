@@ -94,7 +94,7 @@ class NapariImageJWidget(QWidget):
 
         # -- Final setup -- #
 
-        self.ij_post_init_setup: ImageJSetup = ImageJSetup(self)
+        self.ij_post_init_setup: WidgetFinalizer = WidgetFinalizer(self)
         java_signals.when_ij_ready(self.ij_post_init_setup.start)
 
         # Bind L key to search bar.
@@ -115,12 +115,29 @@ class NapariImageJWidget(QWidget):
         msg.exec()
 
 
-class ImageJSetup(QThread):
+class WidgetFinalizer(QThread):
+    """
+    QThread responsible for modifying NapariImageJWidget AFTER ImageJ is ready.
+    """
+
     def __init__(self, napari_imagej_widget: NapariImageJWidget):
         super().__init__()
         self.widget: NapariImageJWidget = napari_imagej_widget
 
     def run(self):
+        """
+        Finalizes components of napari_imagej_widget.
+
+        Functionality partitioned into functions by subwidget.
+        """
+        # Finalize the Results Tree
+        self._finalize_results_tree()
+
+    def _finalize_results_tree(self):
+        """
+        Finalizes the SearchResultTree starting state once ImageJ2 is ready.
+        """
+
         # Define our SearchListener
         @JImplements("org.scijava.search.SearchListener")
         class NapariImageJSearchListener:
