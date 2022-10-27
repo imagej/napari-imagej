@@ -196,7 +196,7 @@ class ImageJ_Callbacks(QObject):
         If ImageJ has not yet been initialized, the passed function is registered
         as a callback.
 
-        If ImageJ setup has already failed, this function does nothing
+        If ImageJ setup has already failed, the passed function will not be called.
 
         :param func: The behavior to execute
         """
