@@ -109,6 +109,9 @@ class NapariImageJWidget(QWidget):
         # Start constructing the ImageJ instance
         init_ij_async()
 
+    def wait_for_finalization(self):
+        self.ij_post_init_setup.wait()
+
     def _handle_error(self, exc: Exception):
         msg: QMessageBox = QMessageBox()
         msg.setText(str(exc))

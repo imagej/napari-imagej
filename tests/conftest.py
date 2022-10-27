@@ -71,7 +71,7 @@ def imagej_widget(viewer) -> Generator[NapariImageJWidget, None, None]:
     """Fixture providing an ImageJWidget"""
     # Create widget
     ij_widget: NapariImageJWidget = NapariImageJWidget(viewer)
-    ij_widget.ij_post_init_setup.wait()
+    ij_widget.wait_for_finalization()
 
     yield ij_widget
 
