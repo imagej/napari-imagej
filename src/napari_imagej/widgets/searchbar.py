@@ -8,7 +8,7 @@ are ready to accept queries.
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.java import ensure_jvm_started, ij, java_signals
+from napari_imagej.java import ij, init_ij, java_signals
 
 
 class JVMEnabledSearchbar(QWidget):
@@ -54,7 +54,7 @@ class JLineEdit(QLineEdit):
 
     def enable(self):
         # Once the JVM is ready, allow editing
-        ensure_jvm_started()
+        init_ij()
         self.setText("")
         if ij():
             self.setEnabled(True)

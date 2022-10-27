@@ -10,7 +10,7 @@ from qtpy.QtCore import QThread, Signal
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
-from napari_imagej.java import ij, init_ij, java_signals, jc
+from napari_imagej.java import ij, init_ij_async, java_signals, jc
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import (
@@ -107,7 +107,7 @@ class NapariImageJWidget(QWidget):
         self.search.bar.setFocus()
 
         # Start constructing the ImageJ instance
-        init_ij()
+        init_ij_async()
 
     def _handle_error(self, exc: Exception):
         msg: QMessageBox = QMessageBox()

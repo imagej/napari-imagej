@@ -2,12 +2,12 @@
 A module encapsulating access to Java functionality.
 
 Notable functions included in the module:
-    * ij_init()
-        - used to begin the creation of the ImageJ instance.
-    * ensure_jvm_started()
-        - used to block execution until the ImageJ instance is ready
+    * init_ij()
+        - used to create the ImageJ instance.
+    * init_ij_async()
+        - used to asynchronously create the ImageJ instance.
     * ij()
-        - used to access the ImageJ instance
+        - used to access the ImageJ instance. Calls init_ij() if necessary.
 
 Notable fields included in the module:
     * jc
@@ -27,9 +27,17 @@ from napari_imagej.utilities.logging import log_debug
 # -- ImageJ API -- #
 
 
-def init_ij():
+def init_ij() -> None:
     """
-    Begins the creation of our ImageJ instance.
+    Starts creating our ImageJ instance, and waits until it is ready.
+    """
+    init_ij_async()
+    initializer.wait()
+
+
+def init_ij_async():
+    """
+    Starts creating our ImageJ instance.
     """
     initializer.start()
 
@@ -39,16 +47,8 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    ensure_jvm_started()
-    return initializer.ij
-
-
-def ensure_jvm_started() -> None:
-    """
-    Blocks until the ImageJ instance is ready.
-    """
     init_ij()
-    initializer.wait()
+    return initializer.ij
 
 
 class ImageJInitializer(QThread):
