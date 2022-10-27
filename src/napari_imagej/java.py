@@ -94,27 +94,31 @@ class ImageJInitializer(QThread):
 
         # -- IMAGEJ CONFIG -- #
 
+        # ScyJava configuration
         # TEMP: Avoid issues caused by
         # https://github.com/imagej/pyimagej/issues/160
         config.add_repositories(
             {"scijava.public": "https://maven.scijava.org/content/groups/public"}
         )
         config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
-        log_debug("Completed JVM Configuration")
 
-        # Add converters
+        # PyImageJ configuration
+        ij_settings = {}
+        ij_settings["ij_dir_or_version_or_endpoint"] = settings[
+            "imagej_directory_or_endpoint"
+        ].get(str)
+        ij_settings["mode"] = settings["jvm_mode"].get(str)
+        ij_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+
+        # napari-imagej configuration
         from napari_imagej.types.converters import install_converters
 
         install_converters()
 
+        log_debug("Completed JVM Configuration")
+
         # Launch PyImageJ
-        self.ij = imagej.init(
-            ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(
-                str
-            ),
-            mode=settings["jvm_mode"].get(str),
-            add_legacy=settings["include_imagej_legacy"].get(bool),
-        )
+        self.ij = imagej.init(**ij_settings)
         # Validate PyImageJ
         self._validate_imagej()
         # Log initialization
