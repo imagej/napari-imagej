@@ -15,7 +15,7 @@ from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
 from napari_imagej import settings
-from napari_imagej.java import ij, init_ij, java_signals, jc, log_debug
+from napari_imagej.java import ij, java_signals, jc, log_debug
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities._module_utils import _get_layers_hack
 
@@ -47,15 +47,18 @@ class NapariImageJMenu(QWidget):
 
     @property
     def gui(self) -> "jc.UserInterface":
-        """Convenience function for obtaining the default UserInterface"""
-        init_ij()
+        """
+        Convenience function for obtaining the default UserInterface
+
+        NB this field is a property so we can lazily evaluate the field.
+        This means we don't have to call ij() and start the JVM until we need it.
+        """
         return ij().ui().getDefaultUI()
 
     def _showUI(self):
         """
         NB: This must be its own function to prevent premature calling of ij()
         """
-        init_ij()
         # First time showing
         if not self.gui.isVisible():
             # First things first, show the GUI
