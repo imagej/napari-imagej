@@ -3,7 +3,6 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from pathlib import Path
-from threading import Thread
 from typing import Any, Dict, Optional, Union
 
 from jpype import JImplements, JOverride
@@ -16,7 +15,7 @@ from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 
 from napari_imagej import settings
-from napari_imagej.java import ensure_jvm_started, ij, jc, log_debug
+from napari_imagej.java import ensure_jvm_started, ij, java_signals, jc, log_debug
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities._module_utils import _get_layers_hack
 
@@ -247,24 +246,20 @@ class GUIButton(QPushButton):
         self.setIcon(icon)
 
         def post_setup():
-            ensure_jvm_started()
-            if ij():
-                self.setEnabled(True)
+            self.setEnabled(True)
 
-        Thread(target=post_setup).start()
+        java_signals.when_ij_ready(post_setup)
 
     def _setup_headful(self):
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("Display ImageJ2 GUI (loading)")
 
         def post_setup():
-            ensure_jvm_started()
-            if ij():
-                self._set_icon(resource_path("imagej2-16x16-flat"))
-                self.setEnabled(True)
-                self.setToolTip("Display ImageJ2 GUI")
+            self._set_icon(resource_path("imagej2-16x16-flat"))
+            self.setEnabled(True)
+            self.setToolTip("Display ImageJ2 GUI")
 
-        Thread(target=post_setup).start()
+        java_signals.when_ij_ready(post_setup)
 
     def _setup_headless(self):
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))

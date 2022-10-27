@@ -3,15 +3,14 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
-from threading import Thread
 from typing import List, Optional
 
 from jpype import JArray, JImplements, JOverride
-from qtpy.QtCore import Qt, Signal, Slot
+from qtpy.QtCore import Qt, QThread, Signal, Slot
 from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
 from scyjava import Priority, when_jvm_stops
 
-from napari_imagej.java import ensure_jvm_started, ij, jc
+from napari_imagej.java import ij, jc
 from napari_imagej.utilities.logging import log_debug
 
 
@@ -88,6 +87,66 @@ class SearcherTreeItem(QTreeWidgetItem):
             self.setText(0, self.title)
 
 
+class ProducerSetup(QThread):
+    def __init__(self, tree):
+        super().__init__()
+        self.tree = tree
+
+    def run(self):
+        # Define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariImageJSearchListener:
+            def __init__(self, event_handler: Signal):
+                super().__init__()
+                self.handler = event_handler
+
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.handler.emit(event)
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)(
+            [NapariImageJSearchListener(self.tree.process)]
+        )
+        self.tree._searchOperation = (
+            ij().get("org.scijava.search.SearchService").search(listener_arr)
+        )
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        when_jvm_stops(self.tree._searchOperation.terminate)
+
+
+class SearcherSetup(QThread):
+    def __init__(self, tree):
+        super().__init__()
+        self.tree = tree
+
+    def run(self):
+        # Define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariImageJSearchListener:
+            def __init__(self, event_handler: Signal):
+                super().__init__()
+                self.handler = event_handler
+
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.handler.emit(event)
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)(
+            [NapariImageJSearchListener(self.tree.process)]
+        )
+        self.tree._searchOperation = (
+            ij().get("org.scijava.search.SearchService").search(listener_arr)
+        )
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        when_jvm_stops(self.tree._searchOperation.terminate)
+
+
 class SearchResultTree(QTreeWidget):
 
     # Signal used to update the children of this widget.
@@ -110,27 +169,14 @@ class SearchResultTree(QTreeWidget):
         self.setHeaderLabels(["Search"])
         self.setIndentation(self.indentation() // 2)
 
-        # Start up the SearchResult producer/consumer chain
-        self._producer_initializer = Thread(target=self._init_producer)
-        self._producer_initializer.start()
+        # Connect search result signal to slot
         self.process.connect(self.update)
 
         # Ensure that once the JVM starts, Searchers are added
-        self._searcher_initializer = Thread(target=self._init_searchers)
-        self._searcher_initializer.start()
         self.insert.connect(self._add_searcher_tree_item)
         self.itemChanged.connect(self._register_item_change)
 
-    def wait_for_setup(self):
-        """
-        This object does some setup asynchronously.
-        This function can be used to ensure all that is done
-        """
-        self._producer_initializer.join()
-        self._searcher_initializer.join()
-
     def search(self, text: str):
-        self.wait_for_setup()
         self._searchOperation.search(text)
 
     @Slot(SearcherTreeItem)
@@ -188,55 +234,6 @@ class SearchResultTree(QTreeWidget):
         self.itemClicked.emit(self.currentItem(), 0)
 
     # -- Helper Functionality -- #
-
-    def _init_producer(self):
-        # First, wait for the JVM to start up
-        ensure_jvm_started()
-        if not ij():
-            return
-
-        # Then, define our SearchListener
-        @JImplements("org.scijava.search.SearchListener")
-        class NapariImageJSearchListener:
-            def __init__(self, event_handler: Signal):
-                super().__init__()
-                self.handler = event_handler
-
-            @JOverride
-            def searchCompleted(self, event: "jc.SearchEvent"):
-                self.handler.emit(event)
-
-        # Start the search!
-        # NB: SearchService.search takes varargs, so we need an array
-        listener_arr = JArray(jc.SearchListener)(
-            [NapariImageJSearchListener(self.process)]
-        )
-        self._searchOperation = (
-            ij().get("org.scijava.search.SearchService").search(listener_arr)
-        )
-        # Make sure that the search stops when we close napari
-        # Otherwise the Java threads like to continue
-        when_jvm_stops(self._searchOperation.terminate)
-
-    def _init_searchers(self):
-        # First, wait for the JVM to start up
-        ensure_jvm_started()
-        if not ij():
-            return
-
-        # Add SearcherTreeItems for each Searcher
-        searchers = ij().plugin().createInstancesOfType(jc.Searcher)
-        for searcher in searchers:
-            self.insert.emit(
-                SearcherTreeItem(
-                    searcher,
-                    checked=ij()
-                    .get("org.scijava.search.SearchService")
-                    .enabled(searcher),
-                    expanded=False,
-                )
-            )
-
     def _first_result(self) -> "jc.SearchResult":
         for i in range(self.topLevelItemCount()):
             searcher = self.topLevelItem(i)

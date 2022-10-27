@@ -42,9 +42,8 @@ def _run_buttons(imagej_widget: NapariImageJWidget):
     return imagej_widget.result_runner.button_pane.findChildren(QPushButton)
 
 
-def _ensure_searchers_available(imagej_widget, asserter):
+def _ensure_searchers_available(imagej_widget: NapariImageJWidget, asserter):
     tree = imagej_widget.result_tree
-    tree.wait_for_setup()
     # Find the ModuleSearcher
     numSearchers = len(ij().plugin().getPluginsOfType(jc.Searcher))
     try:

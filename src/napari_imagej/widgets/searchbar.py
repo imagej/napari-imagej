@@ -4,12 +4,11 @@ A QWidget used to provide input to SciJava Searchers.
 The bar is disabled until ImageJ is ready. This ensures the SciJava Searchers
 are ready to accept queries.
 """
-from threading import Thread
 
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.java import ensure_jvm_started, ij
+from napari_imagej.java import ensure_jvm_started, ij, java_signals
 
 
 class JVMEnabledSearchbar(QWidget):
@@ -24,7 +23,8 @@ class JVMEnabledSearchbar(QWidget):
 
         # The main functionality is a search bar
         self.bar: JLineEdit = JLineEdit()
-        Thread(target=self.bar.enable).start()
+
+        java_signals.when_ij_ready(self.bar.enable)
 
         # Set GUI options
         self.setLayout(QHBoxLayout())

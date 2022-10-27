@@ -4,30 +4,32 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
+from jpype import JArray, JImplements, JOverride
 from napari import Viewer
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QThread, Signal
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
+from scyjava import when_jvm_stops
 
-from napari_imagej.java import ij_init, when_pyimagej_errors
+from napari_imagej.java import ij, init_ij, java_signals, jc
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
-from napari_imagej.widgets.result_tree import SearchResultTree, SearchResultTreeItem
+from napari_imagej.widgets.result_tree import (
+    SearcherTreeItem,
+    SearchResultTree,
+    SearchResultTreeItem,
+)
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
 
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
-    error_handler: Signal = Signal(Exception)
-
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
-        self.error_handler.connect(self._handle_error)
-        when_pyimagej_errors(lambda exc: self.error_handler.emit(exc))
-        ij_init()
+        java_signals.when_initialization_fails(self._handle_error)
 
         # -- NapariImageJWidget construction -- #
 
@@ -92,6 +94,9 @@ class NapariImageJWidget(QWidget):
 
         # -- Final setup -- #
 
+        self.ij_post_init_setup: ImageJSetup = ImageJSetup(self)
+        java_signals.when_ij_ready(self.ij_post_init_setup.start)
+
         # Bind L key to search bar.
         # Note the requirement for an input parameter
         napari_viewer.bind_key(
@@ -101,7 +106,53 @@ class NapariImageJWidget(QWidget):
         # Put the focus on the search bar
         self.search.bar.setFocus()
 
+        # Start constructing the ImageJ instance
+        init_ij()
+
     def _handle_error(self, exc: Exception):
         msg: QMessageBox = QMessageBox()
         msg.setText(str(exc))
         msg.exec()
+
+
+class ImageJSetup(QThread):
+    def __init__(self, napari_imagej_widget: NapariImageJWidget):
+        super().__init__()
+        self.widget: NapariImageJWidget = napari_imagej_widget
+
+    def run(self):
+        # Define our SearchListener
+        @JImplements("org.scijava.search.SearchListener")
+        class NapariImageJSearchListener:
+            def __init__(self, event_handler: Signal):
+                super().__init__()
+                self.handler = event_handler
+
+            @JOverride
+            def searchCompleted(self, event: "jc.SearchEvent"):
+                self.handler.emit(event)
+
+        # Start the search!
+        # NB: SearchService.search takes varargs, so we need an array
+        listener_arr = JArray(jc.SearchListener)(
+            [NapariImageJSearchListener(self.widget.result_tree.process)]
+        )
+        self.widget.result_tree._searchOperation = (
+            ij().get("org.scijava.search.SearchService").search(listener_arr)
+        )
+        # Make sure that the search stops when we close napari
+        # Otherwise the Java threads like to continue
+        when_jvm_stops(self.widget.result_tree._searchOperation.terminate)
+
+        # Add SearcherTreeItems for each Searcher
+        searchers = ij().plugin().createInstancesOfType(jc.Searcher)
+        for searcher in searchers:
+            self.widget.result_tree.insert.emit(
+                SearcherTreeItem(
+                    searcher,
+                    checked=ij()
+                    .get("org.scijava.search.SearchService")
+                    .enabled(searcher),
+                    expanded=False,
+                )
+            )

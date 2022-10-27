@@ -8,19 +8,17 @@ Notable functions included in the module:
         - used to block execution until the ImageJ instance is ready
     * ij()
         - used to access the ImageJ instance
-    * log_debug()
-        - used for logging in a standardized way
 
 Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-from multiprocessing.pool import AsyncResult, ThreadPool
 from threading import Lock
 from typing import Callable, List, Tuple
 
 import imagej
 from jpype import JClass
+from qtpy.QtCore import QObject, QThread, Signal
 from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
 from napari_imagej import settings
@@ -28,11 +26,12 @@ from napari_imagej.utilities.logging import log_debug
 
 # -- ImageJ API -- #
 
-STARTUP_ERROR_HANDLERS: List[Callable[[Exception], None]] = []
 
-
-def when_pyimagej_errors(handler: Callable[[Exception], None]):
-    STARTUP_ERROR_HANDLERS.append(handler)
+def init_ij():
+    """
+    Begins the creation of our ImageJ instance.
+    """
+    initializer.start()
 
 
 def ij():
@@ -40,18 +39,56 @@ def ij():
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return ij_init().get()
+    ensure_jvm_started()
+    return initializer.ij
 
 
 def ensure_jvm_started() -> None:
     """
     Blocks until the ImageJ instance is ready.
     """
-    ij_init().wait()
+    init_ij()
+    initializer.wait()
 
 
-def _imagej_init():
-    try:
+class ImageJInitializer(QThread):
+    """
+    A QThread responsible for initializing ImageJ
+    """
+
+    # Tools used to ensure this QThread only initializes ImageJ once.
+    started: bool = False
+    lock: Lock = Lock()
+    # Used as a placeholder for the ImageJ instance
+    ij = None
+
+    def run(self):
+        """
+        Main QThread loop.
+
+        Well, okay, it isn't really a loop.
+
+        Responsible for ensuring that initialize is only called once.
+        """
+        # Double-checked lock
+        if not self.started:
+            with self.lock:
+                if not self.started:
+                    self.started = True
+                    # Try to initialize ImageJ
+                    try:
+                        self.initialize()
+                        # Report completion
+                        java_signals._startup_complete.emit()
+                    # We failed!
+                    except Exception as exc:
+                        # Report failure
+                        java_signals._startup_error.emit(exc)
+
+    def initialize(self):
+        """
+        Creates the ImageJ instance
+        """
         # Initialize ImageJ
         log_debug("Initializing ImageJ2")
 
@@ -71,101 +108,101 @@ def _imagej_init():
         install_converters()
 
         # Launch PyImageJ
-        _ij = imagej.init(
+        self.ij = imagej.init(
             ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(
                 str
             ),
             mode=settings["jvm_mode"].get(str),
             add_legacy=settings["include_imagej_legacy"].get(bool),
         )
-        log_debug(f"Initialized at version {_ij.getVersion()}")
+        # Validate PyImageJ
+        self._validate_imagej()
+        # Log initialization
+        log_debug(f"Initialized at version {self.ij.getVersion()}")
 
-        # Ensure that the ImageJ instance is compatible with napari-imagej
-        _check_java_component_validity()
+    def _validate_imagej(self):
+        """
+        Helper function to ensure minimum requirements on java component versions
+        """
+        # If we want to require a minimum version for a java component, we need to
+        # be able to find our current version. We do that by querying a Java class
+        # within that component. Thus for each component-version pair, we also need
+        # a class to query
+        component_requirements: List[Tuple[JClass, str, str]] = [
+            (jc.Dataset, "net.imagej:imagej-common", "0.35.0"),
+            (jc.Module, "org.scijava:scijava-common", "2.89.0"),
+            (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
+        ]
 
-        # Return the ImageJ gateway
-        return _ij
-    except Exception as exc:
-        for handler in STARTUP_ERROR_HANDLERS:
-            handler(exc)
+        # Find version that violate the minimum
+        violations = []
+        for cls, component, min_version in component_requirements:
+            # Get component's version
+            component_version = get_version(cls)
+            # Compare
+            if not is_version_at_least(component_version, min_version):
+                violations.append(
+                    f"{component} : {min_version} (Installed: {component_version})"
+                )
 
-
-def _check_java_component_validity():
-    """
-    Helper function to ensure minimum requirements on java component versions
-    """
-    # If we want to require a minimum version for a java component, we need to
-    # be able to find our current version. We do that by querying a Java class
-    # within that component. Thus for each component-version pair, we also need
-    # a class to query
-    component_requirements: List[Tuple[JClass, str, str]] = [
-        (jc.Dataset, "net.imagej:imagej-common", "0.35.0"),
-        (jc.Module, "org.scijava:scijava-common", "2.89.0"),
-        (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
-    ]
-
-    # Find version that violate the minimum
-    violations = []
-    for cls, component, min_version in component_requirements:
-        # Get component's version
-        component_version = get_version(cls)
-        # Compare
-        if not is_version_at_least(component_version, min_version):
-            violations.append(
-                f"{component} : {min_version} (Installed: {component_version})"
+        # If there are version requirements, throw an error
+        if len(violations):
+            failure_str = "napari-imagej requires the following component versions:"
+            violations.insert(0, failure_str)
+            failure_str = "\n\t".join(violations)
+            failure_str += (
+                "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
             )
-
-    # If there are version requirements, throw an error
-    if len(violations):
-        failure_str = "napari-imagej requires the following component versions:"
-        violations.insert(0, failure_str)
-        failure_str = "\n\t".join(violations)
-        failure_str = (
-            failure_str
-            + "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
-        )
-        raise RuntimeError(failure_str)
+            raise RuntimeError(failure_str)
 
 
-init_lock = Lock()
-_ij_future: AsyncResult = None
-
-
-def ij_init() -> AsyncResult:
+class ImageJ_Callbacks(QObject):
     """
-    Initializes the singular ImageJ2 instance.
-    This function returns BEFORE the ImageJ2 instance has been created!
-    To block until the ImageJ2 instance is ready, use ij() instead.
-
-    This function will only create ONE ImageJ2 instance. This ImageJ2 instance
-    will be created in the first call to this function. Later calls to the function
-    will return the same AsyncResult generated from the first call to the function.
-    This function also tries to be thread-safe.
-
-    :return: An AsyncResult that will be populated with the ImageJ2
-    instance once it has been created.
+    An access point for registering ImageJ-related callbacks.
     """
-    global _ij_future
-    if not _ij_future:
-        with init_lock:
-            if not _ij_future:
-                # There is a good debate to be had whether to multithread or
-                # multiprocess. From what I (Gabe) have read, it seems that threading
-                # is preferrable for network / IO bottlenecking, while multiprocessing
-                # is preferrable for CPU bottlenecking. While multiprocessing might
-                # theoretically be a better choice for JVM startup, there are two
-                # reasons we instead choose multithreading:
-                # 1) Multiprocessing is not supported without additional libraries on
-                # MacOS. See
-                # https://docs.python.org/3/library/multiprocessing.html#introduction
-                # 2) JPype items cannot (currently) be passed between processes due to
-                # an issue with pickling. See
-                # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
-                threadpool: ThreadPool = ThreadPool(processes=1)
-                # ij_future is not very pythonic, but we are dealing with a Java Object
-                # and it better conveys the object's meaning than e.g. ij_result
-                _ij_future = threadpool.apply_async(func=_imagej_init)
-    return _ij_future
+
+    # Qt Signals - should not be called directly!
+    _startup_error: Signal = Signal(Exception)
+    _startup_complete: Signal = Signal()
+
+    # -- CALLBACK-ACCEPTING FUNCTIONS -- #
+
+    def when_ij_ready(self, func: Callable[[], None]):
+        """
+        Registers behavior (encapsulated as a function) that should be called
+        when ImageJ is ready to be used.
+
+        If ImageJ has not yet been initialized, the passed function is registered
+        as a callback.
+
+        If ImageJ is ready, the passed function is executed immediately.
+
+        :param func: The behavior to execute
+        """
+        if not initializer.isFinished():
+            self._startup_complete.connect(func)
+        else:
+            func()
+
+    def when_initialization_fails(self, func: Callable[[Exception], None]):
+        """
+        Registers behavior (encapsulated as a function) that should be called
+        when ImageJ fails to initialize.
+
+        If ImageJ has not yet been initialized, the passed function is registered
+        as a callback.
+
+        If ImageJ setup has already failed, this function does nothing
+
+        :param func: The behavior to execute
+        """
+        self._startup_error.connect(func)
+
+
+# -- SINGLETON INSTANCES -- #
+
+initializer = ImageJInitializer()
+java_signals = ImageJ_Callbacks()
 
 
 class JavaClasses(object):

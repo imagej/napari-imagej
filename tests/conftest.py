@@ -8,7 +8,7 @@ import pytest
 from napari import Viewer
 
 import napari_imagej
-from napari_imagej.java import ensure_jvm_started, ij_init
+from napari_imagej.java import ensure_jvm_started
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -48,7 +48,6 @@ def preserve_user_settings():
 @pytest.fixture(autouse=True)
 def launch_imagej():
     """Fixture ensuring that ImageJ is running before any tests run"""
-    ij_init()
     ensure_jvm_started()
     yield
 
@@ -72,6 +71,7 @@ def imagej_widget(viewer) -> Generator[NapariImageJWidget, None, None]:
     """Fixture providing an ImageJWidget"""
     # Create widget
     ij_widget: NapariImageJWidget = NapariImageJWidget(viewer)
+    ij_widget.ij_post_init_setup.wait()
 
     yield ij_widget
 
