@@ -1,4 +1,10 @@
-# Use this file to set up napari and napari-imagej:
+# Use this file to set up napari and napari-imagej.
+#
+# First, install mambaforge:
+#
+#   https://github.com/conda-forge/miniforge#mambaforge
+#
+# Then run:
 #
 #   mamba env create
 #   conda activate napari-imagej
