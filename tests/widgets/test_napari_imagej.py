@@ -160,3 +160,12 @@ def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asser
             searcher_item._searcher
         )
     )
+
+
+def test_widget_finalization(ij, imagej_widget: NapariImageJWidget, asserter):
+    # Ensure that we have the handle on a non-null SearchOperation
+    assert imagej_widget.result_tree._searchOperation is not None
+
+    # Ensure that all Searchers are represented in the tree with a top level item
+    numSearchers = len(ij.plugin().getPluginsOfType(jc.Searcher))
+    asserter(lambda: imagej_widget.result_tree.topLevelItemCount() == numSearchers)
