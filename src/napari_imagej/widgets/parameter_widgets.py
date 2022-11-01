@@ -3,9 +3,11 @@ A collection of QWidgets, each designed to conveniently harvest a particular inp
 They should align with a SciJava ModuleItem that satisfies some set of conditions.
 """
 import importlib
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, List
+from typing import Any, Dict, List
 
+from jpype import JArray, JClass, JInt, JLong
 from magicgui.types import ChoicesType
 from magicgui.widgets import (
     CheckBox,
@@ -13,8 +15,10 @@ from magicgui.widgets import (
     Container,
     FileEdit,
     FloatSpinBox,
+    ListEdit,
     PushButton,
     SpinBox,
+    Widget,
     request_values,
 )
 from napari import current_viewer
@@ -22,6 +26,10 @@ from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 
 from napari_imagej.java import jc
+
+
+def widget_supported_java_types() -> List[JClass]:
+    return [jc.Shape]
 
 
 @lru_cache(maxsize=None)
@@ -313,3 +321,142 @@ class DirectoryWidget(FileEdit):
     def __init__(self, **kwargs):
         kwargs["mode"] = "d"
         super().__init__(**kwargs)
+
+
+# -- SHAPE WIDGETS -- #
+
+
+@dataclass
+class ShapeParam:
+    """Keeps track of a shape parameter"""
+
+    name: str
+    widget_type: Widget
+    j_type: JClass = None
+    default: Any = None
+
+
+@dataclass
+class ShapeData:
+    """Keeps track of shape params"""
+
+    name: str
+    j_class: JClass
+    params: List[ShapeParam]
+
+
+class ShapeWidget(Container):
+    """
+    Widget used to obtain a net.imglib2.algorithm.neighborhood.Shape.
+    """
+
+    def __init__(
+        self,
+        choices: ChoicesType = None,
+        nullable=False,
+        **kwargs,
+    ):
+        value = kwargs.pop("value", None)
+        if value is None:
+            value = ""
+        if choices is None:
+            choices = list(self.shape_types.keys())
+
+        self.layer_select = ComboBox(choices=choices, nullable=nullable, **kwargs)
+        self.shape_options = Container()
+        self._update_options(choices[0])
+        self.layer_select.changed.connect(self._update_options)
+
+        kwargs["widgets"] = [self.layer_select, self.shape_options]
+        kwargs["labels"] = False
+        kwargs["layout"] = "horizontal"
+        super().__init__(**kwargs)
+
+    def _update_options(self, choice):
+        self.shape_options.clear()
+        for p in self.shape_types[choice].params:
+            if p.default:
+                wdgt = p.widget_type(name=p.name, value=p.default)
+            else:
+                wdgt = p.widget_type(name=p.name)
+            self.shape_options.append(wdgt)
+
+    def _param(self, i, p: ShapeParam):
+        wdgt = self.shape_options[i]
+        if p.j_type:
+            return p.j_type(wdgt.value)
+        return wdgt.value
+
+    @property
+    def value(self) -> Any:
+        choice = self.shape_types[self.layer_select.value]
+        cls = choice.j_class
+        params = [self._param(i, p) for i, p in enumerate(choice.params)]
+        return cls(*params)
+
+    @property
+    def shape_types(self) -> Dict[str, ShapeData]:
+        types = [
+            ShapeData(
+                "Centered Rectangle",
+                jc.CenteredRectangleShape,
+                [
+                    ShapeParam("span", ListEdit, JArray(JInt)),
+                    ShapeParam("skipCenter", CheckBox),
+                ],
+            ),
+            ShapeData(
+                "Diamond",
+                jc.DiamondShape,
+                [
+                    ShapeParam("radius", SpinBox),
+                ],
+            ),
+            ShapeData(
+                "Diamond Tips",
+                jc.DiamondTipsShape,
+                [
+                    ShapeParam("radius", SpinBox),
+                ],
+            ),
+            ShapeData(
+                "Horizontal Line",
+                jc.HorizontalLineShape,
+                [
+                    ShapeParam("span", SpinBox, JLong),
+                    ShapeParam("dimension", SpinBox, JInt),
+                    ShapeParam("skip center", CheckBox),
+                ],
+            ),
+            ShapeData(
+                "Hypersphere",
+                jc.HyperSphereShape,
+                [
+                    ShapeParam("radius", SpinBox, JLong),
+                ],
+            ),
+            ShapeData(
+                "Pair of Points",
+                jc.PairOfPointsShape,
+                [
+                    ShapeParam("offset", ListEdit, JArray(JLong)),
+                ],
+            ),
+            ShapeData(
+                "Periodic Line",
+                jc.PeriodicLineShape,
+                [
+                    ShapeParam("span", SpinBox, JLong),
+                    ShapeParam("increments", ListEdit, JArray(JInt)),
+                ],
+            ),
+            ShapeData(
+                "Rectangle",
+                jc.RectangleShape,
+                [
+                    ShapeParam("span", SpinBox, JInt),
+                    ShapeParam("skip center", CheckBox),
+                ],
+            ),
+        ]
+        return {c.name: c for c in types}

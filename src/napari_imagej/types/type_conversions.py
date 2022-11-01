@@ -18,12 +18,14 @@ Notable functions included in the module:
 """
 from typing import Callable, List, Optional, Tuple, Type
 
+from jpype import JObject
 from scyjava import Priority
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.enum_likes import enum_like
 from napari_imagej.types.enums import py_enum_for
 from napari_imagej.types.mappings import ptypes
+from napari_imagej.widgets.parameter_widgets import widget_supported_java_types
 
 # List of Module Item Converters, along with their priority
 _MODULE_ITEM_CONVERTERS: List[Tuple[Callable, int]] = []
@@ -90,6 +92,13 @@ def enum_converter(item: "jc.ModuleItem"):
     if not isinstance(t, jc.Class):
         t = t.class_
     return _optional_of(py_enum_for(t), item)
+
+
+@module_item_converter()
+def widget_enabled_java_types(item: "jc.ModuleItem"):
+    if item.isInput() and not item.isOutput():
+        if item.getType() in widget_supported_java_types():
+            return JObject
 
 
 def _checkerUsingFunc(

@@ -495,6 +495,44 @@ class JavaClasses(object):
     def RealType(self):
         return "net.imglib2.type.numeric.RealType"
 
+    # ImgLib2-algorithm Types
+
+    @blocking_import
+    def CenteredRectangleShape(self):
+        return "net.imglib2.algorithm.neighborhood.CenteredRectangleShape"
+
+    @blocking_import
+    def DiamondShape(self):
+        return "net.imglib2.algorithm.neighborhood.DiamondShape"
+
+    @blocking_import
+    def DiamondTipsShape(self):
+        return "net.imglib2.algorithm.neighborhood.DiamondTipsShape"
+
+    @blocking_import
+    def HorizontalLineShape(self):
+        return "net.imglib2.algorithm.neighborhood.HorizontalLineShape"
+
+    @blocking_import
+    def HyperSphereShape(self):
+        return "net.imglib2.algorithm.neighborhood.HyperSphereShape"
+
+    @blocking_import
+    def PairOfPointsShape(self):
+        return "net.imglib2.algorithm.neighborhood.PairOfPointsShape"
+
+    @blocking_import
+    def PeriodicLineShape(self):
+        return "net.imglib2.algorithm.neighborhood.PeriodicLineShape"
+
+    @blocking_import
+    def RectangleShape(self):
+        return "net.imglib2.algorithm.neighborhood.RectangleShape"
+
+    @blocking_import
+    def Shape(self):
+        return "net.imglib2.algorithm.neighborhood.Shape"
+
     # ImgLib2-roi Types
 
     @blocking_import
