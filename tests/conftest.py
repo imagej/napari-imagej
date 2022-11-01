@@ -8,9 +8,28 @@ import pytest
 from napari import Viewer
 
 import napari_imagej
-from napari_imagej.java import ensure_jvm_started, ij_init
+from napari_imagej.java import init_ij
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
+
+
+@pytest.fixture()
+def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
+    """Wraps qtbot.waitUntil with a standardized timeout"""
+
+    # Determine timeout length
+    if "NAPARI_IMAGEJ_TEST_TIMEOUT" in os.environ:
+        timeout = int(os.environ["NAPARI_IMAGEJ_TEST_TIMEOUT"])
+    else:
+        timeout = 5000  # 5 seconds
+
+    # Define timeout function
+    def assertFunc(func: Callable[[], bool]):
+        # Let things run for up to a minute
+        qtbot.waitUntil(func, timeout=timeout)
+
+    # Return the timeout function
+    return assertFunc
 
 
 @pytest.fixture(autouse=True)
@@ -48,8 +67,7 @@ def preserve_user_settings():
 @pytest.fixture(autouse=True)
 def launch_imagej():
     """Fixture ensuring that ImageJ is running before any tests run"""
-    ij_init()
-    ensure_jvm_started()
+    init_ij()
     yield
 
 
@@ -68,10 +86,14 @@ def viewer(make_napari_viewer) -> Generator[Viewer, None, None]:
 
 
 @pytest.fixture
-def imagej_widget(viewer) -> Generator[NapariImageJWidget, None, None]:
+def imagej_widget(viewer, asserter) -> Generator[NapariImageJWidget, None, None]:
     """Fixture providing an ImageJWidget"""
     # Create widget
     ij_widget: NapariImageJWidget = NapariImageJWidget(viewer)
+    # Wait for
+    finalization = ij_widget.ij_post_init_setup
+    asserter(lambda: finalization.isRunning() or finalization.isFinished())
+    ij_widget.wait_for_finalization()
 
     yield ij_widget
 
@@ -115,22 +137,3 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
-
-
-@pytest.fixture()
-def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
-    """Wraps qtbot.waitUntil with a standardized timeout"""
-
-    # Determine timeout length
-    if "NAPARI_IMAGEJ_TEST_TIMEOUT" in os.environ:
-        timeout = int(os.environ["NAPARI_IMAGEJ_TEST_TIMEOUT"])
-    else:
-        timeout = 5000  # 5 seconds
-
-    # Define timeout function
-    def assertFunc(func: Callable[[], bool]):
-        # Let things run for up to a minute
-        qtbot.waitUntil(func, timeout=timeout)
-
-    # Return the timeout function
-    return assertFunc

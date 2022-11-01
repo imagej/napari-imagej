@@ -10,7 +10,7 @@ from napari_imagej.widgets.result_tree import (
     SearchResultTree,
     SearchResultTreeItem,
 )
-from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult, jc
+from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult
 from tests.widgets.widget_utils import _populate_tree
 
 
@@ -24,20 +24,6 @@ def fixed_tree(ij, asserter):
     """Creates a "fake" ResultsTree with deterministic results"""
     # Create a default SearchResultTree
     tree = SearchResultTree()
-    tree.wait_for_setup()
-    # Waits until all Searchers available
-    scijava_searchers = ij.plugin().createInstancesOfType(jc.Searcher)
-    try:
-        asserter(lambda: tree.topLevelItemCount() == len(scijava_searchers))
-    except Exception:
-        # HACK: Sometimes (especially on CI), not all Searchers make it into
-        # the tree.
-        # For our purposes of removing those items, though, we don't care how
-        # many make it in. All that matters is that no more will be added.
-        # So, if we timeout, we assume no more will be added, and carry on.
-        pass
-    # Remove all SciJava Searchers, use our own ones instead
-    tree.invisibleRootItem().takeChildren()
     _populate_tree(tree, asserter)
 
     return tree

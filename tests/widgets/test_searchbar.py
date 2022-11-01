@@ -3,13 +3,12 @@ A module testing napari_imagej.widgets.searchbar
 """
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit
 
-from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 from napari_imagej.widgets.searchbar import JLineEdit, JVMEnabledSearchbar
 
 
-def test_searchbar_widget_layout(imagej_widget: NapariImageJWidget):
+def test_searchbar_widget_layout():
     """Tests the number and expected order of search widget children"""
-    searchbar: JVMEnabledSearchbar = imagej_widget.findChild(JVMEnabledSearchbar)
+    searchbar: JVMEnabledSearchbar = JVMEnabledSearchbar()
     subwidgets = searchbar.children()
     assert len(subwidgets) == 2
     assert isinstance(subwidgets[0], QHBoxLayout)

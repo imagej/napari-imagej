@@ -2,26 +2,24 @@
 A module encapsulating access to Java functionality.
 
 Notable functions included in the module:
-    * ij_init()
-        - used to begin the creation of the ImageJ instance.
-    * ensure_jvm_started()
-        - used to block execution until the ImageJ instance is ready
+    * init_ij()
+        - used to create the ImageJ instance.
+    * init_ij_async()
+        - used to asynchronously create the ImageJ instance.
     * ij()
-        - used to access the ImageJ instance
-    * log_debug()
-        - used for logging in a standardized way
+        - used to access the ImageJ instance. Calls init_ij() if necessary.
 
 Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-from multiprocessing.pool import AsyncResult, ThreadPool
 from threading import Lock
-from typing import Callable
+from typing import Callable, List, Tuple
 
 import imagej
 from jpype import JClass
-from scyjava import config, jimport, jvm_started
+from qtpy.QtCore import QObject, QThread, Signal
+from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
@@ -29,91 +27,186 @@ from napari_imagej.utilities.logging import log_debug
 # -- ImageJ API -- #
 
 
+def init_ij() -> None:
+    """
+    Starts creating our ImageJ instance, and waits until it is ready.
+    """
+    init_ij_async()
+    initializer.wait()
+
+
+def init_ij_async():
+    """
+    Starts creating our ImageJ instance.
+    """
+    initializer.start()
+
+
 def ij():
     """
     Returns the ImageJ instance.
     If it isn't ready yet, blocks until it is ready.
     """
-    return ij_init().get()
+    init_ij()
+    return initializer.ij
 
 
-def ensure_jvm_started() -> None:
+class ImageJInitializer(QThread):
     """
-    Blocks until the ImageJ instance is ready.
+    A QThread responsible for initializing ImageJ
     """
-    ij_init().wait()
+
+    # Tools used to ensure this QThread only initializes ImageJ once.
+    started: bool = False
+    lock: Lock = Lock()
+    # Used as a placeholder for the ImageJ instance
+    ij = None
+
+    def run(self):
+        """
+        Main QThread loop.
+
+        Well, okay, it isn't really a loop.
+
+        Responsible for ensuring that initialize is only called once.
+        """
+        # Double-checked lock
+        if not self.started:
+            with self.lock:
+                if not self.started:
+                    self.started = True
+                    # Try to initialize ImageJ
+                    try:
+                        self.initialize()
+                        # Report completion
+                        java_signals._startup_complete.emit()
+                    # We failed!
+                    except Exception as exc:
+                        # Report failure
+                        java_signals._startup_error.emit(exc)
+
+    def initialize(self):
+        """
+        Creates the ImageJ instance
+        """
+        # Initialize ImageJ
+        log_debug("Initializing ImageJ2")
+
+        # -- IMAGEJ CONFIG -- #
+
+        # ScyJava configuration
+        # TEMP: Avoid issues caused by
+        # https://github.com/imagej/pyimagej/issues/160
+        config.add_repositories(
+            {"scijava.public": "https://maven.scijava.org/content/groups/public"}
+        )
+        config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+
+        # PyImageJ configuration
+        ij_settings = {}
+        ij_settings["ij_dir_or_version_or_endpoint"] = settings[
+            "imagej_directory_or_endpoint"
+        ].get(str)
+        ij_settings["mode"] = settings["jvm_mode"].get(str)
+        ij_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+
+        # napari-imagej configuration
+        from napari_imagej.types.converters import install_converters
+
+        install_converters()
+
+        log_debug("Completed JVM Configuration")
+
+        # Launch PyImageJ
+        self.ij = imagej.init(**ij_settings)
+        # Validate PyImageJ
+        self._validate_imagej()
+        # Log initialization
+        log_debug(f"Initialized at version {self.ij.getVersion()}")
+
+    def _validate_imagej(self):
+        """
+        Helper function to ensure minimum requirements on java component versions
+        """
+        # If we want to require a minimum version for a java component, we need to
+        # be able to find our current version. We do that by querying a Java class
+        # within that component. Thus for each component-version pair, we also need
+        # a class to query
+        component_requirements: List[Tuple[JClass, str, str]] = [
+            (jc.Dataset, "net.imagej:imagej-common", "0.35.0"),
+            (jc.Module, "org.scijava:scijava-common", "2.89.0"),
+            (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
+        ]
+
+        # Find version that violate the minimum
+        violations = []
+        for cls, component, min_version in component_requirements:
+            # Get component's version
+            component_version = get_version(cls)
+            # Compare
+            if not is_version_at_least(component_version, min_version):
+                violations.append(
+                    f"{component} : {min_version} (Installed: {component_version})"
+                )
+
+        # If there are version requirements, throw an error
+        if len(violations):
+            failure_str = "napari-imagej requires the following component versions:"
+            violations.insert(0, failure_str)
+            failure_str = "\n\t".join(violations)
+            failure_str += (
+                "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
+            )
+            raise RuntimeError(failure_str)
 
 
-def _imagej_init():
-    # Initialize ImageJ
-    log_debug("Initializing ImageJ2")
-
-    # -- IMAGEJ CONFIG -- #
-
-    # TEMP: Avoid issues caused by
-    # https://github.com/imagej/pyimagej/issues/160
-    config.add_repositories(
-        {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-    )
-    config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
-    log_debug("Completed JVM Configuration")
-
-    # Add converters
-    from napari_imagej.types.converters import install_converters
-
-    install_converters()
-
-    # Launch PyImageJ
-    _ij = imagej.init(
-        ij_dir_or_version_or_endpoint=settings["imagej_directory_or_endpoint"].get(str),
-        mode=settings["jvm_mode"].get(str),
-        add_legacy=settings["include_imagej_legacy"].get(bool),
-    )
-    log_debug(f"Initialized at version {_ij.getVersion()}")
-
-    # Return the ImageJ gateway
-    return _ij
-
-
-init_lock = Lock()
-_ij_future: AsyncResult = None
-
-
-def ij_init() -> AsyncResult:
+class ImageJ_Callbacks(QObject):
     """
-    Initializes the singular ImageJ2 instance.
-    This function returns BEFORE the ImageJ2 instance has been created!
-    To block until the ImageJ2 instance is ready, use ij() instead.
-
-    This function will only create ONE ImageJ2 instance. This ImageJ2 instance
-    will be created in the first call to this function. Later calls to the function
-    will return the same AsyncResult generated from the first call to the function.
-    This function also tries to be thread-safe.
-
-    :return: An AsyncResult that will be populated with the ImageJ2
-    instance once it has been created.
+    An access point for registering ImageJ-related callbacks.
     """
-    global _ij_future
-    if not _ij_future:
-        with init_lock:
-            if not _ij_future:
-                # There is a good debate to be had whether to multithread or
-                # multiprocess. From what I (Gabe) have read, it seems that threading
-                # is preferrable for network / IO bottlenecking, while multiprocessing
-                # is preferrable for CPU bottlenecking. While multiprocessing might
-                # theoretically be a better choice for JVM startup, there are two
-                # reasons we instead choose multithreading:
-                # 1) Multiprocessing is not supported without additional libraries on
-                # MacOS. See
-                # https://docs.python.org/3/library/multiprocessing.html#introduction
-                # 2) JPype items cannot (currently) be passed between processes due to
-                # an issue with pickling. See
-                # https://github.com/imagej/napari-imagej/issues/27#issuecomment-1130102033
-                threadpool: ThreadPool = ThreadPool(processes=1)
-                # ij_future is not very pythonic, but we are dealing with a Java Object
-                # and it better conveys the object's meaning than e.g. ij_result
-                _ij_future = threadpool.apply_async(func=_imagej_init)
-    return _ij_future
+
+    # Qt Signals - should not be called directly!
+    _startup_error: Signal = Signal(Exception)
+    _startup_complete: Signal = Signal()
+
+    # -- CALLBACK-ACCEPTING FUNCTIONS -- #
+
+    def when_ij_ready(self, func: Callable[[], None]):
+        """
+        Registers behavior (encapsulated as a function) that should be called
+        when ImageJ is ready to be used.
+
+        If ImageJ has not yet been initialized, the passed function is registered
+        as a callback.
+
+        If ImageJ is ready, the passed function is executed immediately.
+
+        :param func: The behavior to execute
+        """
+        if not initializer.isFinished():
+            self._startup_complete.connect(func)
+        else:
+            func()
+
+    def when_initialization_fails(self, func: Callable[[Exception], None]):
+        """
+        Registers behavior (encapsulated as a function) that should be called
+        when ImageJ fails to initialize.
+
+        If ImageJ has not yet been initialized, the passed function is registered
+        as a callback.
+
+        If ImageJ setup has already failed, the passed function will not be called.
+
+        :param func: The behavior to execute
+        """
+        self._startup_error.connect(func)
+
+
+# -- SINGLETON INSTANCES -- #
+
+initializer = ImageJInitializer()
+java_signals = ImageJ_Callbacks()
 
 
 class JavaClasses(object):
