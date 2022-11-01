@@ -4,6 +4,7 @@ A module testing napari_imagej.types.type_conversions
 from typing import List
 
 import pytest
+from jpype import JObject
 
 from napari_imagej.types.enum_likes import OutOfBoundsFactory
 from napari_imagej.types.mappings import ptypes
@@ -95,3 +96,8 @@ def test_python_type_of_enum_like_IO():
 def test_enum():
     p_type = _module_utils.python_type_of(DummyModuleItem(jtype=jc.ItemIO))
     assert p_type.__name__ == "ItemIO"
+
+
+def test_shape():
+    p_type = _module_utils.python_type_of(DummyModuleItem(jtype=jc.Shape))
+    assert p_type == JObject

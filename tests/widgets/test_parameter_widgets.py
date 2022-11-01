@@ -7,7 +7,14 @@ import napari
 import numpy as np
 import pytest
 from magicgui.types import FileDialogMode
-from magicgui.widgets import ComboBox, PushButton
+from magicgui.widgets import (
+    CheckBox,
+    ComboBox,
+    Container,
+    ListEdit,
+    PushButton,
+    SpinBox,
+)
 from napari import current_viewer
 from napari.layers import Image
 
@@ -16,6 +23,7 @@ from napari_imagej.widgets.parameter_widgets import (
     MutableOutputWidget,
     OpenFileWidget,
     SaveFileWidget,
+    ShapeWidget,
     numeric_type_widget_for,
 )
 from tests.utils import jc
@@ -200,3 +208,150 @@ def test_open_file_widget():
 def test_directory_file_widget():
     widget = DirectoryWidget()
     assert widget.mode == FileDialogMode.EXISTING_DIRECTORY
+
+
+def test_shape_widget_regression():
+    widget = ShapeWidget()
+    # Assert widget type
+    assert isinstance(widget, Container)
+    # Assert that widget contains a dropdown and shape options
+    assert len(widget) == 2
+    assert isinstance(widget[0], ComboBox)
+    assert isinstance(widget[1], Container)
+    # Assert starting value
+    assert widget[0].value == "Centered Rectangle"
+
+
+def test_shape_widget_centered_rectangle():
+    # Choose a Centered Rectangle
+    widget = ShapeWidget()
+    widget[0].value = "Centered Rectangle"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 2
+    assert isinstance(widget.shape_options[0], ListEdit)
+    assert isinstance(widget.shape_options[1], CheckBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == [1, 1]
+    assert not widget.shape_options[1].value
+    # Assert the value returned is a CenteredRectangleShape
+    value = widget.value
+    assert isinstance(value, jc.CenteredRectangleShape)
+    assert np.array_equal(value.getSpan(), np.ones((2)))
+    assert not value.isSkippingCenter()
+
+
+def test_shape_widget_diamond():
+    # Choose a Diamond
+    widget = ShapeWidget()
+    widget[0].value = "Diamond"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 1
+    assert isinstance(widget.shape_options[0], SpinBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    # Assert the value returned is a DiamondShape
+    value = widget.value
+    assert isinstance(value, jc.DiamondShape)
+    assert value.getRadius() == 1
+
+
+def test_shape_widget_diamond_tips():
+    # Choose a DiamondTips
+    widget = ShapeWidget()
+    widget[0].value = "Diamond Tips"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 1
+    assert isinstance(widget.shape_options[0], SpinBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    # Assert the value returned is a DiamondTipsShape
+    value = widget.value
+    assert isinstance(value, jc.DiamondTipsShape)
+    assert value.getRadius() == 1
+
+
+def test_shape_widget_horizontal_line():
+    # Choose a Horizontal Line
+    widget = ShapeWidget()
+    widget[0].value = "Horizontal Line"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 3
+    assert isinstance(widget.shape_options[0], SpinBox)
+    assert isinstance(widget.shape_options[1], SpinBox)
+    assert isinstance(widget.shape_options[2], CheckBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    assert widget.shape_options[1].value == 0
+    assert not widget.shape_options[2].value
+    # Assert the value returned is a HorizontalLineShape
+    value = widget.value
+    assert isinstance(value, jc.HorizontalLineShape)
+    assert value.getSpan() == 1
+    assert value.getLineDimension() == 0
+    assert not value.isSkippingCenter()
+
+
+def test_shape_widget_hypersphere():
+    # Choose a Hypersphere
+    widget = ShapeWidget()
+    widget[0].value = "Hypersphere"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 1
+    assert isinstance(widget.shape_options[0], SpinBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    # Assert the value returned is a HyperSphereShape
+    value = widget.value
+    assert isinstance(value, jc.HyperSphereShape)
+    assert value.getRadius() == 1
+
+
+def test_shape_widget_pair_of_points():
+    # Choose a Pair of Points
+    widget = ShapeWidget()
+    widget[0].value = "Pair of Points"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 1
+    assert isinstance(widget.shape_options[0], ListEdit)
+    # Assert starting values
+    assert widget.shape_options[0].value == [1, 1]
+    # Assert the value returned is a PairofPointsShape
+    value = widget.value
+    assert isinstance(value, jc.PairOfPointsShape)
+    assert np.array_equal(value.getOffset(), np.ones((2)))
+
+
+def test_shape_widget_periodic_line():
+    # Choose a Periodic Line
+    widget = ShapeWidget()
+    widget[0].value = "Periodic Line"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 2
+    assert isinstance(widget.shape_options[0], SpinBox)
+    assert isinstance(widget.shape_options[1], ListEdit)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    assert widget.shape_options[1].value == [1, 1]
+    # Assert the value returned is a PeriodicLineShape
+    value = widget.value
+    assert isinstance(value, jc.PeriodicLineShape)
+    assert value.getSpan() == 1
+    assert np.array_equal(value.getIncrements(), np.ones((2)))
+
+
+def test_shape_widget_rectangle():
+    # Choose a Rectangle
+    widget = ShapeWidget()
+    widget[0].value = "Rectangle"
+    # Assert parameter option widgets
+    assert len(widget.shape_options) == 2
+    assert isinstance(widget.shape_options[0], SpinBox)
+    assert isinstance(widget.shape_options[1], CheckBox)
+    # Assert starting values
+    assert widget.shape_options[0].value == 1
+    assert not widget.shape_options[1].value
+    # Assert the value returned is a RectangleShape
+    value = widget.value
+    assert isinstance(value, jc.RectangleShape)
+    assert value.getSpan() == 1
+    assert not value.isSkippingCenter()

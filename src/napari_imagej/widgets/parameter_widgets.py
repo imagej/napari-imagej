@@ -401,7 +401,7 @@ class ShapeWidget(Container):
                 "Centered Rectangle",
                 jc.CenteredRectangleShape,
                 [
-                    ShapeParam("span", ListEdit, JArray(JInt)),
+                    ShapeParam("span", ListEdit, JArray(JInt), default=[1, 1]),
                     ShapeParam("skipCenter", CheckBox),
                 ],
             ),
@@ -409,22 +409,22 @@ class ShapeWidget(Container):
                 "Diamond",
                 jc.DiamondShape,
                 [
-                    ShapeParam("radius", SpinBox),
+                    ShapeParam("radius", SpinBox, default=1),
                 ],
             ),
             ShapeData(
                 "Diamond Tips",
                 jc.DiamondTipsShape,
                 [
-                    ShapeParam("radius", SpinBox),
+                    ShapeParam("radius", SpinBox, default=1),
                 ],
             ),
             ShapeData(
                 "Horizontal Line",
                 jc.HorizontalLineShape,
                 [
-                    ShapeParam("span", SpinBox, JLong),
-                    ShapeParam("dimension", SpinBox, JInt),
+                    ShapeParam("span", SpinBox, JLong, default=1),
+                    ShapeParam("dimension", SpinBox, JInt, default=0),
                     ShapeParam("skip center", CheckBox),
                 ],
             ),
@@ -432,29 +432,29 @@ class ShapeWidget(Container):
                 "Hypersphere",
                 jc.HyperSphereShape,
                 [
-                    ShapeParam("radius", SpinBox, JLong),
+                    ShapeParam("radius", SpinBox, JLong, default=1),
                 ],
             ),
             ShapeData(
                 "Pair of Points",
                 jc.PairOfPointsShape,
                 [
-                    ShapeParam("offset", ListEdit, JArray(JLong)),
+                    ShapeParam("offset", ListEdit, JArray(JLong), default=[1, 1]),
                 ],
             ),
             ShapeData(
                 "Periodic Line",
                 jc.PeriodicLineShape,
                 [
-                    ShapeParam("span", SpinBox, JLong),
-                    ShapeParam("increments", ListEdit, JArray(JInt)),
+                    ShapeParam("span", SpinBox, JLong, default=1),
+                    ShapeParam("increments", ListEdit, JArray(JInt), default=[1, 1]),
                 ],
             ),
             ShapeData(
                 "Rectangle",
                 jc.RectangleShape,
                 [
-                    ShapeParam("span", SpinBox, JInt),
+                    ShapeParam("span", SpinBox, JInt, default=1),
                     ShapeParam("skip center", CheckBox),
                 ],
             ),
