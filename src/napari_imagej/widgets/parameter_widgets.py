@@ -372,6 +372,8 @@ class ShapeWidget(Container):
         nullable=False,
         **kwargs,
     ):
+        # Remove the value kwarg - it shouldn't be passed on
+        kwargs.pop("value", None)
         # Set choices as the names of all known Shape implementations
         if choices is None:
             choices = list(self.shape_types.keys())
