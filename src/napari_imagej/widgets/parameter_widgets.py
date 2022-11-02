@@ -29,6 +29,12 @@ from napari_imagej.java import jc
 
 
 def widget_supported_java_types() -> List[JClass]:
+    """
+    Returns a List of the JAVA types that, for various reasons,
+    have dedicated magicgui widgets.
+
+    Usually, this is due to the absence of a corresponding Python type.
+    """
     return [jc.Shape]
 
 
@@ -327,22 +333,32 @@ class DirectoryWidget(FileEdit):
 
 
 @dataclass
-class ShapeParam:
-    """Keeps track of a shape parameter"""
+class ShapeParameter:
+    """
+    Describes one input to a Shape implementation,
+    and how that input should be obtained
+    """
 
+    # The name of the parameter
     name: str
+    # The magicgui Widget type used to harvest this input
     widget_type: Widget
+    # The parameter's corresponding Java class
     j_type: JClass = None
+    # The starting value for widget_type
     default: Any = None
 
 
 @dataclass
 class ShapeData:
-    """Keeps track of shape params"""
+    """Describes the data necessary to contruct a Shape implementation"""
 
+    # The user-facing name of the shape implementation
     name: str
+    # The implementation's Java class
     j_class: JClass
-    params: List[ShapeParam]
+    # The constructor parameters
+    params: List[ShapeParameter]
 
 
 class ShapeWidget(Container):
@@ -356,32 +372,49 @@ class ShapeWidget(Container):
         nullable=False,
         **kwargs,
     ):
-        value = kwargs.pop("value", None)
-        if value is None:
-            value = ""
+        # Set choices as the names of all known Shape implementations
         if choices is None:
             choices = list(self.shape_types.keys())
-
-        self.layer_select = ComboBox(choices=choices, nullable=nullable, **kwargs)
+        # Create a ComboBox with the impl names as options
+        self.shape_select = ComboBox(choices=choices, nullable=nullable, **kwargs)
+        # Create a container to house the pararm widgets for the selected impl
         self.shape_options = Container()
-        self._update_options(choices[0])
-        self.layer_select.changed.connect(self._update_options)
-
-        kwargs["widgets"] = [self.layer_select, self.shape_options]
+        # Form this widget
+        kwargs["widgets"] = [self.shape_select, self.shape_options]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
         super().__init__(**kwargs)
+        # Set the default to the first impl
+        self._update_options(choices[0])
+        # Connect impl selection to param updates
+        self.shape_select.changed.connect(self._update_options)
 
     def _update_options(self, choice):
+        """
+        Updates the Shape parameter Container with the relevant
+        parameter widgets for the selected impl
+        :param choice: The selected impl
+        """
+        # Clear out old widgets
         self.shape_options.clear()
+        # Add new widgets
         for p in self.shape_types[choice].params:
+            # If the parameter has a default, use it
             if p.default:
                 wdgt = p.widget_type(name=p.name, value=p.default)
             else:
                 wdgt = p.widget_type(name=p.name)
+            # Add widget to container
             self.shape_options.append(wdgt)
 
-    def _param(self, i, p: ShapeParam):
+    def _param(self, i, p: ShapeParameter):
+        """
+        Convenience function for obtaining the ith parameter
+        from the parameter container.
+        Will convert to the parameter type if defined.
+        :param i: the parameter index
+        :param p: the parameter Dataclass
+        """
         wdgt = self.shape_options[i]
         if p.j_type:
             return p.j_type(wdgt.value)
@@ -389,73 +422,82 @@ class ShapeWidget(Container):
 
     @property
     def value(self) -> Any:
-        choice = self.shape_types[self.layer_select.value]
+        """
+        Returns the value of this widget, namely a JAVA Shape.
+        Constructed on demand.
+        """
+        choice = self.shape_types[self.shape_select.value]
         cls = choice.j_class
         params = [self._param(i, p) for i, p in enumerate(choice.params)]
         return cls(*params)
 
     @property
     def shape_types(self) -> Dict[str, ShapeData]:
+        """
+        Defines the Shape implementations supported by this widget.
+        """
         types = [
             ShapeData(
                 "Centered Rectangle",
                 jc.CenteredRectangleShape,
                 [
-                    ShapeParam("span", ListEdit, JArray(JInt), default=[1, 1]),
-                    ShapeParam("skipCenter", CheckBox),
+                    ShapeParameter("span", ListEdit, JArray(JInt), default=[1, 1]),
+                    ShapeParameter("skipCenter", CheckBox),
                 ],
             ),
             ShapeData(
                 "Diamond",
                 jc.DiamondShape,
                 [
-                    ShapeParam("radius", SpinBox, default=1),
+                    ShapeParameter("radius", SpinBox, default=1),
                 ],
             ),
             ShapeData(
                 "Diamond Tips",
                 jc.DiamondTipsShape,
                 [
-                    ShapeParam("radius", SpinBox, default=1),
+                    ShapeParameter("radius", SpinBox, default=1),
                 ],
             ),
             ShapeData(
                 "Horizontal Line",
                 jc.HorizontalLineShape,
                 [
-                    ShapeParam("span", SpinBox, JLong, default=1),
-                    ShapeParam("dimension", SpinBox, JInt, default=0),
-                    ShapeParam("skip center", CheckBox),
+                    ShapeParameter("span", SpinBox, JLong, default=1),
+                    ShapeParameter("dimension", SpinBox, JInt, default=0),
+                    ShapeParameter("skip center", CheckBox),
                 ],
             ),
             ShapeData(
                 "Hypersphere",
                 jc.HyperSphereShape,
                 [
-                    ShapeParam("radius", SpinBox, JLong, default=1),
+                    ShapeParameter("radius", SpinBox, JLong, default=1),
                 ],
             ),
             ShapeData(
                 "Pair of Points",
                 jc.PairOfPointsShape,
                 [
-                    ShapeParam("offset", ListEdit, JArray(JLong), default=[1, 1]),
+                    ShapeParameter("offset", ListEdit, JArray(JLong), default=[1, 1]),
                 ],
             ),
             ShapeData(
                 "Periodic Line",
                 jc.PeriodicLineShape,
                 [
-                    ShapeParam("span", SpinBox, JLong, default=1),
-                    ShapeParam("increments", ListEdit, JArray(JInt), default=[1, 1]),
+                    ShapeParameter("span", SpinBox, JLong, default=1),
+                    ShapeParameter(
+                        "increments", ListEdit, JArray(JInt), default=[1, 1]
+                    ),
                 ],
             ),
             ShapeData(
                 "Rectangle",
                 jc.RectangleShape,
                 [
-                    ShapeParam("span", SpinBox, JInt, default=1),
-                    ShapeParam("skip center", CheckBox),
+                    ShapeParameter("span", SpinBox, JInt, default=1),
+                    ShapeParameter("skip center", CheckBox),
                 ],
             ),
         ]

@@ -96,8 +96,18 @@ def enum_converter(item: "jc.ModuleItem"):
 
 @module_item_converter()
 def widget_enabled_java_types(item: "jc.ModuleItem"):
+    """
+    Checks to see if this JAVA type is fully supported through magicgui widgets.
+    This is sometimes done to expose object creation/usage when there ISN'T
+    a good Python equivalent.
+    """
     if item.isInput() and not item.isOutput():
         if item.getType() in widget_supported_java_types():
+            # TODO: NB: Ideally, we'd return item.getType() here.
+            # Unfortunately, though, that doesn't work, and I can't figure out why
+            # due to https://github.com/imagej/napari-imagej/issues/7
+            # For that reason, we return the Python type JObject instead.
+            # While this return isn't WRONG, it could be MORE correct.
             return JObject
 
 
