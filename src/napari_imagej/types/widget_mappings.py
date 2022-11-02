@@ -12,6 +12,7 @@ from napari.layers import Image
 
 from napari_imagej.java import jc
 from napari_imagej.widgets.parameter_widgets import (
+    ShapeWidget,
     file_widget_for,
     numeric_type_widget_for,
 )
@@ -82,6 +83,15 @@ def _mutable_output_preference(
             or str(type_hint) == "typing.Optional[ForwardRef('napari.layers.Image')]"
         ):
             return "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
+
+
+@_widget_preference
+def _shape_preference(
+    item: "jc.ModuleItem", type_hint: Union[type, str]
+) -> Optional[Union[type, str]]:
+    if item.isInput() and not item.isOutput():
+        if item.getType() == jc.Shape:
+            return ShapeWidget
 
 
 # The definitive mapping of scijava widget styles to magicgui widget types

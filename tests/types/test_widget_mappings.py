@@ -26,6 +26,7 @@ from napari_imagej.widgets.parameter_widgets import (
     MutableOutputWidget,
     OpenFileWidget,
     SaveFileWidget,
+    ShapeWidget,
 )
 from tests.utils import DummyModuleItem, jc
 
@@ -126,3 +127,9 @@ def test_file_widgets():
     item.setWidgetStyle(jc.FileWidget.DIRECTORY_STYLE)
     type_hint = python_type_of(item)
     assert preferred_widget_for(item, type_hint) == DirectoryWidget
+
+
+def test_shape_widget():
+    item = DummyModuleItem(jtype=jc.Shape)
+    type_hint = python_type_of(item)
+    assert preferred_widget_for(item, type_hint) == ShapeWidget
