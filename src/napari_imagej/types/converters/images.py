@@ -58,7 +58,7 @@ def _dataset_to_image(image: Any) -> Image:
 def _image_to_dataset(image: Image) -> "jc.Dataset":
     # Construct a dataset from the data
     data = image.data
-    dataset: "jc.Dataset" = ij().py._numpy_to_dataset(data)
+    dataset: "jc.Dataset" = ij().py.to_dataset(data)
     # Add name
     dataset.setName(image.name)
     # Add color table, if the image uses a custom colormap
