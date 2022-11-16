@@ -62,7 +62,7 @@ class NapariImageJMenu(QWidget):
         # First time showing
         if not self.gui.isVisible():
             # First things first, show the GUI
-            ij().ui().showUI(self.gui)
+            ij().thread().queue(lambda: ij().ui().showUI(self.gui))
             # Then, add our custom settings to the User Interface
             if ij().legacy and ij().legacy.isActive():
                 self._ij1_UI_setup()
@@ -70,7 +70,7 @@ class NapariImageJMenu(QWidget):
                 self._ij2_UI_setup()
         # Later shows - the GUI is "visible", but the appFrame probably isn't
         else:
-            self.gui.getApplicationFrame().setVisible(True)
+            ij().thread().queue(lambda: self.gui.getApplicationFrame().setVisible(True))
 
     def _ij1_UI_setup(self):
         """Configures the ImageJ Legacy GUI"""
@@ -148,7 +148,7 @@ class ToIJButton(QPushButton):
     def send_active_layer(self):
         active_layer: Optional[Layer] = self.viewer.layers.selection.active
         if active_layer:
-            ij().ui().show(ij().py.to_java(active_layer))
+            self._show(active_layer)
         else:
             log_debug("There is no active layer to export to ImageJ2")
 
@@ -165,7 +165,10 @@ class ToIJButton(QPushButton):
             layer = choices["layer"]
             if isinstance(layer, Layer):
                 # Pass the relevant data to ImageJ2
-                ij().ui().show(ij().py.to_java(layer))
+                self._show(layer)
+
+    def _show(self, layer):
+        ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
 
 
 class FromIJButton(QPushButton):
