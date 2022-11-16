@@ -107,8 +107,16 @@ class ImageJInitializer(QThread):
         ij_settings["ij_dir_or_version_or_endpoint"] = settings[
             "imagej_directory_or_endpoint"
         ].get(str)
-        ij_settings["mode"] = settings["jvm_mode"].get(str)
-        ij_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+        if hasattr(imagej, "gateway") and imagej.gateway:
+            ij_settings["mode"] = (
+                "headless" if imagej.gateway.ui().isHeadless() else "gui"
+            )
+            ij_settings["add_legacy"] = (
+                imagej.gateway.legacy and imagej.gateway.legacy.isActive()
+            )
+        else:
+            ij_settings["mode"] = settings["jvm_mode"].get(str)
+            ij_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
 
         # napari-imagej configuration
         from napari_imagej.types.converters import install_converters
@@ -118,7 +126,11 @@ class ImageJInitializer(QThread):
         log_debug("Completed JVM Configuration")
 
         # Launch PyImageJ
-        self.ij = imagej.init(**ij_settings)
+        self.ij = (
+            imagej.gateway
+            if hasattr(imagej, "gateway") and imagej.gateway
+            else imagej.init(**ij_settings)
+        )
         # Validate PyImageJ
         self._validate_imagej()
         # Log initialization
