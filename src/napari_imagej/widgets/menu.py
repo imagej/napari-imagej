@@ -72,9 +72,11 @@ class NapariImageJMenu(QWidget):
                     self._ij2_UI_setup()
 
             # Run the setup on the Java GUI Thread
+            # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
             ij().thread().queue(ui_setup)
         # Later shows - the GUI is "visible", but the appFrame probably isn't
         else:
+            # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
             ij().thread().queue(lambda: self.gui.getApplicationFrame().setVisible(True))
 
     def _ij1_UI_setup(self):
@@ -173,6 +175,7 @@ class ToIJButton(QPushButton):
                 self._show(layer)
 
     def _show(self, layer):
+        # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
         ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
 
 
