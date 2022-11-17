@@ -134,24 +134,32 @@ class ImageJInitializer(QThread):
         # Validate PyImageJ
         self._validate_imagej()
 
-        # HACK: Avoid FlatLaf with ImageJ2 Swing UI; it doesn't work for reasons unknown.
+        # HACK: Avoid FlatLaf with ImageJ2 Swing UI;
+        # it doesn't work for reasons unknown.
         try:
             ui = self.ij.ui().getDefaultUI().getInfo().getName()
             log_debug(f"Default SciJava UI is {ui}.")
             if ui == "swing":
-                SwingLookAndFeelService = jimport("org.scijava.ui.swing.laf.SwingLookAndFeelService")
+                SwingLookAndFeelService = jimport(
+                    "org.scijava.ui.swing.laf.SwingLookAndFeelService"
+                )
                 laf = self.ij.prefs().get(SwingLookAndFeelService, "lookAndFeel")
                 log_debug(f"Preferred Look+Feel is {laf}.")
                 if laf is None or laf.startsWith("FlatLaf"):
                     UIManager = jimport("javax.swing.UIManager")
                     fallback_laf = UIManager.getSystemLookAndFeelClassName()
-                    log_debug(f"Detected FlatLaf. Falling back to {fallback_laf} instead to avoid problems.")
-                    self.ij.prefs().put(SwingLookAndFeelService, "lookAndFeel", fallback_laf)
+                    log_debug(
+                        f"Detected FlatLaf. Falling back to {fallback_laf} "
+                        "instead to avoid problems."
+                    )
+                    self.ij.prefs().put(
+                        SwingLookAndFeelService, "lookAndFeel", fallback_laf
+                    )
         except Exception as exc:
             from scyjava import jstacktrace
-            print(jstacktrace(exc))
+
             # NB: The hack failed, but no worries, just try to keep going.
-            pass
+            print(jstacktrace(exc))
 
         # Log initialization
         log_debug(f"Initialized at version {self.ij.getVersion()}")
