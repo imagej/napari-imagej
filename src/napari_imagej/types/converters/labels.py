@@ -2,6 +2,7 @@
 scyjava Converters for converting between ImgLib2 ImgLabelings
 and napari Labels
 """
+from imagej.convert import imglabeling_to_labeling
 from labeling.Labeling import Labeling
 from napari.layers import Labels
 from scyjava import Priority
@@ -39,7 +40,7 @@ def _imglabeling_to_layer(imgLabeling: "jc.ImgLabeling") -> Labels:
     :param imgLabeling: the Java ImgLabeling
     :return: a Labels layer
     """
-    labeling: Labeling = ij().py._imglabeling_to_labeling(imgLabeling)
+    labeling: Labeling = imglabeling_to_labeling(ij(), imgLabeling)
     return _labeling_to_layer(labeling)
 
 

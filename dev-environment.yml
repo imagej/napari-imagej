@@ -25,7 +25,7 @@ dependencies:
   - magicgui >= 0.5.1
   - napari
   - openjdk=8
-  - pyimagej >= 1.2.0
+  - pyimagej >= 1.3.0
   - scyjava >= 1.7.0
   # Test dependencies
   - numpy

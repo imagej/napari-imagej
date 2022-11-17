@@ -13,6 +13,7 @@ There are a few functions that are designed for use by graphical widgets, namely
 from inspect import Parameter, Signature, _empty, isclass, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from imagej.images import is_arraylike
 from jpype import JException
 from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
 from magicgui.widgets._bases import CategoricalWidget
@@ -306,7 +307,7 @@ def _pure_module_outputs(
             continue
         output = ij().py.from_java(output_entry.getValue())
         # Add arraylike outputs as images
-        if ij().py._is_arraylike(output):
+        if is_arraylike(output):
             layer = Layer.create(data=output, meta={"name": name}, layer_type="image")
             layer_outputs.append(layer)
         # Add Layers directly
