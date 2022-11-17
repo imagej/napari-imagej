@@ -19,7 +19,7 @@ imagej_base_directory: '.'
 # This can be used to include original ImageJ functionality.
 # Iff true, original ImageJ functionality (ij.* packages) will be available.
 # Defaults to false.
-include_imagej_legacy: false
+include_imagej_legacy: true
 
 # Designates the mode of execution for ImageJ2.
 # Allowed options are 'headless' and 'interactive'.
