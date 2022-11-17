@@ -61,13 +61,18 @@ class NapariImageJMenu(QWidget):
         """
         # First time showing
         if not self.gui.isVisible():
-            # First things first, show the GUI
-            ij().thread().queue(lambda: ij().ui().showUI(self.gui))
-            # Then, add our custom settings to the User Interface
-            if ij().legacy and ij().legacy.isActive():
-                self._ij1_UI_setup()
-            else:
-                self._ij2_UI_setup()
+
+            def ui_setup():
+                # First things first, show the GUI
+                ij().ui().showUI(self.gui)
+                # Then, add our custom settings to the User Interface
+                if ij().legacy and ij().legacy.isActive():
+                    self._ij1_UI_setup()
+                else:
+                    self._ij2_UI_setup()
+
+            # Run the setup on the Java GUI Thread
+            ij().thread().queue(ui_setup)
         # Later shows - the GUI is "visible", but the appFrame probably isn't
         else:
             ij().thread().queue(lambda: self.gui.getApplicationFrame().setVisible(True))
