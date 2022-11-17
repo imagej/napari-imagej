@@ -14,7 +14,7 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 from threading import Lock
-from typing import Callable, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import imagej
 from jpype import JClass
@@ -89,53 +89,48 @@ class ImageJInitializer(QThread):
         """
         Creates the ImageJ instance
         """
-        # Initialize ImageJ
         log_debug("Initializing ImageJ2")
 
-        # -- IMAGEJ CONFIG -- #
+        # determine whether imagej is already running
+        imagej_already_initialized: bool = hasattr(imagej, "gateway") and imagej.gateway
 
-        # ScyJava configuration
-        # TEMP: Avoid issues caused by
-        # https://github.com/imagej/pyimagej/issues/160
-        config.add_repositories(
-            {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-        )
-        config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+        # -- CONFIGURATION -- #
 
-        # PyImageJ configuration
-        ij_settings = {}
-        ij_settings["ij_dir_or_version_or_endpoint"] = settings[
-            "imagej_directory_or_endpoint"
-        ].get(str)
-        if hasattr(imagej, "gateway") and imagej.gateway:
-            ij_settings["mode"] = (
-                "headless" if imagej.gateway.ui().isHeadless() else "gui"
-            )
-            ij_settings["add_legacy"] = (
-                imagej.gateway.legacy and imagej.gateway.legacy.isActive()
-            )
+        # Configure pyimagej
+        if imagej_already_initialized:
+            self._update_imagej_settings()
         else:
-            ij_settings["mode"] = settings["jvm_mode"].get(str)
-            ij_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+            ij_settings = self._configure_imagej()
 
-        # napari-imagej configuration
+        # Configure napari-imagej
         from napari_imagej.types.converters import install_converters
 
         install_converters()
 
         log_debug("Completed JVM Configuration")
 
-        # Launch PyImageJ
-        self.ij = (
-            imagej.gateway
-            if hasattr(imagej, "gateway") and imagej.gateway
-            else imagej.init(**ij_settings)
-        )
+        # -- INITIALIZATION -- #
+
+        # Launch ImageJ
+        if imagej_already_initialized:
+            self.ij = imagej.gateway
+        else:
+            self.ij = imagej.init(**ij_settings)
+
+        # Log initialization
+        log_debug(f"Initialized at version {self.ij.getVersion()}")
+
+        # -- VALIDATION -- #
+
         # Validate PyImageJ
         self._validate_imagej()
 
         # HACK: Avoid FlatLaf with ImageJ2 Swing UI;
         # it doesn't work for reasons unknown.
+        # NB this SHOULD NOT be moved.
+        # This code must be in place before ANY swing components get created.
+        # Swing components could be created by any Java functionality (e.g. Commands).
+        # Therefore, we can't move it to e.g. the menu file
         try:
             ui = self.ij.ui().getDefaultUI().getInfo().getName()
             log_debug(f"Default SciJava UI is {ui}.")
@@ -161,8 +156,45 @@ class ImageJInitializer(QThread):
             # NB: The hack failed, but no worries, just try to keep going.
             print(jstacktrace(exc))
 
-        # Log initialization
-        log_debug(f"Initialized at version {self.ij.getVersion()}")
+    def _update_imagej_settings(self) -> None:
+        """
+        Updates napari-imagej's settings to reflect an active ImageJ instance.
+        """
+        # Scrape the JVM mode off of the active ImageJ instance
+        settings["jvm_mode"] = (
+            "headless" if imagej.gateway.ui().isHeadless() else "interactive"
+        )
+        # Determine if legacy is active on the active ImageJ instance
+        # NB bool is needed to coerce Nones into booleans.
+        settings["add_legacy"] = bool(
+            imagej.gateway.legacy and imagej.gateway.legacy.isActive()
+        )
+
+    def _configure_imagej(self) -> Dict[str, Any]:
+        """
+        Configures scyjava and pyimagej.
+        This function returns the settings that must be passed in the
+        actual initialization call.
+
+        :return: kwargs that should be passed to imagej.init()
+        """
+        # ScyJava configuration
+        # TEMP: Avoid issues caused by
+        # https://github.com/imagej/pyimagej/issues/160
+        config.add_repositories(
+            {"scijava.public": "https://maven.scijava.org/content/groups/public"}
+        )
+        config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+
+        # PyImageJ configuration
+        init_settings = {}
+        init_settings["ij_dir_or_version_or_endpoint"] = settings[
+            "imagej_directory_or_endpoint"
+        ].get(str)
+        init_settings["mode"] = settings["jvm_mode"].get(str)
+        init_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+
+        return init_settings
 
     def _validate_imagej(self):
         """
