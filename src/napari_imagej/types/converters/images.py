@@ -41,14 +41,14 @@ def _can_convert_img_plus(obj: Any):
 
 @java_to_py_converter(predicate=_can_convert_img_plus, priority=Priority.VERY_HIGH)
 def _dataset_to_image(image: Any) -> Image:
-    imp = ij().convert().convert(image, jc.ImgPlus)
+    imgplus = ij().convert().convert(image, jc.ImgPlus)
     # Construct a dataset from the data
     kwargs = dict(
-        data=ij().py.from_java(imp.getImg()),
-        name=imp.getName(),
+        data=ij().py.from_java(imgplus.getImg()),
+        name=imgplus.getName(),
     )
-    if imp.getColorTableCount():
-        kwargs["colormap"] = _color_table_to_colormap(imp.getColorTable(0))
+    if imgplus.getColorTableCount():
+        kwargs["colormap"] = _color_table_to_colormap(imgplus.getColorTable(0))
     return Image(**kwargs)
 
 
