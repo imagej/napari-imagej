@@ -96,8 +96,8 @@ jobs:
         with:
           configuration: --check-only
 
-  test-imagej-legacy:
-    name: Test legacy inclusion
+  test-ij2:
+    name: Test pure IJ2
     runs-on: ubuntu-latest
     defaults:
       # Steps that rely on the activated environment must be run with this shell setup.
@@ -124,7 +124,7 @@ jobs:
 
       - name: Setup Testing Environment Variables
         run: |
-          echo "NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=true" >> $GITHUB_ENV
+          echo "NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=false" >> $GITHUB_ENV
 
       - name: Test napari-imagej
         uses: GabrielBB/xvfb-action@v1
