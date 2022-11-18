@@ -27,7 +27,7 @@ def _dataset_view_to_image(image: Any) -> Image:
         data=ij().py.from_java(view.getData().getImgPlus().getImg()),
         name=view.getData().getName(),
     )
-    if view.getColorTables().size() > 0:
+    if view.getColorTables() and view.getColorTables().size() > 0:
         if not jc.ColorTables.isGrayColorTable(view.getColorTables().get(0)):
             kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
     return Image(**kwargs)
@@ -58,7 +58,7 @@ def _dataset_to_image(image: Any) -> Image:
 def _image_to_dataset(image: Image) -> "jc.Dataset":
     # Construct a dataset from the data
     data = image.data
-    dataset: "jc.Dataset" = ij().py._numpy_to_dataset(data)
+    dataset: "jc.Dataset" = ij().py.to_dataset(data)
     # Add name
     dataset.setName(image.name)
     # Add color table, if the image uses a custom colormap
