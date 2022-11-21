@@ -47,7 +47,7 @@ def _dataset_to_image(image: Any) -> Image:
         data=ij().py.from_java(imgplus.getImg()),
         name=imgplus.getName(),
     )
-    if imgplus.getColorTableCount():
+    if imgplus.getColorTableCount() and imgplus.getColorTable(0):
         kwargs["colormap"] = _color_table_to_colormap(imgplus.getColorTable(0))
     return Image(**kwargs)
 

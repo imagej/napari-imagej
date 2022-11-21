@@ -228,7 +228,14 @@ class FromIJButton(QPushButton):
 
     def get_active_layer(self) -> None:
         # Choose the active DatasetView
-        view = ij().get("net.imagej.display.ImageDisplayService").getActiveDatasetView()
+        if ij().legacy and ij().legacy.isActive():
+            view = ij().WindowManager.getCurrentImage()
+        else:
+            view = (
+                ij()
+                .get("net.imagej.display.ImageDisplayService")
+                .getActiveDatasetView()
+            )
         if view is None:
             log_debug("There is no active window to export to napari")
             return
