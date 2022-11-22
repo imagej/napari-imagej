@@ -5,6 +5,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+from imagej.images import is_arraylike
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -227,15 +228,13 @@ class FromIJButton(QPushButton):
                 self._add_image(image)
 
     def get_active_layer(self) -> None:
-        # Choose the active DatasetView
+        # HACK: Sync ImagePlus before transferring
         if ij().legacy and ij().legacy.isActive():
-            view = ij().WindowManager.getCurrentImage()
-        else:
-            view = (
-                ij()
-                .get("net.imagej.display.ImageDisplayService")
-                .getActiveDatasetView()
-            )
+            ij().py.sync_image(ij().WindowManager.getCurrentImage())
+        # Get the active view from the active image display
+        ids = ij().get("net.imagej.display.ImageDisplayService")
+        display = ids.getActiveImageDisplay()
+        view = ids.getActiveDatasetView(display)
         if view is None:
             log_debug("There is no active window to export to napari")
             return
@@ -247,7 +246,7 @@ class FromIJButton(QPushButton):
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
-        elif ij().py._is_arraylike(py_image):
+        elif is_arraylike(py_image):
             name = ij().object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
         else:
