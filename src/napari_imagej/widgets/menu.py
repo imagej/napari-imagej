@@ -233,8 +233,7 @@ class FromIJButton(QPushButton):
             ij().py.sync_image(ij().WindowManager.getCurrentImage())
         # Get the active view from the active image display
         ids = ij().get("net.imagej.display.ImageDisplayService")
-        display = ids.getActiveImageDisplay()
-        view = ids.getActiveDatasetView(display)
+        view = ids.getActiveDatasetView()
         if view is None:
             log_debug("There is no active window to export to napari")
             return
