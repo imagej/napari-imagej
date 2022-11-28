@@ -203,11 +203,6 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if settings["include_imagej_legacy"].get(bool):
-        pytest.skip(
-            "HACK: SKIPPING ON LEGACY. "
-            "See https://github.com/imagej/napari-imagej/issues/124"
-        )
 
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
