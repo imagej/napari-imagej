@@ -381,3 +381,42 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
 
     # Assert no change in the settings
     assert settings["jvm_mode"].get() == "headless"
+
+
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+@pytest.mark.skipif(
+    not settings["include_imagej_legacy"].get(bool), reason="Tests legacy behavior"
+)
+def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    to_button: ToIJButton = gui_widget.to_ij
+    from_button: FromIJButton = gui_widget.from_ij
+
+    # Show the button
+    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+
+    # Add some data to the viewer
+    sample_data = numpy.ones((100, 100, 3), dtype=numpy.uint8)
+    image: Image = Image(data=sample_data, name="test_to")
+    current_viewer().add_layer(image)
+
+    # Press the button, handle the Dialog
+    qtbot.mouseClick(to_button, Qt.LeftButton, delay=1)
+
+    # Assert that the data is in the legacy UI
+    asserter(lambda: ij.WindowManager.getCurrentImage() is not None)
+    imp = ij.WindowManager.getCurrentImage()
+    assert imp.getTitle() == "test_to"
+    # Edit the data
+    imp.getProcessor().invert()
+    imp.updateAndDraw()
+
+    # Press the button, handle the Dialog
+    qtbot.mouseClick(from_button, Qt.LeftButton, delay=1)
+
+    # Assert the returned data is inverted
+    asserter(lambda: "test_to [1]" in current_viewer().layers)
+    modified_layer = current_viewer().layers["test_to [1]"].data
+    assert numpy.all(modified_layer[0, :, :] == 254)
+    # NB the original ImageJ only inverts the active slice;
+    # all other layers are the same.
+    assert numpy.all(modified_layer[1:, :, :] == 1)
