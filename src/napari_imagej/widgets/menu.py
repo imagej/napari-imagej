@@ -229,8 +229,12 @@ class FromIJButton(QPushButton):
 
     def get_active_layer(self) -> None:
         # HACK: Sync ImagePlus before transferring
+        # This code can be removed once
+        # https://github.com/imagej/imagej-legacy/issues/286 is solved.
         if ij().legacy and ij().legacy.isActive():
-            ij().py.sync_image(ij().WindowManager.getCurrentImage())
+            current_image_plus = ij().WindowManager.getCurrentImage()
+            if current_image_plus is not None:
+                ij().py.sync_image(current_image_plus)
         # Get the active view from the active image display
         ids = ij().get("net.imagej.display.ImageDisplayService")
         view = ids.getActiveDatasetView()
