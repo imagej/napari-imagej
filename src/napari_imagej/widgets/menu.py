@@ -13,6 +13,7 @@ from napari.layers import Layer
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
+from scyjava import is_arraylike
 
 from napari_imagej import settings
 from napari_imagej.java import ij, java_signals, jc, log_debug
@@ -227,8 +228,18 @@ class FromIJButton(QPushButton):
                 self._add_image(image)
 
     def get_active_layer(self) -> None:
-        # Choose the active DatasetView
-        view = ij().get("net.imagej.display.ImageDisplayService").getActiveDatasetView()
+        # HACK: Sync ImagePlus before transferring
+        # This code can be removed once
+        # https://github.com/imagej/imagej-legacy/issues/286 is solved.
+        if ij().legacy and ij().legacy.isActive():
+            current_image_plus = ij().WindowManager.getCurrentImage()
+            if current_image_plus is not None:
+                ij().py.sync_image(current_image_plus)
+        # Get the active view from the active image display
+        ids = ij().get("net.imagej.display.ImageDisplayService")
+        # TODO: simplify to no-args once
+        # https://github.com/imagej/imagej-legacy/pull/287 is merged.
+        view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
         if view is None:
             log_debug("There is no active window to export to napari")
             return
@@ -240,7 +251,7 @@ class FromIJButton(QPushButton):
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
-        elif ij().py._is_arraylike(py_image):
+        elif is_arraylike(py_image):
             name = ij().object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
         else:
