@@ -5,7 +5,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from imagej.images import is_arraylike
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -14,6 +13,7 @@ from napari.layers import Layer
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
+from scyjava import is_arraylike
 
 from napari_imagej import settings
 from napari_imagej.java import ij, java_signals, jc, log_debug
