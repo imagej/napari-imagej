@@ -420,3 +420,27 @@ def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMen
     # NB the original ImageJ only inverts the active slice;
     # all other layers are the same.
     assert numpy.all(modified_layer[1:, :, :] == 1)
+
+
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+@pytest.mark.skipif(
+    not settings["include_imagej_legacy"].get(bool), reason="Tests legacy behavior"
+)
+def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    from_button: FromIJButton = gui_widget.from_ij
+
+    # Show the button
+    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+
+    # Add some data to ImageJ Legacy
+    asserter(lambda: ij.WindowManager.getCurrentImage() is None)
+    ij.IJ.runPlugIn("ij.plugin.URLOpener", "blobs.gif")
+    asserter(lambda: ij.WindowManager.getCurrentImage() is not None)
+    imp = ij.WindowManager.getCurrentImage()
+    assert imp.getTitle() == "blobs.gif"
+
+    # Press the button, handle the Dialog
+    qtbot.mouseClick(from_button, Qt.LeftButton, delay=1)
+
+    # Assert the data is in napari
+    asserter(lambda: "blobs.gif" in current_viewer().layers)

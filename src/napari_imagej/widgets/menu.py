@@ -237,7 +237,9 @@ class FromIJButton(QPushButton):
                 ij().py.sync_image(current_image_plus)
         # Get the active view from the active image display
         ids = ij().get("net.imagej.display.ImageDisplayService")
-        view = ids.getActiveDatasetView()
+        # TODO: simplify to no-args once
+        # https://github.com/imagej/imagej-legacy/pull/287 is merged.
+        view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
         if view is None:
             log_debug("There is no active window to export to napari")
             return
