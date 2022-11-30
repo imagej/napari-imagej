@@ -19,21 +19,23 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python >= 3.8
   # Project dependencies
   - confuse
+  - jpype1 >= 1.4.1
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
   - napari
+  - numpy
   - openjdk=8
   - pyimagej >= 1.3.0
   - scyjava >= 1.8.1
-  # Test dependencies
-  - numpy
   # Developer tools
   - autopep8
   - black
   - build
   - flake8
+  - flake8-typing-imports
   - isort
   - pre-commit
   - pyqt5-sip
@@ -45,4 +47,6 @@ dependencies:
   # Project from source
   - pip
   - pip:
+    - flake8-pyproject
+    - validate-pyproject[all]
     - -e '.'

@@ -19,8 +19,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python >= 3.8
   # Project depenencies
   - confuse
+  - jpype1 >= 1.4.1
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
   - napari
@@ -31,4 +33,5 @@ dependencies:
   # Project from source
   - pip
   - pip:
+    - validate-pyproject[all]
     - '.'
