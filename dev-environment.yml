@@ -35,6 +35,7 @@ dependencies:
   - black
   - build
   - flake8
+  - flake8-typing-imports
   - isort
   - pre-commit
   - pyqt5-sip
@@ -46,5 +47,6 @@ dependencies:
   # Project from source
   - pip
   - pip:
+    - flake8-pyproject
     - validate-pyproject[all]
     - -e '.'
