@@ -60,6 +60,7 @@ dev = [
     "pytest-env",
     "pytest-qt",
     "qtpy",
+    "validate-pyproject[all]",
 ]
 
 [project.urls]

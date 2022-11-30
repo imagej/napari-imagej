@@ -95,6 +95,10 @@ jobs:
         uses: isort/isort-action@master
         with:
           configuration: --check-only
+      - name: Validate pyproject.toml
+        run: |
+          python -m pip install validate-pyproject[all]
+          python -m validate_pyproject pyproject.toml
 
   test-ij2:
     name: Test pure IJ2
