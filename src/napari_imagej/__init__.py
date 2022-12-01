@@ -55,6 +55,27 @@ class _NapariImageJSettings(confuse.Configuration):
         :param value: The value assigned to a particular setting
         :param strict: If true, raise an Error. If false, assign a reasonable default.
         """
+        if setting == "imagej_directory_or_endpoint":
+            # Ensure a valid endpoint/directory
+            if value in ["", None]:
+                if strict:  # Report the failure
+                    raise ValueError(
+                        "The imagej directory or endpoint cannot be blank! "
+                        "<p><font face='courier'>net.imagej:imagej</font> "
+                        "is the default option."
+                        "<p>Visit "
+                        '<a href="https://pyimagej.readthedocs.io/en/latest/'
+                        'api.html#initialization">this site</a> '
+                        "and check the "
+                        "<font face='courier'>ij_dir_or_version_or_endpoint</font> "
+                        "parameter for more options."
+                    )
+                else:  # Assign a reasonable default
+                    log_debug(
+                        "No provided imagej directory or endpoint. Setting endpoint "
+                        "to net.imagej:imagej"
+                    )
+                    self["imagej_directory_or_endpoint"] = "net.imagej:imagej"
         if setting == "jvm_mode":
             # Ensure a valid jvm mode choice
             self["jvm_mode"].as_choice(["interactive", "headless"])
@@ -62,7 +83,7 @@ class _NapariImageJSettings(confuse.Configuration):
             if value == "interactive" and sys.platform == "darwin":
                 if strict:  # Report the failure
                     raise ValueError(
-                        "ImageJ2 must be run headlessly on MacOS. Visit "
+                        "ImageJ2 must be run headlessly on MacOS. <p>Visit "
                         '<a href="https://pyimagej.readthedocs.io/en/latest/'
                         'Initialization.html#interactive-mode">this site</a> '
                         "for more information."
