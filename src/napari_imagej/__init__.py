@@ -55,6 +55,20 @@ class _NapariImageJSettings(confuse.Configuration):
         :param value: The value assigned to a particular setting
         :param strict: If true, raise an Error. If false, assign a reasonable default.
         """
+        if setting == "imagej_directory_or_endpoint":
+            # Ensure a valid endpoint/directory
+            if value in ["", None]:
+                if strict:  # Report the failure
+                    raise ValueError(
+                        "Please specify an imagej directory or endpoint in "
+                        "your configuration."
+                    )
+                else:  # Assign a reasonable default
+                    log_debug(
+                        "No provided imagej directory or endpoint. Setting endpoint "
+                        "to net.imagej:imagej"
+                    )
+                    self["imagej_directory_or_endpoint"] = "net.imagej:imagej"
         if setting == "jvm_mode":
             # Ensure a valid jvm mode choice
             self["jvm_mode"].as_choice(["interactive", "headless"])
