@@ -6,6 +6,7 @@ import importlib
 import napari
 import numpy as np
 import pytest
+from imagej.images import _imglib2_types
 from magicgui.types import FileDialogMode
 from magicgui.widgets import (
     CheckBox,
@@ -79,25 +80,39 @@ def test_mutable_output_widget_layout(output_widget):
     assert output_widget.margins == (0, 0, 0, 0)
 
 
-def test_mutable_output_default_shape(
+def test_mutable_output_default_parameters(
     input_widget: ComboBox, output_widget: MutableOutputWidget
 ):
     """
-    Tests that MutableOutputWidget's default size changes based on the
+    Tests that MutableOutputWidget's default size and type change based on the
     choice of input widget
     """
 
     # Assert when no selection, output shape is default
     assert input_widget.current_choice == ""
     assert output_widget._default_new_shape() == [512, 512]
+    assert output_widget._default_new_type() == "float64"
 
     # Add new image
     shape = (128, 128, 3)
     import numpy as np
 
-    current_viewer().add_image(data=np.ones(shape), name="img")
+    current_viewer().add_image(data=np.ones(shape, dtype=np.int32), name="img")
     assert input_widget.current_choice == "img"
     assert output_widget._default_new_shape() == shape
+    assert output_widget._default_new_type() == "int32"
+
+
+def test_mutable_output_dtype_choices(
+    input_widget: ComboBox, output_widget: MutableOutputWidget
+):
+    """
+    Tests that MutableOutputWidget's data type choices
+    are all types supported by pyimagej
+    """
+    supported = output_widget._dtype_choices()
+    for ptype in _imglib2_types.values():
+        assert np.dtype(ptype) in supported
 
 
 # these types are always included
@@ -126,6 +141,7 @@ def test_mutable_output_add_new_image(
         "array_type": choice,
         "shape": (100, 100, 3),
         "fill_value": 3.0,
+        "data_type": np.int32,
     }
 
     output_widget._add_new_image(params)

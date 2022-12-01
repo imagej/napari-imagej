@@ -5,8 +5,9 @@ They should align with a SciJava ModuleItem that satisfies some set of condition
 import importlib
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
+from imagej.images import _imglib2_types
 from jpype import JArray, JClass, JInt, JLong
 from magicgui.types import ChoicesType
 from magicgui.widgets import (
@@ -24,6 +25,7 @@ from magicgui.widgets import (
 from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
+from numpy import dtype
 
 from napari_imagej.java import jc
 
@@ -120,7 +122,11 @@ class MutableOutputWidget(Container):
     def _btn_text(self) -> str:
         return "New Image"
 
-    def _default_new_shape(self):
+    def _default_layer(self) -> Optional[Layer]:
+        """
+        This widget sets the default size, shape etc. to be the same as
+        the (first) input. We find the (first) input in this function.
+        """
         # Attempt to guess a good size based off of the first image input
         for widget in self.parent._magic_widget.parent._magic_widget:
             if widget is self:
@@ -128,9 +134,26 @@ class MutableOutputWidget(Container):
             if isinstance(widget, ComboBox) and issubclass(widget.annotation, Layer):
                 selection_name = widget.current_choice
                 if selection_name != "":
-                    selection = current_viewer().layers[selection_name]
-                    return selection.data.shape
+                    return current_viewer().layers[selection_name]
+
+    def _default_new_shape(self):
+        guess = self._default_layer()
+        if guess:
+            return guess.data.shape
         return [512, 512]
+
+    def _default_new_type(self) -> str:
+        """
+        Returns the NAME of the default type choice
+        """
+        guess = self._default_layer()
+        if guess:
+            return str(guess.data.dtype)
+        # fallback - good ol' float64
+        return "float64"
+
+    def _dtype_choices(self) -> List:
+        return [dtype(v) for v in set(_imglib2_types.values())]
 
     def create_new_image(self) -> None:
         """
@@ -172,6 +195,17 @@ class MutableOutputWidget(Container):
                     choices=backing_choices,
                 ),
             ),
+            data_type=dict(
+                annotation=type,
+                value=self._default_new_type(),
+                options=dict(
+                    tooltip="The image element type",
+                    choices=dict(
+                        choices=self._dtype_choices(),
+                        key=str,
+                    ),
+                ),
+            ),
             fill_value=dict(
                 annotation=float,
                 value=0.0,
@@ -187,13 +221,21 @@ class MutableOutputWidget(Container):
         if params["array_type"] == "NumPy":
             import numpy as np
 
-            data = np.full(tuple(params["shape"]), params["fill_value"])
+            data = np.full(
+                shape=tuple(params["shape"]),
+                fill_value=params["fill_value"],
+                dtype=params["data_type"],
+            )
 
         elif params["array_type"] == "Zarr":
             # This choice is only available if we can import
             import zarr
 
-            data = zarr.full(params["shape"], params["fill_value"])
+            data = zarr.full(
+                shape=params["shape"],
+                fill_value=params["fill_value"],
+                dtype=params["data_type"],
+            )
 
         elif params["array_type"] == "xarray":
             # This choice is only available if we can import
@@ -201,7 +243,11 @@ class MutableOutputWidget(Container):
             import xarray
 
             data = xarray.DataArray(
-                data=np.full(tuple(params["shape"]), params["fill_value"])
+                data=np.full(
+                    shape=tuple(params["shape"]),
+                    fill_value=params["fill_value"],
+                    dtype=params["data_type"],
+                )
             )
 
         # give the data array to the viewer.
