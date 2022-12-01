@@ -340,6 +340,54 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
         assert yaml.safe_load(stream)[key] == new_value
 
 
+def test_empty_ij_dir_str_prevention(popup_handler, gui_widget: NapariImageJMenu):
+    """Change ij_dir_or_endpoint to an empty string, assert that it cannot be done"""
+    button: SettingsButton = gui_widget.settings_button
+
+    # REQUEST_VALUES MOCK
+    oldfunc = menu.request_values
+
+    assert settings["imagej_directory_or_endpoint"].get() == "net.imagej:imagej"
+
+    def newfunc(values={}, title="", **kwargs):
+        results = {}
+        # Solve each parameter
+        for name, options in values.items():
+            if name == "imagej_directory_or_endpoint":
+                results[name] = ""
+                continue
+            elif "value" in options:
+                results[name] = options["value"]
+                continue
+
+            # Otherwise, we don't know how to solve that parameter
+            raise NotImplementedError()
+        return results
+
+    menu.request_values = newfunc
+
+    # Handle the popup from button._update_settings
+    expected_text = (
+        "<b>Ignoring selection for setting "
+        "<font face='courier'>imagej_directory_or_endpoint</font>:</b><p>"
+        "The imagej directory or endpoint cannot be blank! "
+        "<p><font face='courier'>net.imagej:imagej</font> "
+        "is the default option."
+        "<p>Visit "
+        '<a href="https://pyimagej.readthedocs.io/en/latest/'
+        'api.html#initialization">this site</a> '
+        "and check the "
+        "<font face='courier'>ij_dir_or_version_or_endpoint</font> "
+        "parameter for more options."
+    )
+    popup_handler(expected_text, button._update_settings)
+
+    menu.request_values = oldfunc
+
+    # Assert no change in the settings
+    assert settings["imagej_directory_or_endpoint"].get() == "net.imagej:imagej"
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="Only applies testing on MacOS")
 def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu):
     """Change jvm_mode on mac from headless to interactive, ensure that is prevented"""
@@ -369,8 +417,9 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
 
     # Handle the popup from button._update_settings
     expected_text = (
-        "<b>Ignoring selection for setting jvm_mode:</b> "
-        "ImageJ2 must be run headlessly on MacOS. Visit "
+        "<b>Ignoring selection for setting "
+        "<font face='courier'>jvm_mode</font>:</b><p>"
+        "ImageJ2 must be run headlessly on MacOS. <p>Visit "
         '<a href="https://pyimagej.readthedocs.io/en/latest/'
         'Initialization.html#interactive-mode">this site</a> '
         "for more information."

@@ -374,7 +374,11 @@ class SettingsButton(QPushButton):
         except Exception as exc:
             # New value incompatible; report it to the user
             RichTextPopup(
-                rich_message=f"<b>Ignoring selection for setting {setting}:</b> {exc}",
+                rich_message=(
+                    "<b>Ignoring selection for setting <font face='courier'>"
+                    f"{setting}"
+                    f"</font>:</b><p>{exc}"
+                ),
                 exec=True,
             )
             return False
