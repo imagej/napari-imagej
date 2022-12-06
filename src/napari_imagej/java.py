@@ -186,6 +186,11 @@ class ImageJInitializer(QThread):
         )
         config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
 
+        # Append napari-imagej-specific cli arguments
+        cli_args = settings["jvm_command_line_arguments"].get(str)
+        if cli_args not in [None, ""]:
+            config.add_option(cli_args)
+
         # PyImageJ configuration
         init_settings = {}
         init_settings["ij_dir_or_version_or_endpoint"] = settings[

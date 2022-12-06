@@ -95,5 +95,6 @@ profile = "black"
 
 [tool.pytest.ini_options]
 env = [
-    "NAPARI_IMAGEJ_TESTING=yes"
+    "NAPARI_IMAGEJ_TESTING=yes",
+    "NAPARI_IMAGEJ_JVM_COMMAND_LINE_ARGUMENTS=-Dfoo=bar"
 ]
