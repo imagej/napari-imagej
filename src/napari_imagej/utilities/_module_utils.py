@@ -321,8 +321,6 @@ def _pure_module_outputs(
             widget_outputs.append((name, output))
 
     # napari cannot handle empty List[Layer], so we return None if empty
-    if not len(layer_outputs):
-        layer_outputs = None
     return (layer_outputs, widget_outputs)
 
 
@@ -506,9 +504,8 @@ def functionify_module_execution(
                     module, unresolved_inputs
                 )
                 # log outputs
-                if layer_outputs is not None:
-                    for layer in layer_outputs:
-                        log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
+                for layer in layer_outputs:
+                    log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
                 for output in widget_outputs:
                     log_debug(f"Result: ({type(output[1])}) {output[0]}")
 

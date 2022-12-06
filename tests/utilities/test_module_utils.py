@@ -498,12 +498,9 @@ widget_parameterizations = [
 )
 def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget, args):
     layer_outputs, widget_outputs = run_module_from_script(ij, tmp_path, script, args)
-    if num_layer == 0:
-        assert layer_outputs is None
-    else:
-        assert num_layer == len(layer_outputs)
-        for layer in layer_outputs:
-            assert isinstance(layer, Layer)
+    assert num_layer == len(layer_outputs)
+    for layer in layer_outputs:
+        assert isinstance(layer, Layer)
     assert num_widget == len(widget_outputs)
 
 
