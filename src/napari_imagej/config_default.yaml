@@ -37,3 +37,7 @@ jvm_mode: 'interactive'
 # Iff false, a popup will be shown instead, prompting the user to select data for transfer.
 # Defaults to true.
 choose_active_layer: true
+
+# This setting can be used to pass command line arguments to the Java Virtual Machine (JVM). 
+# By default, no arguments are passed.
+jvm_command_line_arguments: ''
