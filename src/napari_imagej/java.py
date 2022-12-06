@@ -210,7 +210,7 @@ class ImageJInitializer(QThread):
         # within that component. Thus for each component-version pair, we also need
         # a class to query
         component_requirements: List[Tuple[JClass, str, str]] = [
-            (jc.Dataset, "net.imagej:imagej-common", "0.35.0"),
+            (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
             (jc.Module, "org.scijava:scijava-common", "2.89.0"),
             (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
         ]
