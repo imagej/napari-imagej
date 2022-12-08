@@ -6,13 +6,15 @@ from napari_imagej.types import type_hints
 
 def _napari_layer_types():
     """A hardcoded set of types that should be displayable in napari"""
-    return {
-        **type_hints.images(),
-        **type_hints.points(),
-        **type_hints.shapes(),
-        **type_hints.surfaces(),
-        **type_hints.labels(),
-    }.keys()
+    layer_hints = [
+        *type_hints.images(),
+        *type_hints.points(),
+        *type_hints.shapes(),
+        *type_hints.surfaces(),
+        *type_hints.labels(),
+    ]
+
+    return list(map(lambda hint: hint.type, layer_hints))
 
 
 def displayable_in_napari(data):
