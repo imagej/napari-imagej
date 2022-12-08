@@ -184,7 +184,7 @@ Finally, file a [pull request]!
 
 ## License
 
-Distributed under the terms of the [BSD-3] license,
+Distributed under the terms of the [BSD-2] license,
 "napari-imagej" is free and open source software.
 
 ## Issues
@@ -194,7 +194,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 
 [Apache Software License 2.0]: https://www.apache.org/licenses/LICENSE-2.0
 [black]: https://github.com/psf/black
-[BSD-3]: https://opensource.org/licenses/BSD-3-Clause
+[BSD-2]: https://opensource.org/licenses/BSD-2-Clause
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
 [cookiecutter-napari-plugin]: https://github.com/napari/cookiecutter-napari-plugin
 [conda]: https://docs.conda.io/

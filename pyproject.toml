@@ -7,7 +7,7 @@ name = "napari-imagej"
 version = "0.1.0.dev0"
 description = "ImageJ functionality from napari"
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
+license = {text = "BSD-2-Clause"}
 authors = [{name = "ImageJ2 developers", email = "ctrueden@wisc.edu"}]
 keywords = ["java", "imagej", "imagej2", "fiji", "napari"]
 classifiers = [
