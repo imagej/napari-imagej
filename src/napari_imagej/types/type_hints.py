@@ -1,7 +1,13 @@
 """
-The definitive set of equivalent Java and Python types.
+The definitive set of HARDCODED python type hints for java types.
 
-The mappings are broken up into sub-maps for convenience and utility.
+The type hints may be concrete types OR strings that can be treated
+as forward references.
+
+Note that many types don't belong here, as they can be determined
+in a programmatic way. Those types should be declared elsewhere.
+
+The hint maps are broken up into sub-maps for convenience and utility.
 """
 from collections import OrderedDict
 from functools import lru_cache
@@ -29,7 +35,7 @@ def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, A
 
 
 @lru_cache(maxsize=None)
-def ptypes() -> OrderedDict:
+def hint_map() -> OrderedDict:
     types = OrderedDict()
     for generator in MAP_GENERATORS:
         for k, v in generator().items():

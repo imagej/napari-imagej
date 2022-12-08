@@ -11,7 +11,7 @@ from magicgui.widgets import Container, Label, LineEdit, Widget
 from napari import Viewer
 from napari.layers import Image, Layer
 
-from napari_imagej.types.mappings import ptypes
+from napari_imagej.types.type_hints import hint_map
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
 from tests.utils import DummyModuleItem, jc
@@ -161,7 +161,7 @@ def test_napari_param_new_window_checkbox():
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(ptypes().keys()) - set(_napari_layer_types()))
+    types_present = list(set(hint_map().keys()) - set(_napari_layer_types()))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 

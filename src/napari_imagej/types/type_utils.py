@@ -1,17 +1,17 @@
 """
 A module containing useful functions for operating on python types
 """
-from napari_imagej.types import mappings
+from napari_imagej.types import type_hints
 
 
 def _napari_layer_types():
     """A hardcoded set of types that should be displayable in napari"""
     return {
-        **mappings.images(),
-        **mappings.points(),
-        **mappings.shapes(),
-        **mappings.surfaces(),
-        **mappings.labels(),
+        **type_hints.images(),
+        **type_hints.points(),
+        **type_hints.shapes(),
+        **type_hints.surfaces(),
+        **type_hints.labels(),
     }.keys()
 
 

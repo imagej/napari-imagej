@@ -22,7 +22,7 @@ from napari.utils._magicgui import find_viewer_ancestor
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
 from napari_imagej.java import ij, jc
-from napari_imagej.types.type_conversions import python_type_of
+from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
@@ -133,7 +133,7 @@ def _resolvable_or_required(input: "jc.ModuleItem"):
     # The ModuleItem is resolvable iff python_type_of
     # does not throw a ValueError.
     try:
-        python_type_of(input)
+        type_hint_for(input)
         return True
     except ValueError:
         return False
@@ -246,7 +246,7 @@ def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
     """
     Gets the (Python) type hint for a (Java) input
     """
-    type = python_type_of(input)
+    type = type_hint_for(input)
     if not input.isRequired():
         type = Optional[type]
     return type
@@ -382,7 +382,7 @@ def _add_napari_metadata(
 
     # Add the type hints as annotations metadata as well.
     # Without this, magicgui doesn't pick up on the types.
-    type_hints = {str(i.getName()): python_type_of(i) for i in unresolved_inputs}
+    type_hints = {str(i.getName()): type_hint_for(i) for i in unresolved_inputs}
 
     type_hints["return"] = signature(execute_module).return_annotation
 

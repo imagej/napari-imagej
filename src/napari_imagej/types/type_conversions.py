@@ -24,7 +24,7 @@ from scyjava import Priority
 from napari_imagej.java import ij, jc
 from napari_imagej.types.enum_likes import enum_like
 from napari_imagej.types.enums import py_enum_for
-from napari_imagej.types.mappings import ptypes
+from napari_imagej.types.type_hints import hint_map
 from napari_imagej.widgets.parameter_widgets import widget_supported_java_types
 
 # List of Module Item Converters, along with their priority
@@ -49,8 +49,8 @@ def module_item_converter(
     return converter
 
 
-def python_type_of(module_item: "jc.ModuleItem"):
-    """Returns the Python type associated with the passed ModuleItem."""
+def type_hint_for(module_item: "jc.ModuleItem"):
+    """Returns a python type hint for the passed Java ModuleItem."""
     for converter, _ in sorted(
         _MODULE_ITEM_CONVERTERS, reverse=True, key=lambda x: x[1]
     ):
@@ -59,7 +59,7 @@ def python_type_of(module_item: "jc.ModuleItem"):
             return converted
     raise ValueError(
         (
-            f"Unsupported Java Type: {module_item.getType()}. "
+            f"Cannot determine python type hint of {module_item.getType()}. "
             "Let us know about the failure at https://forum.image.sc, "
             "or file an issue at https://github.com/imagej/napari-imagej!"
         )
@@ -117,7 +117,7 @@ def _checkerUsingFunc(
     """
     The logic of this checker is as follows:
 
-    type_mappings().ptypes.items() contains (java_type, python_type) pairs.
+    hint_map.items() contains (java_type, python_type) pairs.
     These pairs are considered to be equivalent types; i.e. we can freely
     convert between these types.
 
@@ -140,7 +140,7 @@ def _checkerUsingFunc(
     """
     # Get the type of the Module item
     java_type = item.getType()
-    type_pairs = ptypes().items()
+    type_pairs = hint_map().items()
     # Case 1
     if item.isInput() and not item.isOutput():
         for jtype, ptype in type_pairs:
