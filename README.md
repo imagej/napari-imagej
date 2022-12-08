@@ -28,7 +28,6 @@ First, **[install mamba]**. Then:
     cd napari-imagej
     mamba env create
     mamba activate napari-imagej
-    pip install -e .
 
 We will be publishing a release of napari-imagej to [napari hub] and [PyPI] and [conda-forge] soon.
 
@@ -171,7 +170,6 @@ Contributions are welcome! When making changes to napari-imagej, please instead 
 
     mamba env create -f dev-environment.yml
     mamba activate napari-imagej-dev
-    pip install -e .
 
 The resulting environment `napari-imagej-dev` provides developer tools on top of the libraries needed to run napari-imagej. It **must be activated** for napari-imagej to appear in the Plugins menu. You can start napari *with napari-imagej* using the following:
 
