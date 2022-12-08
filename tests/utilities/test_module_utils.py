@@ -13,7 +13,7 @@ from napari.layers import Image, Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 
-from napari_imagej.types.type_hints import hint_map
+from napari_imagej.types.type_hints import type_hints
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
 from tests.utils import DummyModuleItem, jc
@@ -134,7 +134,8 @@ def test_napari_param_new_window_checkbox():
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    types_present = list(set(hint_map().keys()) - set(_napari_layer_types()))
+    hint_domain = list(map(lambda hint: hint.type, type_hints()))
+    types_present = list(set(hint_domain) - set(_napari_layer_types()))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
 

@@ -24,7 +24,7 @@ from scyjava import Priority
 from napari_imagej.java import ij, jc
 from napari_imagej.types.enum_likes import enum_like
 from napari_imagej.types.enums import py_enum_for
-from napari_imagej.types.type_hints import hint_map
+from napari_imagej.types.type_hints import type_hints
 from napari_imagej.widgets.parameter_widgets import widget_supported_java_types
 
 # List of Module Item Converters, along with their priority
@@ -140,29 +140,44 @@ def _checkerUsingFunc(
     """
     # Get the type of the Module item
     java_type = item.getType()
-    type_pairs = hint_map().items()
+    hints = type_hints()
     # Case 1
     if item.isInput() and not item.isOutput():
-        for jtype, ptype in type_pairs:
+        for hint in hints:
             # can we go from jtype to java_type?
-            if func(jtype, java_type):
-                return _optional_of(ptype, item)
+            if func(hint.type, java_type):
+                return _optional_of(hint.hint, item)
     # Case 2
     elif item.isOutput() and not item.isInput():
         # NB type_pairs is ordered from least to most specific.
-        for jtype, ptype in reversed(type_pairs):
+        for hint in hints:
             # can we go from java_type to jtype?
-            if func(java_type, jtype):
-                return _optional_of(ptype, item)
+            if func(java_type, hint.type):
+                return _optional_of(hint.hint, item)
     # Case 3
     elif item.isInput() and item.isOutput():
-        for jtype, ptype in type_pairs:
+        for hint in hints:
             # can we go both ways?
-            if func(java_type, jtype) and func(jtype, java_type):
-                return _optional_of(ptype, item)
+            if func(java_type, hint.type) and func(hint.type, java_type):
+                return _optional_of(hint.hint, item)
 
     # Didn't satisfy any cases!
     return None
+
+
+@module_item_converter(priority=Priority.HIGH)
+def isEqualChecker(item: "jc.ModuleItem") -> Optional[Type]:
+    """
+    Determines whether we have a type hint for this SPECIFIC type.
+    """
+
+    def isAssignable(from_type, to_type) -> bool:
+        # Use Types to get the raw type of each
+        from_raw = jc.Types.raw(from_type)
+        to_raw = jc.Types.raw(to_type)
+        return to_raw.equals(from_raw)
+
+    return _checkerUsingFunc(item, isAssignable)
 
 
 @module_item_converter()
@@ -175,7 +190,7 @@ def isAssignableChecker(item: "jc.ModuleItem") -> Optional[Type]:
         # Use Types to get the raw type of each
         from_raw = jc.Types.raw(from_type)
         to_raw = jc.Types.raw(to_type)
-        return from_raw.isAssignableFrom(to_raw)
+        return to_raw.isAssignableFrom(from_raw)
 
     return _checkerUsingFunc(item, isAssignable)
 
