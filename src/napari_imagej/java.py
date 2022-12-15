@@ -185,7 +185,6 @@ class ImageJInitializer(QThread):
             {"scijava.public": "https://maven.scijava.org/content/groups/public"}
         )
         config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
-        config.endpoints.append("org.scijava:scijava-common:2.90.1-SNAPSHOT")
 
         # Append napari-imagej-specific cli arguments
         cli_args = settings["jvm_command_line_arguments"].get(str)
@@ -213,7 +212,7 @@ class ImageJInitializer(QThread):
         component_requirements: List[Tuple[JClass, str, str]] = [
             (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
             (jc.OpInfo, "net.imagej:imagej-ops", "0.49.0"),
-            (jc.Module, "org.scijava:scijava-common", "2.89.0"),
+            (jc.Module, "org.scijava:scijava-common", "2.91.0"),
             (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
         ]
 

@@ -63,7 +63,7 @@ def test_convertible_match_pairs():
     # as an option, we will leave the conversion like this.
     assert jc.DoubleArray not in hint_domain
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=True, isOutput=False)
-    assert _module_utils.type_hint_for(input_item) == int
+    assert _module_utils.type_hint_for(input_item) == "napari.layers.Labels"
 
     # We want to test that napari could tell that a DoubleArray ModuleItem
     # could be satisfied by a List[float], as napari-imagej knows how to
@@ -82,7 +82,7 @@ def test_convertible_match_pairs():
     # gets converted to a ptype
     assert jc.DoubleArray not in hint_domain
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=True, isOutput=True)
-    assert _module_utils.type_hint_for(input_item) == List[float]
+    assert _module_utils.type_hint_for(input_item) == List[bool]
 
 
 def test_python_type_of_enum_like_IO():
