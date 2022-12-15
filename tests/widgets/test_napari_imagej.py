@@ -169,3 +169,35 @@ def test_widget_finalization(ij, imagej_widget: NapariImageJWidget, asserter):
     # Ensure that all Searchers are represented in the tree with a top level item
     numSearchers = len(ij.plugin().getPluginsOfType(jc.Searcher))
     asserter(lambda: imagej_widget.result_tree.topLevelItemCount() == numSearchers)
+
+
+def test_widget_clearing(imagej_widget: NapariImageJWidget, qtbot, asserter):
+    """
+    Ensures that searching something clears the result runner
+    """
+
+    # Ensure that the tree is fully populated
+    _ensure_searchers_available(imagej_widget, asserter)
+
+    # Find the ModuleSearcher
+    searcher_item = _searcher_tree_named(imagej_widget.result_tree, "Command")
+    assert searcher_item is not None
+    searcher_item.setCheckState(0, Qt.Checked)
+    asserter(lambda: searcher_item.checkState(0) == Qt.Checked)
+    # Search something, then wait for the results to populate
+    imagej_widget.search.bar.insert("Frangi")
+    asserter(lambda: searcher_item.childCount() > 0)
+    # Test single click spawns buttons
+    item = searcher_item.child(0)
+    rect = imagej_widget.result_tree.visualItemRect(item)
+    qtbot.mouseClick(
+        imagej_widget.result_tree.viewport(), Qt.LeftButton, pos=rect.center()
+    )
+    asserter(lambda: len(_run_buttons(imagej_widget)) > 0)
+
+    # Search something else
+    imagej_widget.search.bar.insert("Add")
+
+    # Wait for the buttons to disappear
+    asserter(imagej_widget.result_runner.selected_module_label.isHidden)
+    asserter(lambda: len(_run_buttons(imagej_widget)) == 0)
