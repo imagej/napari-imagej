@@ -44,6 +44,10 @@ def hint_category(func: Callable[[], List[TypeHint]]) -> Callable[[], List[TypeH
 
 @lru_cache(maxsize=None)
 def type_hints() -> List[TypeHint]:
+    """
+    Returns a List of all HARDCODED python type hints for java types,
+    sorted by priority.
+    """
     types: List[TypeHint] = []
     for generator in HINT_GENERATORS:
         types.extend(generator())
