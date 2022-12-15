@@ -211,7 +211,7 @@ class ImageJInitializer(QThread):
         # a class to query
         component_requirements: List[Tuple[JClass, str, str]] = [
             (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
-            (jc.OpInfo, "net.imagej:imagej-ops", "0.48.0"),
+            (jc.OpInfo, "net.imagej:imagej-ops", "0.49.0"),
             (jc.Module, "org.scijava:scijava-common", "2.89.0"),
             (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
         ]
