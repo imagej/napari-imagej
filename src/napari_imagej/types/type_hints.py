@@ -85,8 +85,8 @@ def numbers() -> List[TypeHint]:
         TypeHint(jc.BigInteger, int),
         TypeHint(jc.BigDecimal, float),
         TypeHint(jc.IntegerType, int, Priority.LOW),
-        TypeHint(jc.RealType, float, Priority.LOW),
-        TypeHint(jc.ComplexType, complex, Priority.LOW),
+        TypeHint(jc.RealType, float, Priority.LOW - 1),
+        TypeHint(jc.ComplexType, complex, Priority.LOW - 2),
         TypeHint(jc.NumericType, float, Priority.VERY_LOW),
     ]
 
