@@ -117,22 +117,22 @@ def _checkerUsingFunc(
     """
     The logic of this checker is as follows:
 
-    hint_map.items() contains (java_type, python_type) pairs.
-    These pairs are considered to be equivalent types; i.e. we can freely
-    convert between these types.
+    type_hints contains a bunch of TypeHints, data classes mapping a Java type
+    to a corresponding python hint.
 
     There are 3 cases:
     1) The ModuleItem is a PURE INPUT:
-        We can satisfy item with an object of ptype IF its corresponding
-        jtype can be converted to item's type. The conversion then goes
-        ptype -> jtype -> java_type
+        We can satisfy item with an object of python type hint.hint IF its
+        corresponding java type hint.type can be converted to item's type.
+        The conversion then goes:
+        hint.hint -> hint.type -> java_type
     2) The ModuleItem is a PURE OUTPUT:
-        We can satisfy item with ptype IF java_type can be converted to jtype.
-        Then jtype can be converted to ptype. The conversion then goes
-        java_type -> jtype -> ptype
+        We can satisfy item with an object of python type hint.hint IF we can convert
+        java_type into its corresponding java type hint.type. The conversion then goes
+        java_type -> hint.type -> hint.hint
     3) The ModuleItem is BOTH:
         We can satisfy item with ptype IF we satisfy both 1 and 2.
-        ptype -> jtype -> java_type -> jtype -> ptype
+        hint.hint -> hint.type -> java_type -> hint.type -> hint.hint
 
     :param item: the ModuleItem we'd like to convert
     :return: the python equivalent of ModuleItem's type, or None if that type
@@ -140,25 +140,24 @@ def _checkerUsingFunc(
     """
     # Get the type of the Module item
     java_type = item.getType()
-    hints = type_hints()
     # Case 1
     if item.isInput() and not item.isOutput():
-        for hint in hints:
-            # can we go from jtype to java_type?
+        for hint in type_hints():
+            # can we go from hint.type to java_type?
             if func(hint.type, java_type):
                 return _optional_of(hint.hint, item)
     # Case 2
     elif item.isOutput() and not item.isInput():
         # NB type_pairs is ordered from least to most specific.
-        for hint in hints:
-            # can we go from java_type to jtype?
+        for hint in type_hints():
+            # can we go from java_type to hint.type?
             if func(java_type, hint.type):
                 return _optional_of(hint.hint, item)
     # Case 3
     elif item.isInput() and item.isOutput():
-        for hint in hints:
+        for hint in type_hints():
             # can we go both ways?
-            if func(java_type, hint.type) and func(hint.type, java_type):
+            if func(hint.type, java_type) and func(java_type, hint.type):
                 return _optional_of(hint.hint, item)
 
     # Didn't satisfy any cases!
