@@ -50,6 +50,7 @@ class NapariImageJWidget(QWidget):
 
         # When the text bar changes, update the search results.
         self.search.bar.textEdited.connect(self.result_tree.search)
+        self.search.bar.textEdited.connect(self.result_runner.clear)
 
         # When clicking a result, select it with the ResultRunner
         def click(treeItem: QTreeWidgetItem):
