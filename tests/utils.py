@@ -22,6 +22,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.img.array.ArrayImgs"
 
     @JavaClasses.blocking_import
+    def Axes(self):
+        return "net.imagej.axis.Axes"
+
+    @JavaClasses.blocking_import
     def BoolType(self):
         return "net.imglib2.type.logic.BoolType"
 
