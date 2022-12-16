@@ -11,6 +11,7 @@ from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
+from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import (
@@ -42,9 +43,12 @@ class NapariImageJWidget(QWidget):
         # Then: The results tree
         self.result_tree: SearchResultTree = SearchResultTree()
         self.layout().addWidget(self.result_tree)
-        # Finally: The SearchResult runner
+        # Second-to-lastly: The SearchResult runner
         self.result_runner: ResultRunner = ResultRunner(napari_viewer)
         self.layout().addWidget(self.result_runner)
+        # Finally: The InfoBar
+        self.info_box: InfoBox = InfoBox()
+        self.layout().addWidget(self.info_box)
 
         # -- Interwidget connections -- #
 
@@ -136,6 +140,8 @@ class WidgetFinalizer(QThread):
         """
         # Finalize the Results Tree
         self._finalize_results_tree()
+        # Finalize the info bar
+        self._finalize_info_bar()
 
     def _finalize_results_tree(self):
         """
@@ -177,3 +183,8 @@ class WidgetFinalizer(QThread):
                     expanded=False,
                 )
             )
+
+    def _finalize_info_bar(self):
+        self.widget.info_box.version_bar.setText(
+            " ".join(["ImageJ", str(ij().getVersion())])
+        )

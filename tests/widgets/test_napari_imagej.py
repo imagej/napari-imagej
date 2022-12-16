@@ -7,6 +7,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
 from napari_imagej.java import ij, jc
+from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree
@@ -17,7 +18,7 @@ from tests.widgets.widget_utils import _searcher_tree_named
 def test_widget_subwidget_layout(imagej_widget: NapariImageJWidget):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = imagej_widget.children()
-    assert len(subwidgets) == 5
+    assert len(subwidgets) == 6
     assert isinstance(imagej_widget.layout(), QVBoxLayout)
     assert isinstance(subwidgets[0], QVBoxLayout)
 
@@ -25,6 +26,7 @@ def test_widget_subwidget_layout(imagej_widget: NapariImageJWidget):
     assert isinstance(subwidgets[2], JVMEnabledSearchbar)
     assert isinstance(subwidgets[3], SearchResultTree)
     assert isinstance(subwidgets[4], ResultRunner)
+    assert isinstance(subwidgets[5], InfoBox)
 
 
 def test_keymaps(make_napari_viewer, qtbot):
@@ -201,3 +203,17 @@ def test_widget_clearing(imagej_widget: NapariImageJWidget, qtbot, asserter):
     # Wait for the buttons to disappear
     asserter(imagej_widget.result_runner.selected_module_label.isHidden)
     asserter(lambda: len(_run_buttons(imagej_widget)) == 0)
+
+
+def test_info_validity(imagej_widget: NapariImageJWidget, qtbot, asserter):
+    """
+    Ensures that searching something clears the result runner
+    """
+
+    # Wait for the info to populate
+    ij()
+
+    # Check the version
+    info_box = imagej_widget.info_box
+
+    asserter(lambda: info_box.version_bar.text() == "ImageJ " + str(ij().getVersion()))
