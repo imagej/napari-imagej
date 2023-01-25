@@ -11,6 +11,7 @@ There are a few functions that are designed for use by graphical widgets, namely
         - converts a SciJava SearchResult to a ModuleInfo
 """
 from inspect import Parameter, Signature, _empty, isclass, signature
+from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException
@@ -475,6 +476,9 @@ def functionify_module_execution(
                 or None if this module does not return any layer data.
             """
             try:
+                # Start timing
+                start = perf_counter()
+
                 # Resolve remaining inputs
                 resolved_java_args = _preprocess_remaining_inputs(
                     module,
@@ -521,6 +525,10 @@ def functionify_module_execution(
                 )
                 if display_externally is not None and len(widget_outputs) > 0:
                     _display_result(widget_outputs, info, viewer, display_externally)
+
+                # End timing
+                end = perf_counter()
+                log_debug(f"Computation completed in {end - start:0.4f} seconds")
 
                 # Refresh the modified layers
                 for layer in mutated_layers:
