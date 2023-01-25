@@ -30,6 +30,24 @@ from napari_imagej.widgets.parameter_widgets import (
 )
 from tests.utils import DummyModuleItem, jc
 
+
+def _assert_widget_matches_item(item, type_hint, widget_type, widget_class):
+    # We only need item for the getWidgetStyle() function
+    actual = preferred_widget_for(item, type_hint)
+    assert widget_type == actual
+
+    def func(foo):
+        print(foo, "bar")
+
+    func.__annotation__ = {"foo": type_hint}
+
+    widget = magicgui.magicgui(
+        function=func, call_button=False, foo={"widget_type": actual}
+    )
+    assert len(widget._list) == 1
+    assert isinstance(widget._list[0], widget_class)
+
+
 parameterizations = [
     ("listBox", str, "Select", Select),
     ("radioButtonHorizontal", str, "RadioButtons", RadioButtons),
@@ -53,22 +71,13 @@ def test_preferred_widget_for(style, type_hint, widget_type, widget_class):
     :param widget_type: the name of a magicgui widget
     :param widget_class: the class corresponding to name
     """
-    # We only need item for the getWidgetStyle() function
     item: DummyModuleItem = DummyModuleItem()
     item.setWidgetStyle(style)
-    actual = preferred_widget_for(item, type_hint)
-    assert widget_type == actual
-
-    def func(foo):
-        print(foo, "bar")
-
-    func.__annotation__ = {"foo": type_hint}
-
-    widget = magicgui.magicgui(
-        function=func, call_button=False, foo={"widget_type": actual}
-    )
-    assert len(widget._list) == 1
-    assert isinstance(widget._list[0], widget_class)
+    _assert_widget_matches_item(item, type_hint, widget_type, widget_class)
+    # let's also check optional parameter
+    item: DummyModuleItem = DummyModuleItem(isRequired=False)
+    item.setWidgetStyle(style)
+    _assert_widget_matches_item(item, Optional[type_hint], widget_type, widget_class)
 
 
 @pytest.mark.parametrize(

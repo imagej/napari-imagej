@@ -6,7 +6,7 @@ Notable functions included in the module:
         - finds the best widget (as a str) for a ModuleItem
         and corresponding python type
 """
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, Optional, Union, get_args, get_origin
 
 from napari.layers import Image
 
@@ -25,6 +25,19 @@ def _widget_preference(
 ) -> Callable[["jc.ModuleItem", Union[type, str]], Optional[str]]:
     PREFERENCE_FUNCTIONS.append(func)
     return func
+
+
+def _unwrap_optional(type_hint: Union[type, str]) -> Union[type, str]:
+    origin = get_origin(type_hint)
+    args = get_args(type_hint)
+    # If it is an optional - unwrap it
+    if origin is Union and type(None) in args:
+        # Find the (first) argument that is not None
+        for arg in args:
+            if arg is not None:
+                return arg
+    # Otherwise - do nothing
+    return type_hint
 
 
 def preferred_widget_for(
@@ -114,6 +127,7 @@ def _scijava_style_preference(
     if style not in _supported_scijava_styles:
         return None
     style_options = _supported_scijava_styles[style]
+    type_hint = _unwrap_optional(type_hint)
     for k, v in style_options.items():
         if issubclass(type_hint, k):
             return v
