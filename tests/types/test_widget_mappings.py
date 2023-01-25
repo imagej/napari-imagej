@@ -90,19 +90,8 @@ def test_preferred_widget_for_parameter_widgets(type_hint):
     item: DummyModuleItem = DummyModuleItem(
         jtype=jc.ArrayImg, isInput=True, isOutput=True
     )
-    actual = preferred_widget_for(item, type_hint)
-    assert "napari_imagej.widgets.parameter_widgets.MutableOutputWidget" == actual
-
-    def func(foo):
-        print(foo, "bar")
-
-    func.__annotation__ = {"foo": type_hint}
-
-    widget = magicgui.magicgui(
-        function=func, call_button=False, foo={"widget_type": actual}
-    )
-    assert len(widget._list) == 1
-    assert isinstance(widget._list[0], MutableOutputWidget)
+    widget_type = "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
+    _assert_widget_matches_item(item, type_hint, widget_type, MutableOutputWidget)
 
 
 def test_all_styles_in_parameterizations():
@@ -118,27 +107,25 @@ def test_all_styles_in_parameterizations():
     assert all_styles == _parameterizations
 
 
-def test_file_widgets():
-    # FileWidget.OPEN_STYLE
+@pytest.mark.parametrize(
+    ["style_str", "widget_type"],
+    [
+        ("OPEN_STYLE", OpenFileWidget),
+        ("SAVE_STYLE", SaveFileWidget),
+        ("DIRECTORY_STYLE", DirectoryWidget),
+    ],
+)
+def test_file_widget(style_str, widget_type):
     item = DummyModuleItem(jtype=jc.File)
-    item.setWidgetStyle(jc.FileWidget.OPEN_STYLE)
-    type_hint = type_hint_for(item)
-    assert preferred_widget_for(item, type_hint) == OpenFileWidget
+    # Get the SciJava style from the string
+    style = getattr(jc.FileWidget, style_str)
+    item.setWidgetStyle(style)
 
-    # FileWidget.SAVE_STYLE
-    item = DummyModuleItem(jtype=jc.File)
-    item.setWidgetStyle(jc.FileWidget.SAVE_STYLE)
     type_hint = type_hint_for(item)
-    assert preferred_widget_for(item, type_hint) == SaveFileWidget
-
-    # FileWidget.DIRECTORY_STYLE
-    item = DummyModuleItem(jtype=jc.File)
-    item.setWidgetStyle(jc.FileWidget.DIRECTORY_STYLE)
-    type_hint = type_hint_for(item)
-    assert preferred_widget_for(item, type_hint) == DirectoryWidget
+    _assert_widget_matches_item(item, type_hint, widget_type, widget_type)
 
 
 def test_shape_widget():
     item = DummyModuleItem(jtype=jc.Shape)
     type_hint = type_hint_for(item)
-    assert preferred_widget_for(item, type_hint) == ShapeWidget
+    _assert_widget_matches_item(item, type_hint, ShapeWidget, ShapeWidget)
