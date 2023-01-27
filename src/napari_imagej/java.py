@@ -209,9 +209,16 @@ class ImageJInitializer(QThread):
         # be able to find our current version. We do that by querying a Java class
         # within that component. Thus for each component-version pair, we also need
         # a class to query
+        #
+        # Some classes are commonplace, and we can grab them from jc.
+        # Others are not used elsewhere, and we import them here.
+        RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
+        UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
         component_requirements: List[Tuple[JClass, str, str]] = [
             (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
             (jc.OpInfo, "net.imagej:imagej-ops", "0.49.0"),
+            (UnsafeImg, "net.imglib2:imglib2-unsafe", "1.0.0"),
+            (RGRAI, "net.imglib2:imglib2-imglyb", "1.1.0"),
             (jc.Module, "org.scijava:scijava-common", "2.91.0"),
             (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
         ]
