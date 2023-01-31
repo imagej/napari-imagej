@@ -77,7 +77,13 @@ def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter)
     item = searcher_item.child(0)
     rect = tree.visualItemRect(item)
     qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
-    asserter(lambda: len(_run_buttons(imagej_widget)) > 0)
+
+    def assert_buttons():
+        expected = len(imagej_widget.result_runner._buttons_for(item.result))
+        actual = len(_run_buttons(imagej_widget))
+        return expected == actual
+
+    asserter(assert_buttons)
     # Test single click on searcher hides buttons
     item = searcher_item
     rect = tree.visualItemRect(item)
@@ -87,9 +93,14 @@ def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter)
         lambda: imagej_widget.result_runner.selected_module_label.isHidden()
         or imagej_widget.result_runner.selected_module_label.text() == ""
     )
+
     # Ensure we don't see any buttons in the runner widget
-    buttons = _run_buttons(imagej_widget)
-    asserter(lambda: len(buttons) == 0)
+    def assert_no_buttons():
+        expected = 0
+        actual = len(_run_buttons(imagej_widget))
+        return expected == actual
+
+    asserter(assert_no_buttons)
 
 
 def test_searchbar_results_transitions(
