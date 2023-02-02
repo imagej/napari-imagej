@@ -74,7 +74,6 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
     def handle_popup(text: str, popup_generator: Callable[[], None]):
         # # Start the handler in a new thread
         class Handler(QRunnable):
-
             # Test popup when running headlessly
             def run(self) -> None:
                 asserter(lambda: isinstance(QApplication.activeWindow(), RichTextPopup))
@@ -203,7 +202,6 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
 

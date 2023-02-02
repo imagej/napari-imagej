@@ -334,7 +334,6 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
 
 
 def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
-
     widgets = []
     for result in results:
         name = result[0]

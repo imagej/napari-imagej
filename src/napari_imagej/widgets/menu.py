@@ -304,7 +304,6 @@ class GUIButton(QPushButton):
 
 
 class SettingsButton(QPushButton):
-
     # Signal used to identify changes to user settings
     setting_change = Signal()
 
