@@ -49,7 +49,7 @@ dependencies = [
 # Development tools
 dev = [
     "autopep8",
-    "black",
+    "black >= 23.1.0",
     "build",
     "flake8",
     "flake8-pyproject",

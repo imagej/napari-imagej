@@ -17,7 +17,7 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Tuple
 
 import imagej
-from jpype import JClass
+from jpype import JClass, JImplementationFor
 from qtpy.QtCore import QObject, QThread, Signal
 from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
@@ -730,3 +730,25 @@ class JavaClasses(object):
 
 
 jc = JavaClasses()
+
+
+@JImplementationFor("org.scijava.module.ModuleItem")
+class ModuleItemAddons(object):
+    """ModuleItem addons.
+
+    This class should not be initialized manually. Upon initialization
+    the ImagePlusAddons class automatically extends the Java
+    ij.ImagePlus via JPype's class customization mechanism:
+
+    https://jpype.readthedocs.io/en/latest/userguide.html#class-customizers
+    """
+
+    # RESTRICTED_NAMES = {
+    #     "in": "input",
+    # }
+
+    def py_name(self):
+        name = ij().py.from_java(self.getName())
+        if name == "in":
+            return "input"
+        return name

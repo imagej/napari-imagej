@@ -87,7 +87,6 @@ class SearcherTreeItem(QTreeWidgetItem):
 
 
 class SearchResultTree(QTreeWidget):
-
     # Signal used to update the children of this widget.
     # NB the object passed in this signal's emissions will always be a
     # org.scijava.search.SearchEvent in practice. BUT the signal requires

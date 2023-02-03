@@ -85,7 +85,6 @@ def test_preferred_widget_for(style, type_hint, widget_type, widget_class):
     ["napari.layers.Image", Image, Optional["napari.layers.Image"], Optional[Image]],
 )
 def test_preferred_widget_for_parameter_widgets(type_hint):
-
     # MutableOutputWidget
     item: DummyModuleItem = DummyModuleItem(
         jtype=jc.ArrayImg, isInput=True, isOutput=True

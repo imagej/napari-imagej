@@ -27,7 +27,6 @@ def assert_labels_equality(
 
 @pytest.fixture(scope="module")
 def py_labeling() -> Labeling:
-
     a = np.zeros((4, 4), np.int32)
     a[:2] = 1
     example1_images = []

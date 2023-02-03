@@ -32,7 +32,7 @@ dependencies:
   - scyjava >= 1.8.1
   # Developer tools
   - autopep8
-  - black
+  - black >= 23.1.0
   - build
   - flake8
   - flake8-typing-imports

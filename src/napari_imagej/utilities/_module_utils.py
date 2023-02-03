@@ -254,7 +254,8 @@ def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
 
 def _module_param(input: "jc.ModuleItem") -> Parameter:
     """Converts a java ModuleItem into a python Parameter"""
-    name = ij().py.from_java(input.getName())
+    # NB ModuleInfo.py_name() defined using JImplementationFor
+    name = input.py_name()
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
     type_hint = _type_hint_for_module_item(input)
@@ -334,7 +335,6 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
 
 
 def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
-
     widgets = []
     for result in results:
         name = result[0]
