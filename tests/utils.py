@@ -5,7 +5,7 @@ from typing import List
 
 from jpype import JImplements, JOverride
 
-from napari_imagej.java import JavaClasses
+from napari_imagej.java import JavaClasses, ModuleItemAddons
 
 
 class JavaClassesTest(JavaClasses):
@@ -170,7 +170,7 @@ class DummyModuleInfo:
         return self._outputs
 
 
-class DummyModuleItem:
+class DummyModuleItem(ModuleItemAddons):
     """
     A mock of org.scijava.module.ModuleItem that is created much easier
     Fields can and should be added as needed for tests.
