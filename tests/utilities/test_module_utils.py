@@ -209,6 +209,15 @@ def test_module_param():
     assert expected == _module_utils._module_param(module_item)
 
 
+def test_module_param_illegal_name():
+    """Ensure illegal param names in python are renamed"""
+    module_item = DummyModuleItem(jtype=jc.String, name="in")
+    expected = Parameter(
+        name="input", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=str
+    )
+    assert expected == _module_utils._module_param(module_item)
+
+
 def test_add_param_metadata():
     # Test successful addition
     metadata = {}
