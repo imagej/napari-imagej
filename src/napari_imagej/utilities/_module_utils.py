@@ -255,7 +255,7 @@ def _type_hint_for_module_item(input: "jc.ModuleItem") -> type:
 def _module_param(input: "jc.ModuleItem") -> Parameter:
     """Converts a java ModuleItem into a python Parameter"""
     # NB ModuleInfo.py_name() defined using JImplementationFor
-    name = ij().py.from_java(input.py_name())
+    name = input.py_name()
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
     type_hint = _type_hint_for_module_item(input)

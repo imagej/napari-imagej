@@ -748,7 +748,7 @@ class ModuleItemAddons(object):
     # }
 
     def py_name(self):
-        name = self.getName()
+        name = ij().py.from_java(self.getName())
         if name == "in":
             return "input"
         return name
