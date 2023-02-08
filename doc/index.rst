@@ -11,10 +11,10 @@ napari-imagej aims to provide access to all `ImageJ2 <https://imagej.net/softwar
 napari-imagej builds on the foundation of `PyImageJ <https://github.com/imagej/pyimagej>`_, a project allowing ImageJ2 access from Python.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-
+   Install
 
 Indices and tables
 ==================
