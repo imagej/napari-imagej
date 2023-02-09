@@ -22,6 +22,8 @@ napari-imagej builds on the foundation of `PyImageJ <https://github.com/imagej/p
 
    Development
 
+   Benchmarking
+
 Indices and tables
 ==================
 
