@@ -16,12 +16,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
+from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
-from napari_imagej.java import ij, jc
+from napari_imagej.java import ij, jc, legacy_active
 from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
@@ -451,7 +452,7 @@ def functionify_module_execution(
             for module_item, input in zip(unresolved_inputs, resolved_java_args):
                 input_map.put(module_item.getName(), input)
 
-            # Create postprocessors
+            # Add napari pre- and postprocessors
             postprocessors: "jc.ArrayList" = _get_postprocessors()
             postprocessors.add(
                 NapariPostProcessor(
@@ -462,6 +463,10 @@ def functionify_module_execution(
                     start_time,
                 )
             )
+            # Add legacy-specific pre- and postprocessors
+            if legacy_active():
+                remaining_preprocessors.add(NapariLegacyPreProcessor())
+                postprocessors.add(NapariLegacyPostProcessor(output_handler))
 
             log_debug("Processing...")
 
@@ -539,6 +544,57 @@ def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
     return None
 
 
+@JImplements("org.scijava.module.process.PreprocessorPlugin", deferred=True)
+class NapariLegacyPreProcessor(object):
+    def __init__(self):
+        self.is_canceled: bool = False
+        self.cancel_reason: str = ""
+
+    # -- Contextual methods -- #
+
+    @JOverride
+    def context(self):
+        return self.ctx
+
+    @JOverride
+    def getContext(self):
+        return self.ctx
+
+    @JOverride
+    def setContext(self, ctx):
+        self.ctx = ctx
+
+    # -- Cancelable methods -- #
+
+    @JOverride
+    def isCanceled(self):
+        return self.is_canceled
+
+    @JOverride
+    def cancel(self, reason: str):
+        self.is_canceled = True
+        self.cancel_reason = reason
+
+    @JOverride
+    def getCancelReason(self) -> str:
+        return self.cancel_reason
+
+    # -- ProcessorPlugin methods -- #
+
+    @JOverride
+    def process(self, module: "jc.Module"):
+        # As a fallback, if we want to run an ImageJ plugin without
+        # the ImageJ UI, we can run it on napari layers!
+        if legacy_active() and not ij().ui().isVisible():
+            if current_viewer().layers.selection.active:
+                dataset = ij().py.to_java(current_viewer().layers.selection.active)
+                display = ij().display().getDisplay(dataset.getName())
+                if not display:
+                    display = ij().display().createDisplay(dataset.getName(), dataset)
+                imp = ij().legacy.getImageMap().registerDisplay(display)
+                ij().WindowManager.setTempCurrentImage(imp)
+
+
 @JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
 class NapariPostProcessor(object):
     def __init__(
@@ -612,3 +668,46 @@ class NapariPostProcessor(object):
 
         end_time = perf_counter()
         log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")
+
+
+@JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
+class NapariLegacyPostProcessor(object):
+    def __init__(self, output_handler):
+        self.translator = jc.ImageTranslator(ij().legacy)
+        self.harmonizer = jc.Harmonizer(ij().context(), self.translator)
+        self.output_handler = output_handler
+
+    # -- Contextual methods -- #
+
+    @JOverride
+    def context(self):
+        return self.ctx
+
+    @JOverride
+    def getContext(self):
+        return self.ctx
+
+    @JOverride
+    def setContext(self, ctx):
+        self.ctx = ctx
+
+    # -- ProcessorPlugin methods -- #
+
+    @JOverride
+    def process(self, module: "jc.Module"):
+        try:
+            if legacy_active() and not ij().ui().isVisible():
+                if current_viewer().layers.selection.active:
+                    imp = ij().WindowManager.getCurrentImage()
+                    if not ij().legacy.getImageMap().lookupDisplay(imp):
+                        display = ij().legacy.getImageMap().registerLegacyImage(imp)
+                        layer = ij().py.from_java(display)
+                        self.output_handler(layer)
+                    else:
+                        ij().py.sync_image(imp)
+                        current_viewer().layers.selection.active.refresh()
+                for id in ij().WindowManager.getIDList() or []:
+                    print(f"Closing image {id}")
+                    ij().WindowManager.getImage(id).close()
+        except Exception as e:
+            print(e)

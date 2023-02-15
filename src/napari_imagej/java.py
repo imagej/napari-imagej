@@ -51,6 +51,10 @@ def ij():
     return initializer.ij
 
 
+def legacy_active():
+    return ij().legacy and ij().legacy.isActive()
+
+
 class ImageJInitializer(QThread):
     """
     A QThread responsible for initializing ImageJ
@@ -185,6 +189,10 @@ class ImageJInitializer(QThread):
             {"scijava.public": "https://maven.scijava.org/content/groups/public"}
         )
         config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+        config.add_option(
+            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8579"
+        )
+        config.endpoints.append("net.imagej:ij:1.x-SNAPSHOT")
 
         # Append napari-imagej-specific cli arguments
         cli_args = settings["jvm_command_line_arguments"].get(str)
@@ -732,6 +740,20 @@ class JavaClasses(object):
     @blocking_import
     def ImagePlus(self):
         return "ij.ImagePlus"
+
+    # ImageJ Legacy Types
+
+    @blocking_import
+    def Harmonizer(self):
+        return "net.imagej.legacy.translate.Harmonizer"
+
+    @blocking_import
+    def ImageTranslator(self):
+        return "net.imagej.legacy.translate.ImageTranslator"
+
+    @blocking_import
+    def LegacyImageMap(self):
+        return "net.imagej.legacy.LegacyImageMap"
 
     # ImageJ-Ops Types
 

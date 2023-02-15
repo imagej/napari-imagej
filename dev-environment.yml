@@ -46,6 +46,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-qt
+  - setuptools >= 61.2
   - sphinx
   - sphinx_rtd_theme
   - qtpy
