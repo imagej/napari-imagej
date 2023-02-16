@@ -14,11 +14,12 @@ from inspect import Parameter, Signature, _empty, isclass, signature
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException
-from magicgui.widgets import Container, Label, LineEdit, Widget, request_values
+from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
 from magicgui.widgets._bases import CategoricalWidget
 from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import find_viewer_ancestor
+from pandas import DataFrame
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
 from napari_imagej.java import ij, jc
@@ -338,11 +339,14 @@ def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
     widgets = []
     for result in results:
         name = result[0]
-        value = str(result[1])
+        value = result[1]
         result_name: Label = Label(value=name)
 
-        result_value: LineEdit = LineEdit(value=value)
-        result_value.enabled = False
+        if isinstance(value, DataFrame):
+            result_value: Table = Table(value)
+        else:
+            result_value: LineEdit = LineEdit(value=str(value))
+            result_value.enabled = False
 
         widget = Container(layout="horizontal", widgets=(result_name, result_value))
         widgets.append(widget)
