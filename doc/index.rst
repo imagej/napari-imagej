@@ -20,6 +20,8 @@ napari-imagej builds on the foundation of `PyImageJ <https://github.com/imagej/p
 
    Configuration
 
+   Troubleshooting
+
    Use_Cases
 
    Development
