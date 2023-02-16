@@ -28,6 +28,7 @@ dependencies:
   - napari >= 0.4.17
   - numpy
   - openjdk=8
+  - pandas
   - pyimagej >= 1.3.0
   - scyjava >= 1.8.1
   # Project from source

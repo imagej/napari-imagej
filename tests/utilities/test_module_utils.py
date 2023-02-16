@@ -7,9 +7,10 @@ from typing import Any, Dict, List, Optional
 
 import numpy
 import pytest
-from magicgui.widgets import Container, Label, LineEdit, Widget
+from magicgui.widgets import Container, Label, LineEdit, Table, Widget
 from napari import Viewer
 from napari.layers import Image, Layer
+from pandas import DataFrame
 
 from napari_imagej.types.type_hints import hint_map
 from napari_imagej.types.type_utils import _napari_layer_types
@@ -527,6 +528,22 @@ def test_non_layer_widget():
         # Assert the value is '1' (stringified 1)
         assert isinstance(subwidget[1], LineEdit)
         assert subwidget[1].value == str(result[1])
+
+
+def test_non_layer_widget_table():
+    table = DataFrame()
+    results = [("table", table)]
+    widget: Widget = _module_utils._non_layer_widget(results)
+    # Assert the return is a container
+    assert isinstance(widget, Container)
+    # Assert the nth subwidget reports the nth name and (stringified) value
+    for result, subwidget in zip(results, widget):
+        assert isinstance(subwidget, Container)
+        # Assert the label is 'a'
+        assert isinstance(subwidget[0], Label)
+        assert subwidget[0].value == result[0]
+        # Assert the value is a table
+        assert isinstance(subwidget[1], Table)
 
 
 def test_mutable_layers():
