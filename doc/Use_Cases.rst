@@ -8,3 +8,4 @@ Below we document use cases for the napari-imagej plugin.
 
     examples/ops.rst
 
+    examples/scripting.rst
