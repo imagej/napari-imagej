@@ -22,12 +22,14 @@ Since napari-imagej is calling Java code under the hood, it must launch a Java V
 
 The first launch of napari-imagej can take significantly longer than subsequent launches while the underlying framework downloads the Java artifacts needed to run ImageJ2. **Downloading these libraries can take minutes**. These libraries are cached, however, so subsequent launches should not take more than a couple of seconds.
 
-### The ImageJ2 GUI button is greyed out!
+The ImageJ2 GUI button is greyed out!
+-------------------------------------
 
 There are two common cases for a disabled ImageJ2 GUI button:
 
-1. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see [here](#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...")
+#. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see `here <#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...">`_
 
-2. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see [here](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode) for more information.
+#. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see `this page <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_ for more information.
 
+.. _Mamba: https://mamba.readthedocs.io/en/latest/
 .. _npe2: https://github.com/napari/npe2

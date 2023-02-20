@@ -57,7 +57,7 @@ With this widget, we only need to enter in our inputs, and then press the run bu
 
 Below, we run this Op on a focal plane of the `EmbryoCE <https://samples.scif.io/EmbryoCE.zip>`_ image from https://samples.scif.io:
 
-.. figure:: https://media.imagej.net/napari-imagej/gauss_example.png
+.. figure:: https://media.imagej.net/napari-imagej/gauss_op.gif
 
 .. _ImageJ Ops: https://imagej.net/libs/imagej-ops/index
 
