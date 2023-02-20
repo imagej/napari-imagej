@@ -1,0 +1,14 @@
+name: napari-imagej-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # python
+  - python=3.10
+  # dependencies
+  - myst-parser
+  - sphinx_rtd_theme
+  # pip
+  - pip
+  - pip:
+     - readthedocs-sphinx-search
