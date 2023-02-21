@@ -3,7 +3,7 @@ A module testing napari_imagej.utilities._module_utils
 """
 from collections import OrderedDict
 from inspect import Parameter, _empty, signature
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy
 import pytest
@@ -628,7 +628,7 @@ def test_request_values_args():
     assert args["f"]["value"] == "also default"
 
 
-def test_execute_function_with_params(make_napari_viewer, ij):
+def test_execute_function_with_params(make_napari_viewer, ij, asserter):
     viewer: Viewer = make_napari_viewer()
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
@@ -647,7 +647,7 @@ def test_execute_function_with_params(make_napari_viewer, ij):
     assert len(viewer.layers) == 0
 
     _module_utils._execute_function_with_params(viewer, params, func)
-    assert len(viewer.layers) == 1
+    asserter(lambda: len(viewer.layers) == 1)
 
 
 def test_functionify_module_execution_result_regression(make_napari_viewer, ij):
@@ -680,7 +680,7 @@ def test_functionify_module_execution_result_regression(make_napari_viewer, ij):
         default="2, 5",
     )
     assert expected_params == sig.parameters
-    assert sig.return_annotation == List[Layer]
+    assert sig.return_annotation is None
 
 
 def test_info_for(ij):

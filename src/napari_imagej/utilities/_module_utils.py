@@ -14,7 +14,7 @@ from inspect import Parameter, Signature, _empty, isclass, signature
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from jpype import JException
+from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
 from magicgui.widgets._bases import CategoricalWidget
 from napari import Viewer, current_viewer
@@ -452,6 +452,31 @@ def _add_scijava_metadata(
     return metadata
 
 
+def _get_postprocessors(napari_post: "jc.PostprocessorPlugin"):
+    """Runs all known postprocessors on the passed module."""
+    log_debug("Postprocessing...")
+    # Discover all postprocessors
+    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
+
+    problematic_postprocessors = (
+        # HACK: This particular postprocessor is trying to create a Display
+        # for lots of different types. Some of those types (specifically
+        # ImgLabelings) make this guy throw Exceptions. We are going to ignore
+        # it until it behaves.
+        # (see https://github.com/imagej/imagej-common/issues/100 )
+        jc.DisplayPostprocessor,
+    )
+
+    # Run all discovered postprocessors unless we have marked it as problematic
+    good_postprocessors = jc.ArrayList()
+    for postprocessor in postprocessors:
+        if postprocessor not in problematic_postprocessors:
+            good_postprocessors.add(postprocessor)
+
+    good_postprocessors.add(napari_post)
+    return good_postprocessors
+
+
 def functionify_module_execution(
     viewer: Viewer, module: "jc.Module", info: "jc.ModuleInfo"
 ) -> Tuple[Callable, dict]:
@@ -468,7 +493,7 @@ def functionify_module_execution(
         # Package the rest of the execution into a widget
         def module_execute(
             *user_resolved_inputs,
-        ) -> List[Layer]:
+        ) -> None:
             """
             A function designed to execute module.
             :param user_resolved_inputs: Inputs passed from magicgui
@@ -499,43 +524,70 @@ def functionify_module_execution(
                         ({resolved_java_args}) -- {info.getIdentifier()}"
                 )
                 _initialize_module(module)
-                _run_module(module)
+                # _run_module(module)
+
+                @JImplements("org.scijava.module.process.PostprocessorPlugin")
+                class NapariPostProcessor(object):
+                    @JOverride
+                    def context(self):
+                        return self.ctx
+
+                    @JOverride
+                    def getContext(self):
+                        return self.ctx
+
+                    @JOverride
+                    def setContext(self, ctx):
+                        self.ctx = ctx
+
+                    @JOverride
+                    def process(self, module: "jc.Module"):
+                        # get all outputs
+                        layer_outputs: List[Layer]
+                        widget_outputs: List[Any]
+                        layer_outputs, widget_outputs = _pure_module_outputs(
+                            module, unresolved_inputs
+                        )
+                        # log outputs
+                        for layer in layer_outputs:
+                            log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
+                        for output in widget_outputs:
+                            log_debug(f"Result: ({type(output[1])}) {output[0]}")
+
+                        # display non-layer outputs in a widget
+                        display_externally = _napari_specific_parameter(
+                            module_execute,
+                            user_resolved_inputs,
+                            "display_results_in_new_window",
+                        )
+                        if display_externally is not None and len(widget_outputs) > 0:
+                            _display_result(
+                                widget_outputs, info, viewer, display_externally
+                            )
+
+                        # Refresh the modified layers
+                        for layer in mutated_layers:
+                            layer.refresh()
+
+                        # Hand off layer outputs to napari via return
+                        for layer in layer_outputs:
+                            viewer.add_layer(layer)
+
+                        end = perf_counter()
+                        log_debug(f"Computation completed in {end - start:0.4f} seconds")
 
                 # postprocess
-                _postprocess_module(module)
-                log_debug("Execution complete")
-
-                # get all outputs
-                layer_outputs: List[Layer]
-                widget_outputs: List[Any]
-                layer_outputs, widget_outputs = _pure_module_outputs(
-                    module, unresolved_inputs
+                postprocessors: "jc.ArrayList" = _get_postprocessors(
+                    NapariPostProcessor()
                 )
-                # log outputs
-                for layer in layer_outputs:
-                    log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
-                for output in widget_outputs:
-                    log_debug(f"Result: ({type(output[1])}) {output[0]}")
 
-                # display non-layer outputs in a widget
-                display_externally = _napari_specific_parameter(
-                    module_execute,
-                    user_resolved_inputs,
-                    "display_results_in_new_window",
+                ij().module().run(
+                    module,
+                    ij().py.to_java([]),
+                    postprocessors,
+                    ij().py.to_java({}),
                 )
-                if display_externally is not None and len(widget_outputs) > 0:
-                    _display_result(widget_outputs, info, viewer, display_externally)
 
-                # End timing
-                end = perf_counter()
-                log_debug(f"Computation completed in {end - start:0.4f} seconds")
-
-                # Refresh the modified layers
-                for layer in mutated_layers:
-                    layer.refresh()
-
-                # Hand off layer outputs to napari via return
-                return layer_outputs
             except JException as exc:
                 # chain exc to a Python exception
                 raise Exception(
@@ -592,13 +644,10 @@ def _request_values_args(
     return args
 
 
-def _execute_function_with_params(viewer: Viewer, params: Dict, func: Callable):
+def _execute_function_with_params(Viewer, params: Dict, func: Callable):
     if params is not None:
         inputs = params.values()
-        outputs: Optional[List[Layer]] = func(*inputs)
-        if outputs is not None:
-            for output in outputs:
-                viewer.add_layer(output)
+        func(*inputs)
 
 
 def execute_function_modally(
