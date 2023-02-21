@@ -513,11 +513,6 @@ def functionify_module_execution(
                     input_harvesters,
                 )
 
-                mutated_layers = _mutable_layers(
-                    unresolved_inputs,
-                    user_resolved_inputs,
-                )
-
                 # run module
                 log_debug(
                     f"Running {module_execute.__qualname__} \
@@ -526,59 +521,11 @@ def functionify_module_execution(
                 _initialize_module(module)
                 # _run_module(module)
 
-                @JImplements("org.scijava.module.process.PostprocessorPlugin")
-                class NapariPostProcessor(object):
-                    @JOverride
-                    def context(self):
-                        return self.ctx
-
-                    @JOverride
-                    def getContext(self):
-                        return self.ctx
-
-                    @JOverride
-                    def setContext(self, ctx):
-                        self.ctx = ctx
-
-                    @JOverride
-                    def process(self, module: "jc.Module"):
-                        # get all outputs
-                        layer_outputs: List[Layer]
-                        widget_outputs: List[Any]
-                        layer_outputs, widget_outputs = _pure_module_outputs(
-                            module, unresolved_inputs
-                        )
-                        # log outputs
-                        for layer in layer_outputs:
-                            log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
-                        for output in widget_outputs:
-                            log_debug(f"Result: ({type(output[1])}) {output[0]}")
-
-                        # display non-layer outputs in a widget
-                        display_externally = _napari_specific_parameter(
-                            module_execute,
-                            user_resolved_inputs,
-                            "display_results_in_new_window",
-                        )
-                        if display_externally is not None and len(widget_outputs) > 0:
-                            _display_result(
-                                widget_outputs, info, viewer, display_externally
-                            )
-
-                        # Refresh the modified layers
-                        for layer in mutated_layers:
-                            layer.refresh()
-
-                        # Hand off layer outputs to napari via return
-                        for layer in layer_outputs:
-                            viewer.add_layer(layer)
-
-                        end = perf_counter()
-                        log_debug(f"Computation completed in {end - start:0.4f} seconds")
-
                 # postprocess
                 postprocessors: "jc.ArrayList" = _get_postprocessors(
-                    NapariPostProcessor()
+                    NapariPostProcessor(
+                        module_execute, viewer, user_resolved_inputs, unresolved_inputs, start
+                    )
                 )
 
                 ij().module().run(
@@ -604,6 +551,73 @@ def functionify_module_execution(
     except JException as exc:
         # chain exc to a Python exception
         raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
+
+
+@JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
+class NapariPostProcessor(object):
+    def __init__(
+        self, function: Callable, viewer: Viewer, args, params: List["jc.ModuleInfo"], start_time: float
+    ):
+        self.function = function
+        self.viewer = viewer
+        self.params = params
+        self.args = args
+        self.start_time = start_time
+
+    # -- Contextual methods -- #
+
+    @JOverride
+    def context(self):
+        return self.ctx
+
+    @JOverride
+    def getContext(self):
+        return self.ctx
+
+    @JOverride
+    def setContext(self, ctx):
+        self.ctx = ctx
+
+    # -- ProcessorPlugin methods -- #
+
+    @JOverride
+    def process(self, module: "jc.Module"):
+        # get all outputs
+        layer_outputs: List[Layer]
+        widget_outputs: List[Any]
+        layer_outputs, widget_outputs = _pure_module_outputs(module, self.params)
+        # log outputs
+        for layer in layer_outputs:
+            log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
+        for output in widget_outputs:
+            log_debug(f"Result: ({type(output[1])}) {output[0]}")
+
+        mutated_layers = _mutable_layers(
+            self.params,
+            self.args,
+        )
+
+        # display non-layer outputs in a widget
+        display_externally = _napari_specific_parameter(
+            self.function,
+            self.args,
+            "display_results_in_new_window",
+        )
+        if display_externally is not None and len(widget_outputs) > 0:
+            _display_result(
+                widget_outputs, module.getInfo(), self.viewer, display_externally
+            )
+
+        # Refresh the modified layers
+        for layer in mutated_layers:
+            layer.refresh()
+
+        # Hand off layer outputs to napari via return
+        for layer in layer_outputs:
+            self.viewer.add_layer(layer)
+
+        end_time = perf_counter()
+        log_debug(f"Computation completed in {end_time - start_time:0.4f} seconds")
 
 
 def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
