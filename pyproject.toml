@@ -62,6 +62,8 @@ dev = [
     "pytest-cov",
     "pytest-env",
     "pytest-qt",
+    "sphinx",
+    "sphinx-rtd-theme",
     "qtpy",
     "validate-pyproject[all]",
 ]

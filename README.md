@@ -11,183 +11,45 @@
 
 **napari-imagej** aims to provide access to all [ImageJ2] functionality through the [napari] graphical user interface. It builds on the foundation of [PyImageJ], a project allowing ImageJ2 access from Python.
 
-See the [project roadmap](https://github.com/orgs/imagej/projects/2), still under construction.
+**With napari-imagej, you can access:**
 
-## With napari-imagej, you can access:
-* [ImageJ2 Commands] - 100+ image processing algorithms
-* [ImageJ Ops] - 500+ *functional* image processing algorithms
-* [SciJava Scripts] - migrated from Fiji or ImageJ2, or written yourself!
+1. The napari-imagej widget, providing *headless access* to:
+   * [ImageJ2 Commands] - 100+ image processing algorithms
+   * [ImageJ Ops] - 500+ *functional* image processing algorithms
+   * [SciJava Scripts] - migrated from Fiji or ImageJ2, or written yourself!
+2. The ImageJ user interface, providing access to *the entire ImageJ ecosystem* within napari.
 
-## Installation
+See the [project roadmap](https://github.com/orgs/imagej/projects/2) for future directions.
 
-Currently, the only way to install napari-imagej is by downloading this repository. You can then use [conda]/[mamba] to install the environment.
+## Getting Started
 
-First, **[install mamba]**. Then:
-
-    git clone https://github.com/imagej/napari-imagej
-    cd napari-imagej
-    mamba env create
-    mamba activate napari-imagej
-
-We will be publishing a release of napari-imagej to [napari hub] and [PyPI] and [conda-forge] soon.
-
-To start napari with napari-imagej, activate the conda environment and run `napari`:
-
-    mamba activate napari-imagej
-    napari
+Learn more about the project [here](https://napari-imagej.readthedocs.io/en/latest/), or jump straight to [installation](https://napari-imagej.readthedocs.io/en/latest/Install.html)!
 
 ## Usage
 
-### A simple example
-
-With napari-imagej installed, you can access it through napari's `Plugins` menu. Clicking `napari-imagej` will show the main napari-imagej widget.
-
-Once the napari-imagej widget has loaded, typing keywords into the searchbar will display results in the list below.
-
-Selecting a result will show buttons at the bottom of the widget for executing that functionality. Of importance are the `Run` and `Widget` buttons, *both used to run the selected algorithm*:
-* The `Run` button launches a *modal* dialog prompting the user for inputs. Clicking the `OK` button will run the functionality with the selected inputs.
-  * Best choice for single function executions, as the dialog only persists for the single execution.
-* The `Widget` button launches a *new napari widget* prompting the user for inputs. Clicking the `Run` button will run the functionality with the selected inputs
-  * Best choices for experimentation, as the widget will persist until closed by the user.
-
-
-![Running an Op within napari-imagej](resources/napari_imagej_simple_example.gif)
-
-### Running your own [SciJava Scripts]
-
-napari-imagej is able to automatically detect and expose user-written SciJava scripts. To discover these scripts, they must be located in a *subdirectory* of a `scripts` directory relative to the location where napari is launched.
-
-For example, we might write this SciJava script, named `scripts/examples/Connected_Components_Analysis.py`, in Jython:
-```jython
-#@ Img input
-#@ OpService ops
-#@output net.imglib2.roi.labeling.ImgLabeling segmentation
-
-inverted = ops.run("copy.img", input)
-ops.run("image.invert", inverted, input)
-
-from net.imglib2.algorithm.labeling.ConnectedComponents import StructuringElement
-
-thresholded = ops.run("threshold.otsu", inverted)
-
-segmentation = ops.run("labeling.cca", thresholded, StructuringElement.FOUR_CONNECTED)
-```
-We can then run it in napari-imagej, **if napari is launched from the parent of the aforementioned `directory`**: 
-
-![Running a SciJava script within napari-imagej](resources/napari_imagej_SciJava_script.gif)
-
-### Launching the ImageJ User Interface
-
-napari-imagej provides the ability to interact with the ImageJ2 User Interface directly.
-
-**This feature is only available when PyImageJ can be run [interactively](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode).**
-
-Once napari-imagej has successfully started ImageJ, the ImageJ2 button at the top of the widget will become enabled. Pressing the button will launch the ImageJ2 GUI and will enable the other buttons in the menu.
-
-* Clicking the right arrow button causes the *active* napari `Layer` to be transferred into ImageJ2.
-* Clicking the left arrow button causes the *active* ImageJ2 `Dataset` to be transferred into napari. 
-
-*If the user instead wishes to select the transferred layer from a list of available data, set `choose_active_layer` to `false` in the plugin settings.*
-
-![Launching the ImageJ2 GUI and transferring data between interfaces](resources/napari_imagej_gui_and_data_transfer.gif)
-
-## Configuration
-
-napari-imagej's settings can be configured directly through the user interface. Clicking the settings button (with the gear icon) in the napari-imagej's menu bar will launch a popup allowing the configuration of all settings.
-
-**Alterations to napari-imagej settings will not take effect until a full restart of napari.**
-
-### imagej_directory_or_endpoint
-
-Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
-OR version of net.imagej:imagej artifact to launch (e.g. 2.3.0),
-OR endpoint of another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
-OR list of Maven artifacts to include (e.g.
-  ['net.imagej:imagej:2.3.0', 'net.imagej:imagej-legacy', 'net.preibisch:BigStitcher']).
-Defaults to 'net.imagej:imagej', which will use the latest version of ImageJ2,
-downloading it if needed.
-
-### imagej_base_directory
-
-Path to the ImageJ base directory on your local machine.
-Defaults to the current working directory.
-
-### include_imagej_legacy
-
-This can be used to include original ImageJ functionality.
-Iff true, original ImageJ functionality (ij.* packages) will be available.
-Defaults to false.
-
-### jvm_mode
-
-Designates the mode of execution for ImageJ2.
-Allowed options are 'headless' and 'interactive'.
-NB 'interactive' mode is unavailable on MacOS. More details can be found at
-https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode
-If napari-imagej is launched on MacOS with this setting set to "interactive",
-the setting will silently be reassigned to "headless".
-Defaults to 'interactive'.
-
-### choose_active_layer
-
-This can be used to identify whether transferred data between ImageJ2 and napari
-should be selected via activation or by user selection via a dialog.
-Iff true, the active layer/window is chosen for transfer between applications.
-Iff false, a popup will be shown instead, prompting the user to select data for transfer.
-Defaults to true.
-
-![Launching the napari-imagej settings dialog, including imagej-legacy](resources/napari_imagej_gui_settings.gif)
+* [Image Processing with ImageJ Ops](https://napari-imagej.readthedocs.io/en/latest/examples/ops.html)
+* [Puncta Segmentation with SciJava Scripts](https://napari-imagej.readthedocs.io/en/latest/examples/scripting.html)
 
 ## Troubleshooting
 
-### napari-imagej does not appear in the Plugins menu of napari!
+The [FAQ](https://napari-imagej.readthedocs.io/en/latest/Troubleshooting.html) outlines solutions to many common issues.
 
-[npe2] is a useful tool for validating a napari plugin's setup. When running napari-imagej from a [conda] environment, you can install npe2 through [conda-forge]:
+For more obscure issues, feel free to reach out on [forum.image.sc](https://forum.image.sc).
 
-    mamba activate napari-imagej
-    mamba install npe2 -c conda-forge
-    npe2 validate napari-imagej
-
-If `npe2 validate` returns an error, this indicates that napari-imagej was not installed correctly.
-
-### The search bar is disabled with the message "Initializing ImageJ..."
-
-Since napari-imagej is calling Java code under the hood, it must launch a Java Virtual Machine (JVM). The JVM is not launched until the user starts napari-imagej. As we cannot search Java functionality *until the JVM is running*, the search bar is not enabled until the JVM is ready.
-
-The first launch of napari-imagej can take significantly longer than subsequent launches while the underlying framework downloads the Java artifacts needed to run ImageJ2. **Downloading these libraries can take minutes**. These libraries are cached, however, so subsequent launches should not take more than a couple of seconds.
-
-### The ImageJ2 GUI button is greyed out!
-
-There are two common cases for a disabled ImageJ2 GUI button:
-
-1. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see [here](#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...")
-
-2. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see [here](https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode) for more information.
+If you've found a bug, please [file an issue]!
 
 ## Contributing
 
-Contributions are welcome! When making changes to napari-imagej, please instead use a new conda environment derived from the file `dev-environment.yml`.
+We welcome any and all contributions made onto the napari-imagej repository.
 
-    mamba env create -f dev-environment.yml
-    mamba activate napari-imagej-dev
+Development discussion occurs on the [Image.sc Zulip chat](https://imagesc.zulipchat.com/#narrow/stream/328100-scyjava).
 
-The resulting environment `napari-imagej-dev` provides developer tools on top of the libraries needed to run napari-imagej. It **must be activated** for napari-imagej to appear in the Plugins menu. You can start napari *with napari-imagej* using the following:
-
-    mamba activate napari-imagej-dev
-    napari
-
-**Once you've made changes**, please lint your code by running `bin/lint.sh`.
-
-Finally, file a [pull request]!
+For technical details involved with contributing, please see [here](https://napari-imagej.readthedocs.io/en/latest/Development.html)
 
 ## License
 
 Distributed under the terms of the [BSD-2] license,
 "napari-imagej" is free and open source software.
-
-## Issues
-
-If you encounter any problems, please [file an issue] along with a detailed description.
 
 
 [Apache Software License 2.0]: https://www.apache.org/licenses/LICENSE-2.0
