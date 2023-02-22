@@ -23,7 +23,7 @@ Within this modal dialog are many different settings, many pertaining to the und
 
 Note that many of these settings **pertain to the underlying ImageJ2 instance**, requiring a restart of napari to take effect.
 
-``imagej directory or endpoint``
+*imagej directory or endpoint*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This setting allows users to provide a string identifying *which Java components* should be used to form the ImageJ2 instance. This line is passed directly to PyImageJ.
@@ -54,14 +54,14 @@ Below are a couple examples of ways to construct different ImageJ2 instances:
       - NO
 
 
-``imagej base directory``
+*imagej base directory*
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Path to the ImageJ base directory on your local machine. Defaults to the current working directory.
 
 This directory is most commonly used for discovering SciJava scripts; ImageJ2 will search the provided directory for a `scripts` folder, automatically exposing any scripts within.
 
-``include imgaej legacy``
+*include imagej legacy*
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This button is used to declare whether original ImageJ functionality should be exposed.
@@ -70,7 +70,7 @@ If active, all original ImageJ functionality (ij.* packages) will be available, 
 
 If disabled, only ImageJ2 functionality will be availabe, and the napari-imagej GUI button will launch the ImageJ2 user interface.
 
-``jvm mode``
+*jvm mode*
 ^^^^^^^^^^^^
 
 Designates the mode of execution for ImageJ2.
@@ -81,7 +81,7 @@ Selecting ``interactive`` allows ImageJ ecosystem functionality to launch graphi
 
 ``interactive`` **mode is unavailable on MacOS**. More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_. If napari-imagej is launched on MacOS with this setting set to ``interactive``, the setting will silently be reassigned to ``headless``.
 
-``choose active layer``
+*choose active layer*
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Used to define which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
@@ -90,7 +90,7 @@ If active, napari-imagej will transfer highlighted napari layers to ImageJ, and 
 
 If inactive, napari-imagej will prompt the user with a modal dialog, asking for the name of the layer to transfer.
 
-``jvm command line arguments``
+*jvm command line arguments*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Used to define command line arguments that should be passed to the JVM at startup.
