@@ -12,7 +12,6 @@ Accessing napari-imagej settings
 As soon as you launch napari-imagej, you can access napari-imagej's configuration dialog by clicking on the gear in the napari-imagej menu:
 
 .. figure:: https://media.imagej.net/napari-imagej/settings_wheel.png
-    :scale: 50 %
     
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
