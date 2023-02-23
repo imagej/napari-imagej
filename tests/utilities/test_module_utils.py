@@ -10,6 +10,7 @@ import pytest
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget
 from napari import Viewer
 from napari.layers import Image, Layer
+from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 
 from napari_imagej.types.type_hints import hint_map
@@ -68,35 +69,6 @@ def test_filter_unresolved_inputs(ij, preresolved_module):
 
     for e, a in zip(expected, actual):
         assert e == a
-
-
-def test_preprocess_remaining_inputs(preresolved_module):
-    all_inputs = preresolved_module.getInfo().inputs()
-    # Example user-resolved inputs
-    input = jc.ArrayImgs.bytes(10, 10)
-    doGauss = True
-    spacingString = "1, 1"
-    scaleString = "2 5"
-
-    user_inputs = [input, doGauss, spacingString, scaleString]
-
-    unresolved_inputs = _module_utils._filter_unresolved_inputs(
-        preresolved_module, all_inputs
-    )
-
-    # In this scenario, we don't care about the remaining harvesters
-    remaining_preprocessors = []
-
-    _module_utils._preprocess_remaining_inputs(
-        preresolved_module,
-        all_inputs,
-        unresolved_inputs,
-        user_inputs,
-        remaining_preprocessors,
-    )
-
-    for input in all_inputs:
-        assert preresolved_module.isInputResolved(input.getName())
 
 
 def test_resolvable_or_required():
@@ -379,12 +351,12 @@ def run_module_from_script(ij, tmp_path, script, args):
     unresolved_inputs = _module_utils._filter_unresolved_inputs(module, info.inputs())
     unresolved_inputs = _module_utils._sink_optional_inputs(unresolved_inputs)
     # Resolve the inputs
-    _module_utils._preprocess_remaining_inputs(
-        module, info.inputs(), unresolved_inputs, args, remaining_preprocessors
-    )
-    # Run the module
-    _module_utils._run_module(module)
-    _module_utils._postprocess_module(module)
+    input_map = jc.HashMap()
+    for module_item, input in zip(unresolved_inputs, args):
+        input_map.put(module_item.getName(), ij.py.to_java(input))
+    ij.module().run(
+        module, remaining_preprocessors, _module_utils._get_postprocessors(), input_map
+    ).get()
     # Return the outputs
     return _module_utils._pure_module_outputs(module, unresolved_inputs)
 
@@ -609,12 +581,12 @@ def test_request_values_args():
 
     assert "c" in args
     assert args["c"]["annotation"] == Image
-    assert args["c"]["options"] == dict(choices=_module_utils._get_layers_hack)
+    assert args["c"]["options"] == dict(choices=get_layers)
     assert "value" not in args["c"]
 
     assert "d" in args
     assert args["d"]["annotation"] == "napari.layers.Image"
-    assert args["d"]["options"] == dict(choices=_module_utils._get_layers_hack)
+    assert args["d"]["options"] == dict(choices=get_layers)
     assert "value" not in args["d"]
 
     assert "e" in args
@@ -628,13 +600,16 @@ def test_request_values_args():
     assert args["f"]["value"] == "also default"
 
 
-def test_execute_function_with_params(imagej_widget, ij, asserter):
+def test_functionify_module_exercution_execution(imagej_widget, ij, asserter):
     viewer: Viewer = imagej_widget.napari_viewer
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        viewer, imagej_widget.subwidget_adder, info.createModule(), info
+        imagej_widget.subwidget_adder,
+        imagej_widget.layer_adder,
+        info.createModule(),
+        info,
     )
     params: Dict[str, Any] = dict(
         input=numpy.ones((100, 100)),
@@ -642,11 +617,7 @@ def test_execute_function_with_params(imagej_widget, ij, asserter):
         spacingString="1, 1",
         scaleString="2, 5",
     )
-    # Ensure that a None params does nothing
-    _module_utils._execute_function_with_params(None, func)
-    assert len(viewer.layers) == 0
-
-    _module_utils._execute_function_with_params(params, func)
+    func(*(params.values()))
     asserter(lambda: len(viewer.layers) == 1)
 
 

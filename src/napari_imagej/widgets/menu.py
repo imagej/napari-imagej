@@ -163,8 +163,6 @@ class ToIJButton(QPushButton):
 
     def send_chosen_layer(self):
         # Get Layer choice
-        # TODO: Once napari > 0.4.16 is released, replace _get_layers_hack with
-        # napari.util._magicgui.get_layers
         choices: dict = request_values(
             title="Send layers to ImageJ2",
             layer={"annotation": Layer, "options": {"choices": get_layers}},

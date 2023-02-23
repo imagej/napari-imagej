@@ -16,10 +16,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
-from magicgui.widgets._bases import CategoricalWidget
-from napari import Viewer, current_viewer
 from napari.layers import Layer
-from napari.utils._magicgui import find_viewer_ancestor
+from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from qtpy.QtCore import Signal
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
@@ -55,71 +53,14 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     :param module: The module to preprocess
     :return: The list of preprocessors that have not yet run.
     """
-    log_debug("Preprocessing...")
 
     preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
     for i, preprocessor in enumerate(preprocessors):
         # if preprocessor is an InputHarvester, stop and return the remaining list
         if isinstance(preprocessor, jc.InputHarvester):
-            return list(preprocessors)[i:]
+            return preprocessors.subList(i, preprocessors.size())
         # preprocess
         preprocessor.process(module)
-
-
-def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleItem", input: Any):
-    """
-    Resolves module_item, a ModuleItem in module, with JAVA object input
-    :param module: The module to be resolved
-    :param module_item: The particular item being resolved
-    :param input: The JAVA input that is resolving module_item.
-    """
-    name = module_item.getName()
-    if module_item.isRequired() and input is None:
-        raise ValueError("No selection was made for input {}!".format(name))
-    item_class = module_item.getType()
-    if not item_class.isInstance(input):
-        if ij().convert().supports(input, item_class):
-            input = ij().convert().convert(input, item_class)
-        else:
-            raise ValueError(f"{input} is not a {module_item.getType()}!")
-    module.setInput(name, input)
-    module.resolveInput(name)
-
-
-def _preprocess_remaining_inputs(
-    module: "jc.Module",
-    inputs: List["jc.ModuleItem"],
-    unresolved_inputs: List["jc.ModuleItem"],
-    user_resolved_inputs: List[Any],
-    remaining_preprocessors: List["jc.PreprocessorPlugin"],
-):
-    """Resolves each input in unresolved_inputs"""
-    resolved_java_args = ij().py.jargs(*user_resolved_inputs)
-    # resolve remaining inputs
-    for module_item, input in zip(unresolved_inputs, resolved_java_args):
-        _resolve_user_input(module, module_item, input)
-
-    # Deliberately ignore optional inputs
-    for input in inputs:
-        if not input.isRequired() and not module.isInputResolved(input.getName()):
-            module.resolveInput(input.getName())
-
-    for processor in remaining_preprocessors:
-        processor.process(module)
-
-    # sanity check: ensure all inputs resolved
-    for input in inputs:
-        if input.isRequired() and not module.isInputResolved(input.getName()):
-            raise ValueError(
-                (
-                    f"input {input.getName()} of type {input.getType()} "
-                    " was not resolved! If it is impossible to resolve, "
-                    " let us know at forum.image.sc or by filing an issue "
-                    " at https://github.com/imagej/napari-imagej!"
-                )
-            )
-
-    return resolved_java_args
 
 
 def _mutable_layers(
@@ -166,40 +107,7 @@ def _filter_unresolved_inputs(
     return unresolved
 
 
-def _initialize_module(module: "jc.Module"):
-    """Initializes the passed module."""
-    # HACK: module.initialize() does not seem to call
-    # Initializable.initialize()
-    if isinstance(module.getDelegateObject(), jc.Initializable):
-        module.getDelegateObject().initialize()
-
-
-def _run_module(module: "jc.Module"):
-    """Runs the passed module."""
-    module.run()
-
-
-def _postprocess_module(module: "jc.Module"):
-    """Runs all known postprocessors on the passed module."""
-    log_debug("Postprocessing...")
-    # Discover all postprocessors
-    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
-
-    problematic_postprocessors = (
-        # HACK: This particular postprocessor is trying to create a Display
-        # for lots of different types. Some of those types (specifically
-        # ImgLabelings) make this guy throw Exceptions. We are going to ignore
-        # it until it behaves.
-        # (see https://github.com/imagej/imagej-common/issues/100 )
-        jc.DisplayPostprocessor,
-    )
-    # Run all discovered postprocessors unless we have marked it as problematic
-    for postprocessor in postprocessors:
-        if not isinstance(postprocessor, problematic_postprocessors):
-            postprocessor.process(module)
-
-
-# Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
+# Credit: https://gist.github.com/xhlulu/95118e225b7a1aa806e696180a72bdd0
 
 
 def _napari_module_param_additions(
@@ -464,9 +372,8 @@ def _add_scijava_metadata(
     return metadata
 
 
-def _get_postprocessors(napari_post: "jc.PostprocessorPlugin"):
+def _get_postprocessors():
     """Runs all known postprocessors on the passed module."""
-    log_debug("Postprocessing...")
     # Discover all postprocessors
     postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
@@ -488,18 +395,19 @@ def _get_postprocessors(napari_post: "jc.PostprocessorPlugin"):
         if type(postprocessor) not in problematic_postprocessors:
             good_postprocessors.add(postprocessor)
 
-    good_postprocessors.add(napari_post)
     return good_postprocessors
 
 
 def functionify_module_execution(
-    viewer, widget_signal: Signal, module: "jc.Module", info: "jc.ModuleInfo"
+    widget_signal: Signal,
+    layer_signal: Signal,
+    module: "jc.Module",
+    info: "jc.ModuleInfo",
 ) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     try:
         # Run preprocessors until we hit input harvesting
-        input_harvesters: List["jc.PreprocessorPlugin"]
-        input_harvesters = _preprocess_to_harvester(module)
+        remaining_preprocessors = _preprocess_to_harvester(module)
 
         # Determine which inputs must be resolved by the user
         unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -517,42 +425,33 @@ def functionify_module_execution(
             """
             try:
                 # Start timing
-                start = perf_counter()
+                start_time = perf_counter()
 
-                # Resolve remaining inputs
-                resolved_java_args = _preprocess_remaining_inputs(
-                    module,
-                    info.inputs(),
-                    unresolved_inputs,
-                    user_resolved_inputs,
-                    input_harvesters,
-                )
-
-                # run module
-                log_debug(
-                    f"Running {module_execute.__qualname__} \
-                        ({resolved_java_args}) -- {info.getIdentifier()}"
-                )
-                _initialize_module(module)
-                # _run_module(module)
+                resolved_java_args = ij().py.jargs(*user_resolved_inputs)
+                input_map = jc.HashMap()
+                for module_item, input in zip(unresolved_inputs, resolved_java_args):
+                    input_map.put(module_item.getName(), input)
 
                 # postprocess
-                postprocessors: "jc.ArrayList" = _get_postprocessors(
+                postprocessors: "jc.ArrayList" = _get_postprocessors()
+                postprocessors.add(
                     NapariPostProcessor(
                         module_execute,
-                        viewer,
                         widget_signal,
+                        layer_signal,
                         user_resolved_inputs,
                         unresolved_inputs,
-                        start,
+                        start_time,
                     )
                 )
 
+                log_debug("Processing...")
+
                 ij().module().run(
                     module,
-                    ij().py.to_java([]),
+                    remaining_preprocessors,
                     postprocessors,
-                    ij().py.to_java({}),
+                    input_map,
                 )
 
             except JException as exc:
@@ -573,20 +472,75 @@ def functionify_module_execution(
         raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
 
 
+def _request_values_args(
+    func: Callable, param_options: Dict[str, Dict]
+) -> Dict[str, Dict]:
+    """Gets the arguments for request_values from a function"""
+
+    # Convert function parameters and param_options to a dictionary
+    args = {}
+    for param in signature(func).parameters.values():
+        args[param.name] = {}
+        # Add type to dict
+        args[param.name]["annotation"] = param.annotation
+        # Add magicgui preferences, if they exist, to dict
+        if param.name in param_options:
+            args[param.name]["options"] = param_options[param.name]
+        # Add default value, if we have one, to dict
+        if param.default not in [None, _empty]:
+            args[param.name]["value"] = param.default
+        # Add layer choices, if relevant
+        if (isclass(param.annotation) and issubclass(param.annotation, Layer)) or (
+            type(param.annotation) is str
+            and param.annotation.startswith("napari.layers")
+        ):
+            if "options" not in args[param.name]:
+                args[param.name]["options"] = {}
+            # TODO: Once napari > 0.4.16 is released, replace this with
+            args[param.name]["options"]["choices"] = get_layers
+    return args
+
+
+def execute_function_modally(
+    name: str, func: Callable, param_options: Dict[str, Dict]
+) -> None:
+    # Determine which arguments are needed
+    args: dict = _request_values_args(func, param_options)
+    # Get any needed arguments
+    if len(args) > 0:
+        params = request_values(title=name, **args)
+    else:
+        params = dict()
+    # Execute the function with the arguments
+    if params is not None:
+        inputs = params.values()
+        func(*inputs)
+
+
+def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
+    if hasattr(search_result, "info"):
+        info = search_result.info()
+        # There is an extra step for Ops - we actually need the CommandInfo
+        if isinstance(info, jc.OpInfo):
+            info = info.cInfo()
+        return info
+    return None
+
+
 @JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
 class NapariPostProcessor(object):
     def __init__(
         self,
         function: Callable,
-        viewer: Viewer,
         widget_signal: Signal,
+        layer_signal: Signal,
         args,
         params: List["jc.ModuleInfo"],
         start_time: float,
     ):
         self.function = function
-        self.viewer = viewer
         self.widget_signal = widget_signal
+        self.layer_signal = layer_signal
         self.params = params
         self.args = args
         self.start_time = start_time
@@ -639,77 +593,11 @@ class NapariPostProcessor(object):
         for layer in mutated_layers:
             layer.refresh()
 
+        log_debug("Refreshed all layers")
+
         # Hand off layer outputs to napari via return
         for layer in layer_outputs:
-            self.viewer.add_layer(layer)
+            self.layer_signal.emit(layer)
 
         end_time = perf_counter()
         log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")
-
-
-def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
-    """Mimics the functional changes of https://github.com/napari/napari/pull/4715"""
-    viewer = find_viewer_ancestor(gui.native)
-    if viewer is None:
-        viewer = current_viewer()
-    return [x for x in viewer.layers if isinstance(x, gui.annotation)]
-
-
-def _request_values_args(
-    func: Callable, param_options: Dict[str, Dict]
-) -> Dict[str, Dict]:
-    """Gets the arguments for request_values from a function"""
-
-    # Convert function parameters and param_options to a dictionary
-    args = {}
-    for param in signature(func).parameters.values():
-        args[param.name] = {}
-        # Add type to dict
-        args[param.name]["annotation"] = param.annotation
-        # Add magicgui preferences, if they exist, to dict
-        if param.name in param_options:
-            args[param.name]["options"] = param_options[param.name]
-        # Add default value, if we have one, to dict
-        if param.default not in [None, _empty]:
-            args[param.name]["value"] = param.default
-        # Add layer choices, if relevant
-        if (isclass(param.annotation) and issubclass(param.annotation, Layer)) or (
-            type(param.annotation) is str
-            and param.annotation.startswith("napari.layers")
-        ):
-            if "options" not in args[param.name]:
-                args[param.name]["options"] = {}
-            # TODO: Once napari > 0.4.16 is released, replace this with
-            # napari.util._magicgui.get_layers
-            args[param.name]["options"]["choices"] = _get_layers_hack
-    return args
-
-
-def _execute_function_with_params(params: Dict, func: Callable):
-    if params is not None:
-        inputs = params.values()
-        func(*inputs)
-
-
-def execute_function_modally(
-    name: str, func: Callable, param_options: Dict[str, Dict]
-) -> None:
-    # Determine which arguments are needed
-    args: dict = _request_values_args(func, param_options)
-    # Get any needed arguments
-    if len(args) > 0:
-        params = request_values(title=name, **args)
-    else:
-        params = dict()
-    # Execute the function with the arguments
-    _execute_function_with_params(params, func)
-
-
-def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
-    if hasattr(search_result, "info"):
-        info = search_result.info()
-        # There is an extra step for Ops - we actually need the CommandInfo
-        if isinstance(info, jc.OpInfo):
-            info = info.cInfo()
-        return info
-    return None

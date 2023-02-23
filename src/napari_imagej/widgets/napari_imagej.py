@@ -6,6 +6,7 @@ This Widget is made accessible to napari through napari.yml
 """
 from jpype import JArray, JImplements, JOverride
 from napari import Viewer
+from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
@@ -27,6 +28,7 @@ class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
     subwidget_adder = Signal(SubWidgetData)
+    layer_adder = Signal(Layer)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
@@ -102,6 +104,7 @@ class NapariImageJWidget(QWidget):
         self.search.bar.returnPressed.connect(return_search_bar)
 
         self.subwidget_adder.connect(self._add_subwidget)
+        self.layer_adder.connect(self._add_layer)
 
         # -- Final setup -- #
 
@@ -135,6 +138,10 @@ class NapariImageJWidget(QWidget):
         self.napari_viewer.window.add_dock_widget(
             _non_layer_widget(data.get_data()), name=data.get_name()
         )
+
+    @Slot(Layer)
+    def _add_layer(self, data: Layer):
+        self.napari_viewer.add_layer(data)
 
 
 class WidgetFinalizer(QThread):

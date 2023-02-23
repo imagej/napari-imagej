@@ -136,7 +136,10 @@ class ResultRunner(QWidget):
 
             # preprocess using napari GUI
             func, param_options = functionify_module_execution(
-                self.viewer, self.parentWidget().subwidget_adder, module, moduleInfo
+                self.parentWidget().subwidget_adder,
+                self.parentWidget().layer_adder,
+                module,
+                moduleInfo,
             )
             if modal:
                 execute_function_modally(
