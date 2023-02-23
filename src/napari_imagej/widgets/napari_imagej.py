@@ -6,11 +6,12 @@ This Widget is made accessible to napari through napari.yml
 """
 from jpype import JArray, JImplements, JOverride
 from napari import Viewer
-from qtpy.QtCore import QThread, Signal
+from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
+from napari_imagej.utilities._module_utils import SubWidgetData, _non_layer_widget
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -25,8 +26,11 @@ from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
+    subwidget_adder = Signal(SubWidgetData)
+
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
+        self.napari_viewer = napari_viewer
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
@@ -97,6 +101,8 @@ class NapariImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(return_search_bar)
 
+        self.subwidget_adder.connect(self._add_subwidget)
+
         # -- Final setup -- #
 
         self.ij_post_init_setup: WidgetFinalizer = WidgetFinalizer(self)
@@ -121,6 +127,14 @@ class NapariImageJWidget(QWidget):
         msg: QMessageBox = QMessageBox()
         msg.setText(str(exc))
         msg.exec()
+
+    @Slot(SubWidgetData)
+    def _add_subwidget(self, data: SubWidgetData):
+        # TODO: Try creating the Widget here,
+
+        self.napari_viewer.window.add_dock_widget(
+            _non_layer_widget(data.get_data()), name=data.get_name()
+        )
 
 
 class WidgetFinalizer(QThread):

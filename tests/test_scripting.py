@@ -30,7 +30,7 @@ def test_example_script_exists(ij):
 
     module = ij.module().createModule(module_info)
 
-    func, magic_kwargs = functionify_module_execution(None, module, module_info)
+    func, magic_kwargs = functionify_module_execution(None, None, module, module_info)
 
     # Normally we'd assign the call to a variable, but we aren't using it..
     magicgui(function=func, **magic_kwargs)

@@ -21,6 +21,7 @@ from napari import Viewer, current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import find_viewer_ancestor
 from pandas import DataFrame
+from qtpy.QtCore import Signal
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
 from napari_imagej.java import ij, jc
@@ -28,6 +29,18 @@ from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
+
+
+class SubWidgetData(object):
+    def __init__(self, data, name):
+        self.data = data
+        self.name = name
+
+    def get_data(self):
+        return self.data
+
+    def get_name(self):
+        return self.name
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
@@ -358,18 +371,17 @@ def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
 def _display_result(
     results: List[Tuple[str, Any]],
     info: "jc.ModuleInfo",
-    viewer: Viewer,
+    signal: Signal,
     external: bool,
 ) -> None:
     """Displays result in a new widget"""
 
-    widget: Widget = _non_layer_widget(results)
-
     if external:
+        widget: Widget = _non_layer_widget(results)
         widget.show(run=True)
     else:
         name = "Result: " + ij().py.from_java(info.getTitle())
-        viewer.window.add_dock_widget(widget, name=name)
+        signal.emit(SubWidgetData(results, name=name))
 
 
 def _add_napari_metadata(
@@ -465,12 +477,15 @@ def _get_postprocessors(napari_post: "jc.PostprocessorPlugin"):
         # it until it behaves.
         # (see https://github.com/imagej/imagej-common/issues/100 )
         jc.DisplayPostprocessor,
+        # HACK: This postprocessor will display data within a SciJava Table.
+        # We want to display the data in napari, so we don't want to run this.
+        jc.ResultsPostprocessor,
     )
 
     # Run all discovered postprocessors unless we have marked it as problematic
     good_postprocessors = jc.ArrayList()
     for postprocessor in postprocessors:
-        if postprocessor not in problematic_postprocessors:
+        if type(postprocessor) not in problematic_postprocessors:
             good_postprocessors.add(postprocessor)
 
     good_postprocessors.add(napari_post)
@@ -478,7 +493,7 @@ def _get_postprocessors(napari_post: "jc.PostprocessorPlugin"):
 
 
 def functionify_module_execution(
-    viewer: Viewer, module: "jc.Module", info: "jc.ModuleInfo"
+    viewer, widget_signal: Signal, module: "jc.Module", info: "jc.ModuleInfo"
 ) -> Tuple[Callable, dict]:
     """Converts a module into a Widget that can be added to napari."""
     try:
@@ -524,7 +539,12 @@ def functionify_module_execution(
                 # postprocess
                 postprocessors: "jc.ArrayList" = _get_postprocessors(
                     NapariPostProcessor(
-                        module_execute, viewer, user_resolved_inputs, unresolved_inputs, start
+                        module_execute,
+                        viewer,
+                        widget_signal,
+                        user_resolved_inputs,
+                        unresolved_inputs,
+                        start,
                     )
                 )
 
@@ -556,10 +576,17 @@ def functionify_module_execution(
 @JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
 class NapariPostProcessor(object):
     def __init__(
-        self, function: Callable, viewer: Viewer, args, params: List["jc.ModuleInfo"], start_time: float
+        self,
+        function: Callable,
+        viewer: Viewer,
+        widget_signal: Signal,
+        args,
+        params: List["jc.ModuleInfo"],
+        start_time: float,
     ):
         self.function = function
         self.viewer = viewer
+        self.widget_signal = widget_signal
         self.params = params
         self.args = args
         self.start_time = start_time
@@ -605,7 +632,7 @@ class NapariPostProcessor(object):
         )
         if display_externally is not None and len(widget_outputs) > 0:
             _display_result(
-                widget_outputs, module.getInfo(), self.viewer, display_externally
+                widget_outputs, module.getInfo(), self.widget_signal, display_externally
             )
 
         # Refresh the modified layers
@@ -617,7 +644,7 @@ class NapariPostProcessor(object):
             self.viewer.add_layer(layer)
 
         end_time = perf_counter()
-        log_debug(f"Computation completed in {end_time - start_time:0.4f} seconds")
+        log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")
 
 
 def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
@@ -658,14 +685,14 @@ def _request_values_args(
     return args
 
 
-def _execute_function_with_params(Viewer, params: Dict, func: Callable):
+def _execute_function_with_params(params: Dict, func: Callable):
     if params is not None:
         inputs = params.values()
         func(*inputs)
 
 
 def execute_function_modally(
-    viewer: Viewer, name: str, func: Callable, param_options: Dict[str, Dict]
+    name: str, func: Callable, param_options: Dict[str, Dict]
 ) -> None:
     # Determine which arguments are needed
     args: dict = _request_values_args(func, param_options)
@@ -675,7 +702,7 @@ def execute_function_modally(
     else:
         params = dict()
     # Execute the function with the arguments
-    _execute_function_with_params(viewer, params, func)
+    _execute_function_with_params(params, func)
 
 
 def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
