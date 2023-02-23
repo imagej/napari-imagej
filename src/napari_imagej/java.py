@@ -451,6 +451,10 @@ class JavaClasses(object):
         return "org.scijava.module.process.PreprocessorPlugin"
 
     @blocking_import
+    def ResultsPostprocessor(self):
+        return "org.scijava.table.process.ResultsPostprocessor"
+
+    @blocking_import
     def Searcher(self):
         return "org.scijava.search.Searcher"
 

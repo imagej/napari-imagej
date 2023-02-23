@@ -628,13 +628,13 @@ def test_request_values_args():
     assert args["f"]["value"] == "also default"
 
 
-def test_execute_function_with_params(make_napari_viewer, ij, asserter):
-    viewer: Viewer = make_napari_viewer()
+def test_execute_function_with_params(imagej_widget, ij, asserter):
+    viewer: Viewer = imagej_widget.napari_viewer
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        viewer, info.createModule(), info
+        viewer, imagej_widget.subwidget_adder, info.createModule(), info
     )
     params: Dict[str, Any] = dict(
         input=numpy.ones((100, 100)),
@@ -643,20 +643,20 @@ def test_execute_function_with_params(make_napari_viewer, ij, asserter):
         scaleString="2, 5",
     )
     # Ensure that a None params does nothing
-    _module_utils._execute_function_with_params(viewer, None, func)
+    _module_utils._execute_function_with_params(None, func)
     assert len(viewer.layers) == 0
 
-    _module_utils._execute_function_with_params(viewer, params, func)
+    _module_utils._execute_function_with_params(params, func)
     asserter(lambda: len(viewer.layers) == 1)
 
 
-def test_functionify_module_execution_result_regression(make_napari_viewer, ij):
-    viewer: Viewer = make_napari_viewer()
+def test_functionify_module_execution_result_regression(imagej_widget, ij):
+    viewer: Viewer = imagej_widget.napari_viewer
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        viewer, info.createModule(), info
+        viewer, imagej_widget.subwidget_adder, info.createModule(), info
     )
     sig = signature(func)
     expected_params = OrderedDict()
