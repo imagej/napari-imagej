@@ -423,42 +423,36 @@ def functionify_module_execution(
             :return: A List[Layer] of the layer data outputs of the module,
                 or None if this module does not return any layer data.
             """
-            try:
-                # Start timing
-                start_time = perf_counter()
+            # Start timing
+            start_time = perf_counter()
 
-                resolved_java_args = ij().py.jargs(*user_resolved_inputs)
-                input_map = jc.HashMap()
-                for module_item, input in zip(unresolved_inputs, resolved_java_args):
-                    input_map.put(module_item.getName(), input)
+            # Create user input map
+            resolved_java_args = ij().py.jargs(*user_resolved_inputs)
+            input_map = jc.HashMap()
+            for module_item, input in zip(unresolved_inputs, resolved_java_args):
+                input_map.put(module_item.getName(), input)
 
-                # postprocess
-                postprocessors: "jc.ArrayList" = _get_postprocessors()
-                postprocessors.add(
-                    NapariPostProcessor(
-                        module_execute,
-                        widget_signal,
-                        layer_signal,
-                        user_resolved_inputs,
-                        unresolved_inputs,
-                        start_time,
-                    )
+            # Create postprocessors
+            postprocessors: "jc.ArrayList" = _get_postprocessors()
+            postprocessors.add(
+                NapariPostProcessor(
+                    module_execute,
+                    widget_signal,
+                    layer_signal,
+                    user_resolved_inputs,
+                    unresolved_inputs,
+                    start_time,
                 )
+            )
 
-                log_debug("Processing...")
+            log_debug("Processing...")
 
-                ij().module().run(
-                    module,
-                    remaining_preprocessors,
-                    postprocessors,
-                    input_map,
-                )
-
-            except JException as exc:
-                # chain exc to a Python exception
-                raise Exception(
-                    f"Caught Java Exception\n\n {jstacktrace(exc)}"
-                ) from None
+            ij().module().run(
+                module,
+                remaining_preprocessors,
+                postprocessors,
+                input_map,
+            )
 
         # Add metadata for widget creation
         _add_napari_metadata(module_execute, info, unresolved_inputs)
