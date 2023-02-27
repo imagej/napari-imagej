@@ -13,6 +13,7 @@ from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
 from napari_imagej.utilities._module_utils import SubWidgetData, _non_layer_widget
+from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -163,6 +164,8 @@ class WidgetFinalizer(QThread):
         self._finalize_results_tree()
         # Finalize the info bar
         self._finalize_info_bar()
+        # Finalize Exception printer
+        self._finalize_exception_printer()
 
     def _finalize_results_tree(self):
         """
@@ -209,3 +212,24 @@ class WidgetFinalizer(QThread):
         self.widget.info_box.version_bar.setText(
             " ".join(["ImageJ", str(ij().getVersion())])
         )
+
+    def _finalize_exception_printer(self):
+        @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
+        class NapariEventSubscriber(object):
+            @JOverride
+            def onEvent(self, event):
+                log_debug(str(event))
+
+            @JOverride
+            def getEventClass(self):
+                return jc.SciJavaEvent.class_
+
+            @JOverride
+            def equals(self, other):
+                return isinstance(other, NapariEventSubscriber)
+
+        event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
+        event_bus_field.setAccessible(True)
+        event_bus = event_bus_field.get(ij().event())
+        subscriber = NapariEventSubscriber()
+        event_bus.subscribe(jc.SciJavaEvent.class_, subscriber)

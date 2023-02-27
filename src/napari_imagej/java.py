@@ -459,6 +459,10 @@ class JavaClasses(object):
         return "org.scijava.table.process.ResultsPostprocessor"
 
     @blocking_import
+    def SciJavaEvent(self):
+        return "org.scijava.event.SciJavaEvent"
+
+    @blocking_import
     def Searcher(self):
         return "org.scijava.search.Searcher"
 
