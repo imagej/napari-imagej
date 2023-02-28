@@ -137,7 +137,7 @@ class ResultRunner(QWidget):
 
             # preprocess using napari GUI
             func, param_options = functionify_module_execution(
-                self.output_signal,
+                lambda o: self.output_signal.emit(o),
                 module,
                 moduleInfo,
             )

@@ -19,7 +19,6 @@ from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
-from qtpy.QtCore import Signal
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
 from napari_imagej.java import ij, jc
@@ -269,13 +268,13 @@ def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> 
 def _display_result(
     results: List[Tuple[str, Any]],
     info: "jc.ModuleInfo",
-    signal: Signal,
+    output_handler: Callable[[object], None],
     external: bool,
 ) -> None:
     """Displays result in a new widget"""
 
     name = "Result: " + ij().py.from_java(info.getTitle())
-    signal.emit({"data": results, "name": name, "external": external})
+    output_handler({"data": results, "name": name, "external": external})
 
 
 def _add_napari_metadata(
@@ -385,11 +384,14 @@ def _get_postprocessors():
 
 
 def functionify_module_execution(
-    output_handler: Signal,
+    output_handler: Callable[[object], None],
     module: "jc.Module",
     info: "jc.ModuleInfo",
 ) -> Tuple[Callable, dict]:
-    """Converts a module into a Widget that can be added to napari."""
+    """
+    Converts a module into a Widget that can be added to napari.
+    :param output_handler: The callback function for Module outputs
+    """
     try:
         # Run preprocessors until we hit input harvesting
         remaining_preprocessors = _preprocess_to_harvester(module)
@@ -510,7 +512,7 @@ class NapariPostProcessor(object):
     def __init__(
         self,
         function: Callable,
-        output_handler: Signal,
+        output_handler: Callable[[object], None],
         args,
         params: List["jc.ModuleInfo"],
         start_time: float,
@@ -576,7 +578,7 @@ class NapariPostProcessor(object):
 
         # Hand off layer outputs to napari via return
         for layer in layer_outputs:
-            self.output_handler.emit(layer)
+            self.output_handler(layer)
 
         end_time = perf_counter()
         log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")

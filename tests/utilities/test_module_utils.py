@@ -606,7 +606,7 @@ def test_functionify_module_exercution_execution(imagej_widget, ij, asserter):
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        imagej_widget.output_handler,
+        lambda o: imagej_widget.output_handler.emit(o),
         info.createModule(),
         info,
     )
@@ -625,7 +625,7 @@ def test_functionify_module_execution_result_regression(imagej_widget, ij):
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        imagej_widget.output_handler, info.createModule(), info
+        lambda o: imagej_widget.output_handler.emit(o), info.createModule(), info
     )
     sig = signature(func)
     expected_params = OrderedDict()
