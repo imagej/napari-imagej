@@ -265,18 +265,6 @@ def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> 
     return Container(widgets=widgets)
 
 
-def _display_result(
-    results: List[Tuple[str, Any]],
-    info: "jc.ModuleInfo",
-    output_handler: Callable[[object], None],
-    external: bool,
-) -> None:
-    """Displays result in a new widget"""
-
-    name = "Result: " + ij().py.from_java(info.getTitle())
-    output_handler({"data": results, "name": name, "external": external})
-
-
 def _add_napari_metadata(
     execute_module: Callable,
     info: "jc.ModuleInfo",
@@ -565,11 +553,9 @@ class NapariPostProcessor(object):
             "display_results_in_new_window",
         )
         if display_externally is not None and len(widget_outputs) > 0:
-            _display_result(
-                widget_outputs,
-                module.getInfo(),
-                self.output_handler,
-                display_externally,
+            name = "Result: " + ij().py.from_java(module.getInfo().getTitle())
+            self.output_handler(
+                {"data": widget_outputs, "name": name, "external": display_externally}
             )
 
         # Refresh the modified layers
