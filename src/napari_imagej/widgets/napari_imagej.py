@@ -233,6 +233,8 @@ class WidgetFinalizer(QThread):
             def equals(self, other):
                 return isinstance(other, NapariEventSubscriber)
 
+        # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+        # See https://github.com/scijava/scijava-common/issues/452
         event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
         event_bus_field.setAccessible(True)
         event_bus = event_bus_field.get(ij().event())
