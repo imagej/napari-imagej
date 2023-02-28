@@ -391,6 +391,8 @@ def functionify_module_execution(
     """
     Converts a module into a Widget that can be added to napari.
     :param output_handler: The callback function for Module outputs
+    :param module: The SciJava Module to turn into a Python function
+    :param info: The ModuleInfo of module.
     """
     try:
         # Run preprocessors until we hit input harvesting
