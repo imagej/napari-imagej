@@ -346,7 +346,10 @@ def _add_scijava_metadata(
 
 
 def _get_postprocessors():
-    """Runs all known postprocessors on the passed module."""
+    """
+    Returns the list of PostprocessorPlugins that should be used
+    on SciJava Modules from napari-imagej
+    """
     # Discover all postprocessors
     postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
@@ -362,13 +365,14 @@ def _get_postprocessors():
         jc.ResultsPostprocessor,
     )
 
-    # Run all discovered postprocessors unless we have marked it as problematic
-    good_postprocessors = jc.ArrayList()
-    for postprocessor in postprocessors:
-        if type(postprocessor) not in problematic_postprocessors:
-            good_postprocessors.add(postprocessor)
+    itr = postprocessors.iterator()
+    while itr.hasNext():
+        postprocessor = itr.next()
+        if type(postprocessor) in problematic_postprocessors:
+            itr.remove()
 
-    return good_postprocessors
+    # Return non-problematic postprocessors
+    return postprocessors
 
 
 def functionify_module_execution(
