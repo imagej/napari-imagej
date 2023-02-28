@@ -21,7 +21,7 @@ jc = JavaClassesTest()
 
 @pytest.fixture
 def result_runner(viewer):
-    return ResultRunner(viewer)
+    return ResultRunner(viewer, None)
 
 
 def test_result_runner(result_runner):

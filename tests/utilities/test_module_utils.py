@@ -488,7 +488,7 @@ def test_module_outputs_number(ij, tmp_path, script, num_layer, num_widget, args
 
 def test_non_layer_widget():
     results = [("a", 1), ("b", 2)]
-    widget: Widget = _module_utils._non_layer_widget(results)
+    widget: Widget = _module_utils._non_layer_widget(results, "test")
     # Assert the return is a container
     assert isinstance(widget, Container)
     # Assert the nth subwidget reports the nth name and (stringified) value
@@ -505,7 +505,7 @@ def test_non_layer_widget():
 def test_non_layer_widget_table():
     table = DataFrame()
     results = [("table", table)]
-    widget: Widget = _module_utils._non_layer_widget(results)
+    widget: Widget = _module_utils._non_layer_widget(results, "test")
     # Assert the return is a container
     assert isinstance(widget, Container)
     # Assert the nth subwidget reports the nth name and (stringified) value
@@ -606,8 +606,7 @@ def test_functionify_module_exercution_execution(imagej_widget, ij, asserter):
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        imagej_widget.subwidget_adder,
-        imagej_widget.layer_adder,
+        imagej_widget.output_handler,
         info.createModule(),
         info,
     )
@@ -622,12 +621,11 @@ def test_functionify_module_exercution_execution(imagej_widget, ij, asserter):
 
 
 def test_functionify_module_execution_result_regression(imagej_widget, ij):
-    viewer: Viewer = imagej_widget.napari_viewer
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
     )
     func, _ = _module_utils.functionify_module_execution(
-        viewer, imagej_widget.subwidget_adder, info.createModule(), info
+        imagej_widget.output_handler, info.createModule(), info
     )
     sig = signature(func)
     expected_params = OrderedDict()
