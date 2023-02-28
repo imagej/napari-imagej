@@ -29,22 +29,6 @@ from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
 
 
-class SubWidgetData(object):
-    def __init__(self, data, name: str, external: bool):
-        self.data = data
-        self.name = name
-        self.external = external
-
-    def get_data(self):
-        return self.data
-
-    def get_name(self):
-        return self.name
-
-    def display_external(self):
-        return self.external
-
-
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     """
     Uses all preprocessors up to the InputHarvesters.
@@ -261,7 +245,7 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
     return args[index]
 
 
-def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str) -> Widget:
+def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> Widget:
     widgets = []
     for result in results:
         name = result[0]
@@ -291,7 +275,7 @@ def _display_result(
     """Displays result in a new widget"""
 
     name = "Result: " + ij().py.from_java(info.getTitle())
-    signal.emit(SubWidgetData(results, name=name, external=external))
+    signal.emit({"data": results, "name": name, "external": external})
 
 
 def _add_napari_metadata(

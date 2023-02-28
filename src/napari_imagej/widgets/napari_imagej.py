@@ -13,7 +13,7 @@ from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
-from napari_imagej.utilities._module_utils import SubWidgetData, _non_layer_widget
+from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -137,14 +137,15 @@ class NapariImageJWidget(QWidget):
     def _handle_output(self, data):
         if isinstance(data, Layer):
             self.napari_viewer.add_layer(data)
-        elif isinstance(data, SubWidgetData):
-            widget: Widget = _non_layer_widget(
-                data.get_data(), widget_name=data.get_name()
-            )
-            if data.display_external():
+        elif isinstance(data, dict):
+            widget: Widget = _non_layer_widget(data.get("data", {}))
+            if data.get("external", False):
+                widget.name = data.get("name", "")
                 widget.show(run=True)
             else:
-                self.napari_viewer.window.add_dock_widget(widget, name=data.get_name())
+                self.napari_viewer.window.add_dock_widget(
+                    widget, name=data.get("name", "")
+                )
         else:
             raise TypeError(f"Do not know how to display {data}")
 
