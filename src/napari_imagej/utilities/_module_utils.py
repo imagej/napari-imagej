@@ -30,15 +30,19 @@ from napari_imagej.utilities.logging import log_debug
 
 
 class SubWidgetData(object):
-    def __init__(self, data, name):
+    def __init__(self, data, name: str, external: bool):
         self.data = data
         self.name = name
+        self.external = external
 
     def get_data(self):
         return self.data
 
     def get_name(self):
         return self.name
+
+    def display_external(self):
+        return self.external
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
@@ -257,7 +261,7 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
     return args[index]
 
 
-def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
+def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str) -> Widget:
     widgets = []
     for result in results:
         name = result[0]
@@ -270,7 +274,9 @@ def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
             result_value: LineEdit = LineEdit(value=str(value))
             result_value.enabled = False
 
-        widget = Container(layout="horizontal", widgets=(result_name, result_value))
+        widget = Container(
+            layout="horizontal", widgets=(result_name, result_value), name=widget_name
+        )
         widgets.append(widget)
 
     return Container(widgets=widgets)
@@ -284,12 +290,8 @@ def _display_result(
 ) -> None:
     """Displays result in a new widget"""
 
-    if external:
-        widget: Widget = _non_layer_widget(results)
-        widget.show(run=True)
-    else:
-        name = "Result: " + ij().py.from_java(info.getTitle())
-        signal.emit(SubWidgetData(results, name=name))
+    name = "Result: " + ij().py.from_java(info.getTitle())
+    signal.emit(SubWidgetData(results, name=name, external=external))
 
 
 def _add_napari_metadata(
@@ -399,8 +401,7 @@ def _get_postprocessors():
 
 
 def functionify_module_execution(
-    widget_signal: Signal,
-    layer_signal: Signal,
+    output_handler: Signal,
     module: "jc.Module",
     info: "jc.ModuleInfo",
 ) -> Tuple[Callable, dict]:
@@ -437,8 +438,7 @@ def functionify_module_execution(
             postprocessors.add(
                 NapariPostProcessor(
                     module_execute,
-                    widget_signal,
-                    layer_signal,
+                    output_handler,
                     user_resolved_inputs,
                     unresolved_inputs,
                     start_time,
@@ -526,15 +526,13 @@ class NapariPostProcessor(object):
     def __init__(
         self,
         function: Callable,
-        widget_signal: Signal,
-        layer_signal: Signal,
+        output_handler: Signal,
         args,
         params: List["jc.ModuleInfo"],
         start_time: float,
     ):
         self.function = function
-        self.widget_signal = widget_signal
-        self.layer_signal = layer_signal
+        self.output_handler = output_handler
         self.params = params
         self.args = args
         self.start_time = start_time
@@ -580,7 +578,10 @@ class NapariPostProcessor(object):
         )
         if display_externally is not None and len(widget_outputs) > 0:
             _display_result(
-                widget_outputs, module.getInfo(), self.widget_signal, display_externally
+                widget_outputs,
+                module.getInfo(),
+                self.output_handler,
+                display_externally,
             )
 
         # Refresh the modified layers
@@ -591,7 +592,7 @@ class NapariPostProcessor(object):
 
         # Hand off layer outputs to napari via return
         for layer in layer_outputs:
-            self.layer_signal.emit(layer)
+            self.output_handler.emit(layer)
 
         end_time = perf_counter()
         log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")

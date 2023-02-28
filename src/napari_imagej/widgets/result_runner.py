@@ -8,7 +8,7 @@ from typing import Callable, Dict, List, Union
 
 from magicgui import magicgui
 from napari import Viewer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from napari_imagej.java import ij, jc
@@ -44,9 +44,10 @@ class ActionButton(QPushButton):
 
 
 class ResultRunner(QWidget):
-    def __init__(self, viewer: Viewer):
+    def __init__(self, viewer: Viewer, output_signal: Signal):
         super().__init__()
         self.viewer = viewer
+        self.output_signal = output_signal
 
         self.setLayout(QVBoxLayout())
 
@@ -136,8 +137,7 @@ class ResultRunner(QWidget):
 
             # preprocess using napari GUI
             func, param_options = functionify_module_execution(
-                self.parentWidget().subwidget_adder,
-                self.parentWidget().layer_adder,
+                self.output_signal,
                 module,
                 moduleInfo,
             )
@@ -149,7 +149,7 @@ class ResultRunner(QWidget):
                 )
             else:
                 widget = magicgui(function=func, **param_options)
-                self.viewer.window.add_dock_widget(widget)
+                self.viewer.window.add_dock_widget(widget, name=name)
                 widget[0].native.setFocus()
 
         buttons = [

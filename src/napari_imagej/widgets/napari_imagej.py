@@ -5,6 +5,7 @@ graphical access to ImageJ functionality.
 This Widget is made accessible to napari through napari.yml
 """
 from jpype import JArray, JImplements, JOverride
+from magicgui.widgets import Widget
 from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
@@ -28,8 +29,7 @@ from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
-    subwidget_adder = Signal(SubWidgetData)
-    layer_adder = Signal(Layer)
+    output_handler = Signal(object)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
@@ -51,7 +51,9 @@ class NapariImageJWidget(QWidget):
         self.result_tree: SearchResultTree = SearchResultTree()
         self.layout().addWidget(self.result_tree)
         # Second-to-lastly: The SearchResult runner
-        self.result_runner: ResultRunner = ResultRunner(napari_viewer)
+        self.result_runner: ResultRunner = ResultRunner(
+            napari_viewer, self.output_handler
+        )
         self.layout().addWidget(self.result_runner)
         # Finally: The InfoBar
         self.info_box: InfoBox = InfoBox()
@@ -104,8 +106,7 @@ class NapariImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(return_search_bar)
 
-        self.subwidget_adder.connect(self._add_subwidget)
-        self.layer_adder.connect(self._add_layer)
+        self.output_handler.connect(self._handle_output)
 
         # -- Final setup -- #
 
@@ -132,17 +133,20 @@ class NapariImageJWidget(QWidget):
         msg.setText(str(exc))
         msg.exec()
 
-    @Slot(SubWidgetData)
-    def _add_subwidget(self, data: SubWidgetData):
-        # TODO: Try creating the Widget here,
-
-        self.napari_viewer.window.add_dock_widget(
-            _non_layer_widget(data.get_data()), name=data.get_name()
-        )
-
-    @Slot(Layer)
-    def _add_layer(self, data: Layer):
-        self.napari_viewer.add_layer(data)
+    @Slot(object)
+    def _handle_output(self, data):
+        if isinstance(data, Layer):
+            self.napari_viewer.add_layer(data)
+        elif isinstance(data, SubWidgetData):
+            widget: Widget = _non_layer_widget(
+                data.get_data(), widget_name=data.get_name()
+            )
+            if data.display_external():
+                widget.show(run=True)
+            else:
+                self.napari_viewer.window.add_dock_widget(widget, name=data.get_name())
+        else:
+            raise TypeError(f"Do not know how to display {data}")
 
 
 class WidgetFinalizer(QThread):
