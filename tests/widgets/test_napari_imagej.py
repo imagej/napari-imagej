@@ -11,7 +11,11 @@ from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 from napari_imagej.java import ij, jc
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
+from napari_imagej.widgets.napari_imagej import (
+    NapariEventSubscriber,
+    NapariImageJWidget,
+    ResultRunner,
+)
 from napari_imagej.widgets.result_tree import SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from tests.widgets.widget_utils import _searcher_tree_named
@@ -242,7 +246,7 @@ def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter)
     asserter(lambda: len(viewer.layers) == 1)
 
 
-def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):
+def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, asserter):
     output_handler = getattr(imagej_widget, "output_handler")
     viewer = imagej_widget.napari_viewer
     existing_widget_names = [k for k in viewer.window._dock_widgets.keys()]
@@ -255,3 +259,20 @@ def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, qtbot, asser
         return "test" not in existing_widget_names and "test" in current_widget_names
 
     asserter(check_for_new_widget)
+
+
+def test_event_subscriber_registered(imagej_widget: NapariImageJWidget, asserter):
+    """
+    Ensure that a NapariEventSubscriber is registered to capture SciJavaEvents.
+    """
+    # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+    # See https://github.com/scijava/scijava-common/issues/452
+    event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
+    event_bus_field.setAccessible(True)
+    event_bus = event_bus_field.get(ij().event())
+
+    subscribers = event_bus.getSubscribers(jc.SciJavaEvent.class_)
+    for subscriber in subscribers:
+        if isinstance(subscriber, NapariEventSubscriber):
+            return True
+    return False

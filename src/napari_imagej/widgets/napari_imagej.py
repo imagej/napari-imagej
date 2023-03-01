@@ -219,20 +219,6 @@ class WidgetFinalizer(QThread):
         )
 
     def _finalize_exception_printer(self):
-        @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-        class NapariEventSubscriber(object):
-            @JOverride
-            def onEvent(self, event):
-                log_debug(str(event))
-
-            @JOverride
-            def getEventClass(self):
-                return jc.SciJavaEvent.class_
-
-            @JOverride
-            def equals(self, other):
-                return isinstance(other, NapariEventSubscriber)
-
         # HACK: Tap into the EventBus to obtain SciJava Module debug info.
         # See https://github.com/scijava/scijava-common/issues/452
         event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
@@ -240,3 +226,18 @@ class WidgetFinalizer(QThread):
         event_bus = event_bus_field.get(ij().event())
         subscriber = NapariEventSubscriber()
         event_bus.subscribe(jc.SciJavaEvent.class_, subscriber)
+
+
+@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
+class NapariEventSubscriber(object):
+    @JOverride
+    def onEvent(self, event):
+        log_debug(str(event))
+
+    @JOverride
+    def getEventClass(self):
+        return jc.SciJavaEvent.class_
+
+    @JOverride
+    def equals(self, other):
+        return isinstance(other, NapariEventSubscriber)
