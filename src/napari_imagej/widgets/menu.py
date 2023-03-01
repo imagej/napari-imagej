@@ -69,8 +69,7 @@ class NapariImageJMenu(QWidget):
                 # Then, add our custom settings to the User Interface
                 if ij().legacy and ij().legacy.isActive():
                     self._ij1_UI_setup()
-                else:
-                    self._ij2_UI_setup()
+                self._ij2_UI_setup()
 
             # Queue UI call on the EDT
             # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
@@ -86,7 +85,7 @@ class NapariImageJMenu(QWidget):
         ij().IJ.getInstance().exitWhenQuitting(False)
 
     def _ij2_UI_setup(self):
-        """Configures the ImageJ2 Swing GUI"""
+        """Configures the ImageJ2 Swing GUI behavior"""
         appFrame = self.gui.getApplicationFrame()
         # Overwrite the WindowListeners so we control closing behavior
         if isinstance(appFrame, jc.Window):
