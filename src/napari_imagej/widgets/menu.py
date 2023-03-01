@@ -86,12 +86,15 @@ class NapariImageJMenu(QWidget):
 
     def _ij2_UI_setup(self):
         """Configures the ImageJ2 Swing GUI behavior"""
-        appFrame = self.gui.getApplicationFrame()
         # Overwrite the WindowListeners so we control closing behavior
+        self._kill_window_listeners(self._get_AWT_frame())
+
+    def _get_AWT_frame(self):
+        appFrame = self.gui.getApplicationFrame()
         if isinstance(appFrame, jc.Window):
-            self._kill_window_listeners(appFrame)
+            return appFrame
         elif isinstance(appFrame, jc.UIComponent):
-            self._kill_window_listeners(appFrame.getComponent())
+            return appFrame.getComponent()
 
     def _kill_window_listeners(self, window):
         """Replaces the WindowListeners present on window with our own"""

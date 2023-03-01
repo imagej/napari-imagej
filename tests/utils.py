@@ -58,6 +58,10 @@ class JavaClassesTest(JavaClasses):
         return "net.imglib2.type.numeric.real.FloatType"
 
     @JavaClasses.blocking_import
+    def Frame(self):
+        return "java.awt.Frame"
+
+    @JavaClasses.blocking_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
 
@@ -108,6 +112,10 @@ class JavaClassesTest(JavaClasses):
     @JavaClasses.blocking_import
     def UnsignedLongType(self):
         return "net.imglib2.type.numeric.integer.UnsignedLongType"
+
+    @JavaClasses.blocking_import
+    def WindowEvent(self):
+        return "java.awt.event.WindowEvent"
 
 
 jc = JavaClassesTest()
