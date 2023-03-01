@@ -257,12 +257,10 @@ def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> 
             result_value: LineEdit = LineEdit(value=str(value))
             result_value.enabled = False
 
-        widget = Container(
-            layout="horizontal", widgets=(result_name, result_value), name=widget_name
-        )
+        widget = Container(layout="horizontal", widgets=(result_name, result_value))
         widgets.append(widget)
 
-    return Container(widgets=widgets)
+    return Container(widgets=widgets, name=widget_name)
 
 
 def _add_napari_metadata(

@@ -491,6 +491,7 @@ def test_non_layer_widget():
     widget: Widget = _module_utils._non_layer_widget(results, "test")
     # Assert the return is a container
     assert isinstance(widget, Container)
+    assert widget.name == "test"
     # Assert the nth subwidget reports the nth name and (stringified) value
     for result, subwidget in zip(results, widget):
         assert isinstance(subwidget, Container)
@@ -508,6 +509,7 @@ def test_non_layer_widget_table():
     widget: Widget = _module_utils._non_layer_widget(results, "test")
     # Assert the return is a container
     assert isinstance(widget, Container)
+    assert widget.name == "test"
     # Assert the nth subwidget reports the nth name and (stringified) value
     for result, subwidget in zip(results, widget):
         assert isinstance(subwidget, Container)
