@@ -76,7 +76,9 @@ def ij():
     """Fixture providing the ImageJ2 Gateway"""
     from napari_imagej.java import ij
 
-    return ij()
+    yield ij()
+
+    ij().context().dispose()
 
 
 @pytest.fixture()

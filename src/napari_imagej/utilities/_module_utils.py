@@ -14,12 +14,10 @@ from inspect import Parameter, Signature, _empty, isclass, signature
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from jpype import JException
+from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
-from magicgui.widgets._bases import CategoricalWidget
-from napari import Viewer, current_viewer
 from napari.layers import Layer
-from napari.utils._magicgui import find_viewer_ancestor
+from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
 
@@ -42,71 +40,14 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     :param module: The module to preprocess
     :return: The list of preprocessors that have not yet run.
     """
-    log_debug("Preprocessing...")
 
     preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
     for i, preprocessor in enumerate(preprocessors):
         # if preprocessor is an InputHarvester, stop and return the remaining list
         if isinstance(preprocessor, jc.InputHarvester):
-            return list(preprocessors)[i:]
+            return preprocessors.subList(i, preprocessors.size())
         # preprocess
         preprocessor.process(module)
-
-
-def _resolve_user_input(module: "jc.Module", module_item: "jc.ModuleItem", input: Any):
-    """
-    Resolves module_item, a ModuleItem in module, with JAVA object input
-    :param module: The module to be resolved
-    :param module_item: The particular item being resolved
-    :param input: The JAVA input that is resolving module_item.
-    """
-    name = module_item.getName()
-    if module_item.isRequired() and input is None:
-        raise ValueError("No selection was made for input {}!".format(name))
-    item_class = module_item.getType()
-    if not item_class.isInstance(input):
-        if ij().convert().supports(input, item_class):
-            input = ij().convert().convert(input, item_class)
-        else:
-            raise ValueError(f"{input} is not a {module_item.getType()}!")
-    module.setInput(name, input)
-    module.resolveInput(name)
-
-
-def _preprocess_remaining_inputs(
-    module: "jc.Module",
-    inputs: List["jc.ModuleItem"],
-    unresolved_inputs: List["jc.ModuleItem"],
-    user_resolved_inputs: List[Any],
-    remaining_preprocessors: List["jc.PreprocessorPlugin"],
-):
-    """Resolves each input in unresolved_inputs"""
-    resolved_java_args = ij().py.jargs(*user_resolved_inputs)
-    # resolve remaining inputs
-    for module_item, input in zip(unresolved_inputs, resolved_java_args):
-        _resolve_user_input(module, module_item, input)
-
-    # Deliberately ignore optional inputs
-    for input in inputs:
-        if not input.isRequired() and not module.isInputResolved(input.getName()):
-            module.resolveInput(input.getName())
-
-    for processor in remaining_preprocessors:
-        processor.process(module)
-
-    # sanity check: ensure all inputs resolved
-    for input in inputs:
-        if input.isRequired() and not module.isInputResolved(input.getName()):
-            raise ValueError(
-                (
-                    f"input {input.getName()} of type {input.getType()} "
-                    " was not resolved! If it is impossible to resolve, "
-                    " let us know at forum.image.sc or by filing an issue "
-                    " at https://github.com/imagej/napari-imagej!"
-                )
-            )
-
-    return resolved_java_args
 
 
 def _mutable_layers(
@@ -153,40 +94,7 @@ def _filter_unresolved_inputs(
     return unresolved
 
 
-def _initialize_module(module: "jc.Module"):
-    """Initializes the passed module."""
-    # HACK: module.initialize() does not seem to call
-    # Initializable.initialize()
-    if isinstance(module.getDelegateObject(), jc.Initializable):
-        module.getDelegateObject().initialize()
-
-
-def _run_module(module: "jc.Module"):
-    """Runs the passed module."""
-    module.run()
-
-
-def _postprocess_module(module: "jc.Module"):
-    """Runs all known postprocessors on the passed module."""
-    log_debug("Postprocessing...")
-    # Discover all postprocessors
-    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
-
-    problematic_postprocessors = (
-        # HACK: This particular postprocessor is trying to create a Display
-        # for lots of different types. Some of those types (specifically
-        # ImgLabelings) make this guy throw Exceptions. We are going to ignore
-        # it until it behaves.
-        # (see https://github.com/imagej/imagej-common/issues/100 )
-        jc.DisplayPostprocessor,
-    )
-    # Run all discovered postprocessors unless we have marked it as problematic
-    for postprocessor in postprocessors:
-        if not isinstance(postprocessor, problematic_postprocessors):
-            postprocessor.process(module)
-
-
-# Credit: https://gist.github.com/xhlulu/95117e225b7a1aa806e696180a72bdd0
+# Credit: https://gist.github.com/xhlulu/95118e225b7a1aa806e696180a72bdd0
 
 
 def _napari_module_param_additions(
@@ -336,7 +244,7 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
     return args[index]
 
 
-def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
+def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> Widget:
     widgets = []
     for result in results:
         name = result[0]
@@ -352,24 +260,7 @@ def _non_layer_widget(results: List[Tuple[str, Any]]) -> Widget:
         widget = Container(layout="horizontal", widgets=(result_name, result_value))
         widgets.append(widget)
 
-    return Container(widgets=widgets)
-
-
-def _display_result(
-    results: List[Tuple[str, Any]],
-    info: "jc.ModuleInfo",
-    viewer: Viewer,
-    external: bool,
-) -> None:
-    """Displays result in a new widget"""
-
-    widget: Widget = _non_layer_widget(results)
-
-    if external:
-        widget.show(run=True)
-    else:
-        name = "Result: " + ij().py.from_java(info.getTitle())
-        viewer.window.add_dock_widget(widget, name=name)
+    return Container(widgets=widgets, name=widget_name)
 
 
 def _add_napari_metadata(
@@ -452,14 +343,50 @@ def _add_scijava_metadata(
     return metadata
 
 
+def _get_postprocessors():
+    """
+    Returns the list of PostprocessorPlugins that should be used
+    on SciJava Modules from napari-imagej
+    """
+    # Discover all postprocessors
+    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
+
+    problematic_postprocessors = (
+        # HACK: This particular postprocessor is trying to create a Display
+        # for lots of different types. Some of those types (specifically
+        # ImgLabelings) make this guy throw Exceptions. We are going to ignore
+        # it until it behaves.
+        # (see https://github.com/imagej/imagej-common/issues/100 )
+        jc.DisplayPostprocessor,
+        # HACK: This postprocessor will display data within a SciJava Table.
+        # We want to display the data in napari, so we don't want to run this.
+        jc.ResultsPostprocessor,
+    )
+
+    itr = postprocessors.iterator()
+    while itr.hasNext():
+        postprocessor = itr.next()
+        if type(postprocessor) in problematic_postprocessors:
+            itr.remove()
+
+    # Return non-problematic postprocessors
+    return postprocessors
+
+
 def functionify_module_execution(
-    viewer: Viewer, module: "jc.Module", info: "jc.ModuleInfo"
+    output_handler: Callable[[object], None],
+    module: "jc.Module",
+    info: "jc.ModuleInfo",
 ) -> Tuple[Callable, dict]:
-    """Converts a module into a Widget that can be added to napari."""
+    """
+    Converts a module into a Widget that can be added to napari.
+    :param output_handler: The callback function for Module outputs
+    :param module: The SciJava Module to turn into a Python function
+    :param info: The ModuleInfo of module.
+    """
     try:
         # Run preprocessors until we hit input harvesting
-        input_harvesters: List["jc.PreprocessorPlugin"]
-        input_harvesters = _preprocess_to_harvester(module)
+        remaining_preprocessors = _preprocess_to_harvester(module)
 
         # Determine which inputs must be resolved by the user
         unresolved_inputs = _filter_unresolved_inputs(module, info.inputs())
@@ -468,79 +395,42 @@ def functionify_module_execution(
         # Package the rest of the execution into a widget
         def module_execute(
             *user_resolved_inputs,
-        ) -> List[Layer]:
+        ) -> None:
             """
             A function designed to execute module.
             :param user_resolved_inputs: Inputs passed from magicgui
             :return: A List[Layer] of the layer data outputs of the module,
                 or None if this module does not return any layer data.
             """
-            try:
-                # Start timing
-                start = perf_counter()
+            # Start timing
+            start_time = perf_counter()
 
-                # Resolve remaining inputs
-                resolved_java_args = _preprocess_remaining_inputs(
-                    module,
-                    info.inputs(),
-                    unresolved_inputs,
-                    user_resolved_inputs,
-                    input_harvesters,
-                )
+            # Create user input map
+            resolved_java_args = ij().py.jargs(*user_resolved_inputs)
+            input_map = jc.HashMap()
+            for module_item, input in zip(unresolved_inputs, resolved_java_args):
+                input_map.put(module_item.getName(), input)
 
-                mutated_layers = _mutable_layers(
-                    unresolved_inputs,
-                    user_resolved_inputs,
-                )
-
-                # run module
-                log_debug(
-                    f"Running {module_execute.__qualname__} \
-                        ({resolved_java_args}) -- {info.getIdentifier()}"
-                )
-                _initialize_module(module)
-                _run_module(module)
-
-                # postprocess
-                _postprocess_module(module)
-                log_debug("Execution complete")
-
-                # get all outputs
-                layer_outputs: List[Layer]
-                widget_outputs: List[Any]
-                layer_outputs, widget_outputs = _pure_module_outputs(
-                    module, unresolved_inputs
-                )
-                # log outputs
-                for layer in layer_outputs:
-                    log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
-                for output in widget_outputs:
-                    log_debug(f"Result: ({type(output[1])}) {output[0]}")
-
-                # display non-layer outputs in a widget
-                display_externally = _napari_specific_parameter(
+            # Create postprocessors
+            postprocessors: "jc.ArrayList" = _get_postprocessors()
+            postprocessors.add(
+                NapariPostProcessor(
                     module_execute,
+                    output_handler,
                     user_resolved_inputs,
-                    "display_results_in_new_window",
+                    unresolved_inputs,
+                    start_time,
                 )
-                if display_externally is not None and len(widget_outputs) > 0:
-                    _display_result(widget_outputs, info, viewer, display_externally)
+            )
 
-                # End timing
-                end = perf_counter()
-                log_debug(f"Computation completed in {end - start:0.4f} seconds")
+            log_debug("Processing...")
 
-                # Refresh the modified layers
-                for layer in mutated_layers:
-                    layer.refresh()
-
-                # Hand off layer outputs to napari via return
-                return layer_outputs
-            except JException as exc:
-                # chain exc to a Python exception
-                raise Exception(
-                    f"Caught Java Exception\n\n {jstacktrace(exc)}"
-                ) from None
+            ij().module().run(
+                module,
+                remaining_preprocessors,
+                postprocessors,
+                input_map,
+            )
 
         # Add metadata for widget creation
         _add_napari_metadata(module_execute, info, unresolved_inputs)
@@ -552,14 +442,6 @@ def functionify_module_execution(
     except JException as exc:
         # chain exc to a Python exception
         raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
-
-
-def _get_layers_hack(gui: CategoricalWidget) -> List[Layer]:
-    """Mimics the functional changes of https://github.com/napari/napari/pull/4715"""
-    viewer = find_viewer_ancestor(gui.native)
-    if viewer is None:
-        viewer = current_viewer()
-    return [x for x in viewer.layers if isinstance(x, gui.annotation)]
 
 
 def _request_values_args(
@@ -587,22 +469,12 @@ def _request_values_args(
             if "options" not in args[param.name]:
                 args[param.name]["options"] = {}
             # TODO: Once napari > 0.4.16 is released, replace this with
-            # napari.util._magicgui.get_layers
-            args[param.name]["options"]["choices"] = _get_layers_hack
+            args[param.name]["options"]["choices"] = get_layers
     return args
 
 
-def _execute_function_with_params(viewer: Viewer, params: Dict, func: Callable):
-    if params is not None:
-        inputs = params.values()
-        outputs: Optional[List[Layer]] = func(*inputs)
-        if outputs is not None:
-            for output in outputs:
-                viewer.add_layer(output)
-
-
 def execute_function_modally(
-    viewer: Viewer, name: str, func: Callable, param_options: Dict[str, Dict]
+    name: str, func: Callable, param_options: Dict[str, Dict]
 ) -> None:
     # Determine which arguments are needed
     args: dict = _request_values_args(func, param_options)
@@ -612,7 +484,9 @@ def execute_function_modally(
     else:
         params = dict()
     # Execute the function with the arguments
-    _execute_function_with_params(viewer, params, func)
+    if params is not None:
+        inputs = params.values()
+        func(*inputs)
 
 
 def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
@@ -623,3 +497,78 @@ def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
             info = info.cInfo()
         return info
     return None
+
+
+@JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
+class NapariPostProcessor(object):
+    def __init__(
+        self,
+        function: Callable,
+        output_handler: Callable[[object], None],
+        args,
+        params: List["jc.ModuleInfo"],
+        start_time: float,
+    ):
+        self.function = function
+        self.output_handler = output_handler
+        self.params = params
+        self.args = args
+        self.start_time = start_time
+
+    # -- Contextual methods -- #
+
+    @JOverride
+    def context(self):
+        return self.ctx
+
+    @JOverride
+    def getContext(self):
+        return self.ctx
+
+    @JOverride
+    def setContext(self, ctx):
+        self.ctx = ctx
+
+    # -- ProcessorPlugin methods -- #
+
+    @JOverride
+    def process(self, module: "jc.Module"):
+        # get all outputs
+        layer_outputs: List[Layer]
+        widget_outputs: List[Any]
+        layer_outputs, widget_outputs = _pure_module_outputs(module, self.params)
+        # log outputs
+        for layer in layer_outputs:
+            log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
+        for output in widget_outputs:
+            log_debug(f"Result: ({type(output[1])}) {output[0]}")
+
+        mutated_layers = _mutable_layers(
+            self.params,
+            self.args,
+        )
+
+        # display non-layer outputs in a widget
+        display_externally = _napari_specific_parameter(
+            self.function,
+            self.args,
+            "display_results_in_new_window",
+        )
+        if display_externally is not None and len(widget_outputs) > 0:
+            name = "Result: " + ij().py.from_java(module.getInfo().getTitle())
+            self.output_handler(
+                {"data": widget_outputs, "name": name, "external": display_externally}
+            )
+
+        # Refresh the modified layers
+        for layer in mutated_layers:
+            layer.refresh()
+
+        log_debug("Refreshed all layers")
+
+        # Hand off layer outputs to napari via return
+        for layer in layer_outputs:
+            self.output_handler(layer)
+
+        end_time = perf_counter()
+        log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")

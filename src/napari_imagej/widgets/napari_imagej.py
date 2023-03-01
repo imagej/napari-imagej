@@ -5,12 +5,16 @@ graphical access to ImageJ functionality.
 This Widget is made accessible to napari through napari.yml
 """
 from jpype import JArray, JImplements, JOverride
+from magicgui.widgets import Widget
 from napari import Viewer
-from qtpy.QtCore import QThread, Signal
+from napari.layers import Layer
+from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
+from napari_imagej.utilities._module_utils import _non_layer_widget
+from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -25,8 +29,11 @@ from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
+    output_handler = Signal(object)
+
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
+        self.napari_viewer = napari_viewer
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
@@ -44,7 +51,9 @@ class NapariImageJWidget(QWidget):
         self.result_tree: SearchResultTree = SearchResultTree()
         self.layout().addWidget(self.result_tree)
         # Second-to-lastly: The SearchResult runner
-        self.result_runner: ResultRunner = ResultRunner(napari_viewer)
+        self.result_runner: ResultRunner = ResultRunner(
+            napari_viewer, self.output_handler
+        )
         self.layout().addWidget(self.result_runner)
         # Finally: The InfoBar
         self.info_box: InfoBox = InfoBox()
@@ -97,6 +106,8 @@ class NapariImageJWidget(QWidget):
 
         self.search.bar.returnPressed.connect(return_search_bar)
 
+        self.output_handler.connect(self._handle_output)
+
         # -- Final setup -- #
 
         self.ij_post_init_setup: WidgetFinalizer = WidgetFinalizer(self)
@@ -122,6 +133,22 @@ class NapariImageJWidget(QWidget):
         msg.setText(str(exc))
         msg.exec()
 
+    @Slot(object)
+    def _handle_output(self, data):
+        if isinstance(data, Layer):
+            self.napari_viewer.add_layer(data)
+        elif isinstance(data, dict):
+            widget: Widget = _non_layer_widget(data.get("data", {}))
+            if data.get("external", False):
+                widget.name = data.get("name", "")
+                widget.show(run=True)
+            else:
+                self.napari_viewer.window.add_dock_widget(
+                    widget, name=data.get("name", "")
+                )
+        else:
+            raise TypeError(f"Do not know how to display {data}")
+
 
 class WidgetFinalizer(QThread):
     """
@@ -142,6 +169,8 @@ class WidgetFinalizer(QThread):
         self._finalize_results_tree()
         # Finalize the info bar
         self._finalize_info_bar()
+        # Finalize Exception printer
+        self._finalize_exception_printer()
 
     def _finalize_results_tree(self):
         """
@@ -188,3 +217,27 @@ class WidgetFinalizer(QThread):
         self.widget.info_box.version_bar.setText(
             " ".join(["ImageJ", str(ij().getVersion())])
         )
+
+    def _finalize_exception_printer(self):
+        # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+        # See https://github.com/scijava/scijava-common/issues/452
+        event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
+        event_bus_field.setAccessible(True)
+        event_bus = event_bus_field.get(ij().event())
+        subscriber = NapariEventSubscriber()
+        event_bus.subscribe(jc.SciJavaEvent.class_, subscriber)
+
+
+@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
+class NapariEventSubscriber(object):
+    @JOverride
+    def onEvent(self, event):
+        log_debug(str(event))
+
+    @JOverride
+    def getEventClass(self):
+        return jc.SciJavaEvent.class_
+
+    @JOverride
+    def equals(self, other):
+        return isinstance(other, NapariEventSubscriber)
