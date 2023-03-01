@@ -3,6 +3,8 @@ A module testing napari_imagej.widgets.napari_imagej
 """
 
 from napari import Viewer
+from napari.layers import Image
+from numpy import ones
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
@@ -228,3 +230,28 @@ def test_info_validity(imagej_widget: NapariImageJWidget, qtbot, asserter):
     info_box = imagej_widget.info_box
 
     asserter(lambda: info_box.version_bar.text() == "ImageJ " + str(ij().getVersion()))
+
+
+def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):
+    output_handler = getattr(imagej_widget, "output_handler")
+    viewer = imagej_widget.napari_viewer
+    asserter(lambda: len(viewer.layers) == 0)
+
+    img = Image(data=ones((3, 3, 3)), name="test")
+    output_handler.emit(img)
+    asserter(lambda: len(viewer.layers) == 1)
+
+
+def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):
+    output_handler = getattr(imagej_widget, "output_handler")
+    viewer = imagej_widget.napari_viewer
+    existing_widget_names = [k for k in viewer.window._dock_widgets.keys()]
+
+    data = {"data": [("b", 4)], "name": "test", "external": False}
+    output_handler.emit(data)
+
+    def check_for_new_widget():
+        current_widget_names = [k for k in viewer.window._dock_widgets.keys()]
+        return "test" not in existing_widget_names and "test" in current_widget_names
+
+    asserter(check_for_new_widget)
