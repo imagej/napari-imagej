@@ -409,6 +409,10 @@ class JavaClasses(object):
         return "java.io.File"
 
     @blocking_import
+    def HashMap(self):
+        return "java.util.HashMap"
+
+    @blocking_import
     def Path(self):
         return "java.nio.file.Path"
 
@@ -420,7 +424,7 @@ class JavaClasses(object):
 
     @blocking_import
     def DisplayPostprocessor(self):
-        return "org.scijava.module.process.PostprocessorPlugin"
+        return "org.scijava.display.DisplayPostprocessor"
 
     @blocking_import
     def FileWidget(self):
@@ -449,6 +453,14 @@ class JavaClasses(object):
     @blocking_import
     def PreprocessorPlugin(self):
         return "org.scijava.module.process.PreprocessorPlugin"
+
+    @blocking_import
+    def ResultsPostprocessor(self):
+        return "org.scijava.table.process.ResultsPostprocessor"
+
+    @blocking_import
+    def SciJavaEvent(self):
+        return "org.scijava.event.SciJavaEvent"
 
     @blocking_import
     def Searcher(self):

@@ -10,6 +10,7 @@ from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
 from napari.layers import Layer
+from napari.utils._magicgui import get_layers
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
@@ -18,7 +19,6 @@ from scyjava import is_arraylike
 from napari_imagej import settings
 from napari_imagej.java import ij, java_signals, jc, log_debug
 from napari_imagej.resources import resource_path
-from napari_imagej.utilities._module_utils import _get_layers_hack
 
 
 class NapariImageJMenu(QWidget):
@@ -163,11 +163,9 @@ class ToIJButton(QPushButton):
 
     def send_chosen_layer(self):
         # Get Layer choice
-        # TODO: Once napari > 0.4.16 is released, replace _get_layers_hack with
-        # napari.util._magicgui.get_layers
         choices: dict = request_values(
             title="Send layers to ImageJ2",
-            layer={"annotation": Layer, "options": {"choices": _get_layers_hack}},
+            layer={"annotation": Layer, "options": {"choices": get_layers}},
         )
         # Parse choices for the layer
         if choices is not None:

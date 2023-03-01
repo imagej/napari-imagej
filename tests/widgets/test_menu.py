@@ -218,10 +218,12 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
 
     # Assert that the data is now in Fiji
-    asserter(lambda: ij.display().getActiveDisplay() is not None)
-    active_display = ij.display().getActiveDisplay()
-    assert isinstance(active_display, jc.ImageDisplay)
-    assert "test_to" == active_display.getName()
+    def check_active_display():
+        if not ij.display().getActiveDisplay():
+            return False
+        return ij.display().getActiveDisplay().getName() == "test_to"
+
+    asserter(check_active_display)
 
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")

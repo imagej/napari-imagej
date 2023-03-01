@@ -21,7 +21,7 @@ jc = JavaClassesTest()
 
 @pytest.fixture
 def result_runner(viewer):
-    return ResultRunner(viewer)
+    return ResultRunner(viewer, None)
 
 
 def test_result_runner(result_runner):
@@ -97,3 +97,20 @@ def test_button_param_regression_legacy(
     assert _action_tooltips[buttons[3].text()] == "Opens the source code in browser"
     assert buttons[4].text() == "Batch"
     assert buttons[4].text() not in _action_tooltips
+
+
+def test_widget_button_spawns_widget(
+    result_runner: ResultRunner, example_info: "jc.ModuleInfo", asserter
+):
+    """Simple regression test ensuring the widget button spawns a new napari widget"""
+
+    result = jc.ModuleSearchResult(example_info, "")
+    buttons = result_runner._buttons_for(result)
+    assert buttons[1].text() == "Widget"
+    assert (
+        _action_tooltips[buttons[0].text()]
+        == "Runs the command immediately, asking for inputs in a pop-up dialog box"
+    )
+    assert result.name() not in result_runner.viewer.window._dock_widgets.keys()
+    buttons[1].action()
+    assert result.name() in result_runner.viewer.window._dock_widgets.keys()
