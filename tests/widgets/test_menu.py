@@ -493,3 +493,28 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 
     # Assert the data is in napari
     asserter(lambda: "blobs.gif" in current_viewer().layers)
+
+
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    # Open the GUI
+    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+    # Wait for the Frame to be created
+    asserter(lambda: gui_widget._get_AWT_frame() is not None)
+    frame = gui_widget._get_AWT_frame()
+    # Wait for the Frame to be visible
+    asserter(lambda: frame.isVisible())
+
+    # Close the GUI
+    ij.thread().queue(
+        lambda: frame.dispatchEvent(
+            jc.WindowEvent(frame, jc.WindowEvent.WINDOW_CLOSING)
+        )
+    )
+    # Wait for the Frame to be hidden
+    asserter(lambda: not frame.isVisible())
+
+    # Open the GUI again
+    qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
+    # Wait for the Frame to be visible again
+    asserter(lambda: frame.isVisible())
