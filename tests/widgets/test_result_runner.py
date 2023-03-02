@@ -20,8 +20,8 @@ jc = JavaClassesTest()
 
 
 @pytest.fixture
-def result_runner(viewer):
-    return ResultRunner(viewer, None)
+def result_runner(imagej_widget):
+    return imagej_widget.result_runner
 
 
 def test_result_runner(result_runner):
