@@ -16,14 +16,14 @@ from tests.widgets.widget_utils import _populate_tree
 
 @pytest.fixture
 def results_tree():
-    return SearchResultTree()
+    return SearchResultTree(None)
 
 
 @pytest.fixture
 def fixed_tree(ij, asserter):
     """Creates a "fake" ResultsTree with deterministic results"""
     # Create a default SearchResultTree
-    tree = SearchResultTree()
+    tree = SearchResultTree(None)
     _populate_tree(tree, asserter)
 
     return tree
