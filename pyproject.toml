@@ -41,7 +41,7 @@ dependencies = [
     "napari >= 0.4.17",
     "numpy",
     "pandas",
-    "pyimagej >= 1.3.0",
+    "pyimagej >= 1.4.0",
     "scyjava >= 1.8.1",
 ]
 
@@ -99,5 +99,5 @@ profile = "black"
 [tool.pytest.ini_options]
 env = [
     "NAPARI_IMAGEJ_TESTING=yes",
-    "NAPARI_IMAGEJ_JVM_COMMAND_LINE_ARGUMENTS=-Dfoo=bar"
+    "NAPARI_IMAGEJ_JVM_COMMAND_LINE_ARGUMENTS=-Dfoo=bar",
 ]

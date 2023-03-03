@@ -44,14 +44,14 @@ def test_convertible_match_pairs():
     # could be satisfied by a List[float], as napari-imagej knows how to
     # convert that List[float] into a Double[], and imagej knows how to
     # convert that Double[] into a DoubleArray. Unfortunately, DefaultConverter
-    # can convert Integers into DoubleArrays; because it comes first in
+    # can convert Booleans into DoubleArrays; because it comes first in
     # TypeMappings, it is the python type that returns.
     # This is really not napari-imagej's fault.
     # Since the goal was just to test that python_type_of uses ij.convert()
     # as an option, we will leave the conversion like this.
     assert jc.DoubleArray not in hint_map().items()
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=True, isOutput=False)
-    assert _module_utils.type_hint_for(input_item) == int
+    assert _module_utils.type_hint_for(input_item) == bool
 
     # We want to test that napari could tell that a DoubleArray ModuleItem
     # could be satisfied by a List[float], as napari-imagej knows how to
@@ -70,7 +70,7 @@ def test_convertible_match_pairs():
     # gets converted to a ptype
     assert jc.DoubleArray not in hint_map().items()
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=True, isOutput=True)
-    assert _module_utils.type_hint_for(input_item) == List[float]
+    assert _module_utils.type_hint_for(input_item) == List[bool]
 
 
 def test_python_type_of_enum_like_IO():
