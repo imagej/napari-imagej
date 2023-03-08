@@ -5,6 +5,7 @@ and napari Images
 
 from typing import Any
 
+from imagej.convert import java_to_xarray
 from imagej.dims import _has_axis
 from jpype import JArray, JByte
 from napari.layers import Image
@@ -24,7 +25,7 @@ def _dataset_view_to_image(image: Any) -> Image:
     view = ij().convert().convert(image, jc.DatasetView)
     # Construct a dataset from the data
     kwargs = dict(
-        data=ij().py.from_java(view.getData().getImgPlus().getImg()),
+        data=java_to_xarray(ij(), view.getData()),
         name=view.getData().getName(),
     )
     if view.getColorTables() and view.getColorTables().size() > 0:
