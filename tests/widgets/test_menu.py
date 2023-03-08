@@ -30,6 +30,7 @@ from tests.utils import jc
 
 # Determine whether we are testing headlessly
 TESTING_HEADLESS: bool = settings["jvm_mode"].get(str) == "headless"
+TESTING_LEGACY: bool = settings["include_imagej_legacy"].get(bool)
 
 
 @pytest.fixture(autouse=True)
@@ -123,18 +124,17 @@ def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
     if viewer is not None:
         viewer.layers.clear()
 
-    # After each test runs, clear all displays from ImageJ2
-    while ij.display().getActiveDisplay() is not None:
-        current_display = ij.display().getActiveDisplay()
-        current_display.close()
-        asserter(lambda: ij.display().getActiveDisplay() is not current_display)
-
     # After each test runs, clear all ImagePlus objects from ImageJ
     if ij.legacy and ij.legacy.isActive():
         while ij.WindowManager.getCurrentImage():
             imp = ij.WindowManager.getCurrentImage()
             imp.changes = False
             imp.close()
+
+    # After each test runs, clear all displays from ImageJ2
+    while not ij.display().getDisplays().isEmpty():
+        for display in ij.display().getDisplays():
+            display.close()
 
 
 def test_widget_layout(gui_widget: NapariImageJMenu):
@@ -201,6 +201,11 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+@pytest.mark.skipif(
+    TESTING_LEGACY,
+    reason="""HACK: Disabled with ImageJ legacy.
+    See https://github.com/imagej/napari-imagej/issues/181""",
+)
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: ToIJButton = gui_widget.to_ij
     assert not button.isEnabled()
@@ -227,6 +232,11 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+@pytest.mark.skipif(
+    TESTING_LEGACY,
+    reason="""HACK: Disabled with ImageJ legacy.
+    See https://github.com/imagej/napari-imagej/issues/181""",
+)
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: FromIJButton = gui_widget.from_ij
     assert not button.isEnabled()

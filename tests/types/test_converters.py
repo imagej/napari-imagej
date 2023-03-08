@@ -108,9 +108,8 @@ def test_labels_to_labeling(py_labeling):
 
 def test_labels_with_metadata_to_imgLabeling(ij, labels_with_metadata):
     converted: "jc.ImgLabeling" = ij.py.to_java(labels_with_metadata)
-    exp_img: np.ndarray = labels_with_metadata.data
-    act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
-    assert np.array_equal(exp_img, act_img)
+    act_img: Image = ij.py.from_java(converted.getIndexImg())
+    assert np.array_equal(labels_with_metadata.data, act_img.data)
 
 
 def test_labels_with_metadata_circular(ij, labels_with_metadata):
@@ -121,37 +120,10 @@ def test_labels_with_metadata_circular(ij, labels_with_metadata):
     assert np.array_equal(exp_img, act_img)
 
 
-def _assert_image_mapping(exp_img: np.ndarray, act_img: np.ndarray) -> Dict[int, int]:
-    """
-    Asserts a CONSISTENT mapping between values in exp_img and act_img.
-
-    i.e. if
-    exp_img[x, y] = a and act_img[x, y] = b for any x,y
-    then
-    np.where(exp_img == a) == np.where(act_img == b)
-
-    :param exp_img: the first image
-    :param act_img: the second image
-    :return: the mappings of a -> b
-    """
-    mapping: Dict[int, int] = {}
-    for e_x, a_x in zip(exp_img, act_img):
-        for e, a in zip(e_x, a_x):
-            if e in mapping:
-                assert mapping[e] == a
-            else:
-                mapping[e] = a
-    return mapping
-
-
 def test_labels_without_metadata_to_imgLabeling(ij, labels_without_metadata):
     converted: "jc.ImgLabeling" = ij.py.to_java(labels_without_metadata)
-    exp_img: np.ndarray = labels_without_metadata.data
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
-    # We cannot assert image equality due to
-    # https://github.com/Labelings/Labeling/issues/16
-    # So we do the next best thing
-    _assert_image_mapping(exp_img, act_img)
+    np.array_equal(labels_without_metadata.data, act_img.data)
 
 
 def test_labels_without_metadata_circular(ij, labels_without_metadata):
@@ -159,20 +131,13 @@ def test_labels_without_metadata_circular(ij, labels_without_metadata):
     converted_back: Labels = ij.py.from_java(converted)
     exp_img: np.ndarray = labels_without_metadata.data
     act_img: np.ndarray = converted_back.data
-    # We cannot assert image equality due to
-    # https://github.com/Labelings/Labeling/issues/16
-    # So we do the next best thing
-    _assert_image_mapping(exp_img, act_img)
+    np.array_equal(exp_img, act_img)
 
 
 def test_imgLabeling_to_labels(ij, imgLabeling):
     converted: Labels = ij.py.from_java(imgLabeling)
     exp_img: np.ndarray = ij.py.from_java(imgLabeling.getIndexImg())
-    act_img: np.ndarray = converted.data
-    # We cannot assert image equality due to
-    # https://github.com/Labelings/Labeling/issues/16
-    # So we do the next best thing
-    _assert_image_mapping(exp_img, act_img)
+    np.array_equal(exp_img.data, converted.data)
 
 
 # -- SHAPES / ROIS -- #

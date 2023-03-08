@@ -32,7 +32,8 @@ def _layer_to_labeling(layer: Labels):
 
 
 @java_to_py_converter(
-    predicate=lambda obj: isinstance(obj, jc.ImgLabeling), priority=Priority.VERY_HIGH
+    predicate=lambda obj: isinstance(obj, jc.ImgLabeling),
+    priority=Priority.VERY_HIGH + 2,
 )
 def _imglabeling_to_layer(imgLabeling: "jc.ImgLabeling") -> Labels:
     """
