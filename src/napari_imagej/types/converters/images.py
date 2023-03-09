@@ -59,7 +59,9 @@ def _dataset_to_image(image: Any) -> Image:
 def _image_to_dataset(image: Image) -> "jc.Dataset":
     # Construct a dataset from the data
     data = image.data
-    dataset: "jc.Dataset" = ij().py.to_dataset(data)
+    # NB We need to match dimensions to axes, or ImageJ2 don't know
+    # how to display it.
+    dataset: "jc.Dataset" = ij().py.to_dataset(data, dim_order=["row", "col"])
     # Add name
     dataset.setName(image.name)
     # Add color table, if the image uses a custom colormap
