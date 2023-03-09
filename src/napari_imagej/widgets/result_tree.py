@@ -21,7 +21,7 @@ class SearchResultTreeItem(QTreeWidgetItem):
 
     def __init__(self, result: "jc.SearchResult"):
         super().__init__()
-        self.name = ij().py.from_java(result.name())
+        self.name = str(result.name())
         self.result = result
 
         # Set QtPy properties
