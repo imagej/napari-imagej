@@ -725,6 +725,16 @@ def test_OutOfBoundsFactory_conversion(ij):
 
 
 @pytest.fixture
+def test_binary_dataset(ij) -> "jc.Dataset":
+    name = "test.foo"
+    dataset: jc.Dataset = ij.dataset().create(
+        ij.py.to_java(np.ones((10, 10), dtype=np.bool_))
+    )
+    dataset.setName(name)
+    return dataset
+
+
+@pytest.fixture
 def test_dataset(ij) -> "jc.Dataset":
     name = "test.foo"
     dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((10, 10))))
@@ -765,6 +775,20 @@ def test_image_layer_to_dataset(ij):
     assert 1 == j_img.dimensionIndex(jc.Axes.Y)
 
 
+def test_binary_image_layer_to_dataset(ij):
+    """Test conversion of an Image layer of booleans with a default colormap"""
+    name = "test_foo"
+    image = Image(data=np.ones((10, 10), dtype=np.bool_), name=name)
+    j_img = ij.py.to_java(image)
+    assert isinstance(j_img, jc.Dataset)
+    assert isinstance(j_img.cursor().next(), jc.BooleanType)
+    assert name == j_img.getName()
+    assert 0 == j_img.getColorTableCount()
+
+    assert 0 == j_img.dimensionIndex(jc.Axes.X)
+    assert 1 == j_img.dimensionIndex(jc.Axes.Y)
+
+
 def test_colormap_image_layer_to_dataset(ij):
     """Test conversion of an Image layer with a chosen colormap"""
     name = "test_foo"
@@ -781,6 +805,15 @@ def test_dataset_to_image_layer(ij, test_dataset):
     p_img = ij.py.from_java(test_dataset)
     assert isinstance(p_img, Image)
     assert test_dataset.getName() == p_img.name
+    assert "gray" == p_img.colormap.name
+
+
+def test_binary_dataset_to_image_layer(ij, test_binary_dataset):
+    """Test conversion of a binary Dataset with no colormap"""
+    p_img = ij.py.from_java(test_binary_dataset)
+    assert isinstance(p_img, Image)
+    assert isinstance(p_img.dtype, type(np.dtype("bool")))
+    assert test_binary_dataset.getName() == p_img.name
     assert "gray" == p_img.colormap.name
 
 
