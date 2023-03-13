@@ -214,9 +214,7 @@ class WidgetFinalizer(QThread):
             )
 
     def _finalize_info_bar(self):
-        self.widget.info_box.version_bar.setText(
-            " ".join(["ImageJ", str(ij().getVersion())])
-        )
+        self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")
 
     def _finalize_exception_printer(self):
         # HACK: Tap into the EventBus to obtain SciJava Module debug info.
