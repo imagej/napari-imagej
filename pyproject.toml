@@ -75,6 +75,9 @@ dev = [
     "validate-pyproject[all]",
 ]
 
+[project.scripts]
+napari-imagej = "napari_imagej.__main__:main"
+
 [project.urls]
 homepage = "https://github.com/imagej/napari-imagej"
 documentation = "https://github.com/imagej/napari-imagej#README.md"
