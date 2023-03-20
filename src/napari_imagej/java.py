@@ -17,7 +17,7 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Tuple
 
 import imagej
-from jpype import JClass, JImplementationFor
+from jpype import JClass
 from qtpy.QtCore import QObject, QThread, Signal
 from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
