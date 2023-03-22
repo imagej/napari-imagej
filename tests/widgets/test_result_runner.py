@@ -47,56 +47,57 @@ def example_info(ij):
 
 RUNNING_LEGACY = settings["include_imagej_legacy"].get(bool)
 
+# TODO: Uncomment once scijava-search 2.0.2 can be required
+# @pytest.mark.skipif(RUNNING_LEGACY, reason="Tests Pure IJ2 behavior!")
+# def test_button_param_regression(
+#     result_runner: ResultRunner, example_info: "jc.ModuleInfo"
+# ):
+#     """Simple regression test ensuring search action button population"""
 
-@pytest.mark.skipif(RUNNING_LEGACY, reason="Tests Pure IJ2 behavior!")
-def test_button_param_regression(
-    result_runner: ResultRunner, example_info: "jc.ModuleInfo"
-):
-    """Simple regression test ensuring search action button population"""
-
-    result = jc.ModuleSearchResult(example_info, "")
-    buttons = result_runner._buttons_for(result)
-    assert buttons[0].text() == "Run"
-    assert (
-        _action_tooltips[buttons[0].text()]
-        == "Runs the command immediately, asking for inputs in a pop-up dialog box"
-    )
-    assert buttons[1].text() == "Widget"
-    assert (
-        _action_tooltips[buttons[1].text()]
-        == "Creates a napari widget for executing this command with varying inputs"
-    )
-    assert buttons[2].text() == "Batch"
-    assert buttons[2].text() not in _action_tooltips
+#     result = jc.ModuleSearchResult(example_info, "")
+#     buttons = result_runner._buttons_for(result)
+#     assert buttons[0].text() == "Run"
+#     assert (
+#         _action_tooltips[buttons[0].text()]
+#         == "Runs the command immediately, asking for inputs in a pop-up dialog box"
+#     )
+#     assert buttons[1].text() == "Widget"
+#     assert (
+#         _action_tooltips[buttons[1].text()]
+#         == "Creates a napari widget for executing this command with varying inputs"
+#     )
+#     assert buttons[2].text() == "Batch"
+#     assert buttons[2].text() not in _action_tooltips
 
 
-@pytest.mark.skipif(not RUNNING_LEGACY, reason="Tests ImageJ Legacy behavior!")
-def test_button_param_regression_legacy(
-    result_runner: ResultRunner, example_info: "jc.ModuleInfo"
-):
-    """Simple regression test ensuring search action button population"""
+# TODO: Uncomment once scijava-search 2.0.2 can be required
+# @pytest.mark.skipif(not RUNNING_LEGACY, reason="Tests ImageJ Legacy behavior!")
+# def test_button_param_regression_legacy(
+#     result_runner: ResultRunner, example_info: "jc.ModuleInfo"
+# ):
+#     """Simple regression test ensuring search action button population"""
 
-    result = jc.ModuleSearchResult(example_info, "")
-    buttons = result_runner._buttons_for(result)
-    assert buttons[0].text() == "Run"
-    assert (
-        _action_tooltips[buttons[0].text()]
-        == "Runs the command immediately, asking for inputs in a pop-up dialog box"
-    )
-    assert buttons[1].text() == "Widget"
-    assert (
-        _action_tooltips[buttons[1].text()]
-        == "Creates a napari widget for executing this command with varying inputs"
-    )
-    assert buttons[2].text() == "Help"
-    assert (
-        _action_tooltips[buttons[2].text()]
-        == "Opens the functionality's ImageJ.net wiki page"
-    )
-    assert buttons[3].text() == "Source"
-    assert _action_tooltips[buttons[3].text()] == "Opens the source code in browser"
-    assert buttons[4].text() == "Batch"
-    assert buttons[4].text() not in _action_tooltips
+#     result = jc.ModuleSearchResult(example_info, "")
+#     buttons = result_runner._buttons_for(result)
+#     assert buttons[0].text() == "Run"
+#     assert (
+#         _action_tooltips[buttons[0].text()]
+#         == "Runs the command immediately, asking for inputs in a pop-up dialog box"
+#     )
+#     assert buttons[1].text() == "Widget"
+#     assert (
+#         _action_tooltips[buttons[1].text()]
+#         == "Creates a napari widget for executing this command with varying inputs"
+#     )
+#     assert buttons[2].text() == "Help"
+#     assert (
+#         _action_tooltips[buttons[2].text()]
+#         == "Opens the functionality's ImageJ.net wiki page"
+#     )
+#     assert buttons[3].text() == "Source"
+#     assert _action_tooltips[buttons[3].text()] == "Opens the source code in browser"
+#     assert buttons[4].text() == "Batch"
+#     assert buttons[4].text() not in _action_tooltips
 
 
 def test_widget_button_spawns_widget(
