@@ -212,7 +212,7 @@ class ImageJInitializer(QThread):
         component_requirements: List[Tuple[JClass, str, str]] = [
             (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
             (jc.OpInfo, "net.imagej:imagej-ops", "0.49.0"),
-            (jc.Module, "org.scijava:scijava-common", "2.89.0"),
+            (jc.Module, "org.scijava:scijava-common", "2.91.0"),
             (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
         ]
 
@@ -396,6 +396,10 @@ class JavaClasses(object):
     @blocking_import
     def ArrayList(self):
         return "java.util.ArrayList"
+
+    @blocking_import
+    def BigDecimal(self):
+        return "java.math.BigDecimal"
 
     @blocking_import
     def BigInteger(self):

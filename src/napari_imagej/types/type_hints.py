@@ -9,167 +9,186 @@ in a programmatic way. Those types should be declared elsewhere.
 
 The hint maps are broken up into sub-maps for convenience and utility.
 """
-from collections import OrderedDict
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Dict, List
+from typing import Callable, List, Union
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
+from scyjava import Priority
 
 from napari_imagej.java import jc
 
-MAP_GENERATORS: List[Callable[[], Dict[Any, Any]]] = []
+
+@dataclass
+class TypeHint:
+    type: type
+    hint: Union[str, type]
+    priority: float = Priority.NORMAL
 
 
-def map_category(func: Callable[[], Dict[Any, Any]]) -> Callable[[], Dict[Any, Any]]:
+HINT_GENERATORS: List[Callable[[], List[TypeHint]]] = []
+
+
+def hint_category(func: Callable[[], List[TypeHint]]) -> Callable[[], List[TypeHint]]:
     @lru_cache(maxsize=None)
-    def inner() -> Dict[Any, Any]:
+    def inner() -> List[TypeHint]:
         # We want the map returned by func...
-        original = func()
+        original: List[TypeHint] = func()
         # ...but without any None keys.
         # NB the second None avoids the KeyError
-        original.pop(None, None)
-        return original
+        return list(filter(lambda hint: hint.type is not None, original))
 
-    MAP_GENERATORS.append(inner)
+    HINT_GENERATORS.append(inner)
     return inner
 
 
 @lru_cache(maxsize=None)
-def hint_map() -> OrderedDict:
-    types = OrderedDict()
-    for generator in MAP_GENERATORS:
-        for k, v in generator().items():
-            types[k] = v
+def type_hints() -> List[TypeHint]:
+    """
+    Returns a List of all HARDCODED python type hints for java types,
+    sorted by priority.
+    """
+    types: List[TypeHint] = []
+    for generator in HINT_GENERATORS:
+        types.extend(generator())
+    types.sort(reverse=True, key=lambda hint: hint.priority)
     return types
 
 
-@map_category
-def booleans() -> Dict[Any, Any]:
-    return {
-        JBoolean: bool,
-        jc.Boolean_Arr: List[bool],
-        jc.Boolean: bool,
-        jc.BooleanType: bool,
-    }
+@hint_category
+def booleans() -> List[TypeHint]:
+    return [
+        TypeHint(JBoolean, bool),
+        TypeHint(jc.Boolean_Arr, List[bool]),
+        TypeHint(jc.Boolean, bool),
+        TypeHint(jc.BooleanType, bool, Priority.LOW),
+    ]
 
 
-@map_category
-def numbers() -> Dict[Any, Any]:
-    return {
-        JByte: int,
-        jc.Byte: int,
-        jc.Byte_Arr: List[int],
-        JShort: int,
-        jc.Short: int,
-        jc.Short_Arr: List[int],
-        JInt: int,
-        jc.Integer: int,
-        jc.Integer_Arr: List[int],
-        JLong: int,
-        jc.Long: int,
-        jc.Long_Arr: List[int],
-        JFloat: float,
-        jc.Float: float,
-        jc.Float_Arr: List[float],
-        JDouble: float,
-        jc.Double: float,
-        jc.Double_Arr: List[float],
-        jc.BigInteger: int,
-        jc.IntegerType: int,
-        jc.RealType: float,
-        jc.ComplexType: complex,
-        jc.NumericType: float,
-    }
+@hint_category
+def numbers() -> List[TypeHint]:
+    return [
+        TypeHint(JByte, int),
+        TypeHint(jc.Byte, int),
+        TypeHint(jc.Byte_Arr, List[int]),
+        TypeHint(JShort, int),
+        TypeHint(jc.Short, int),
+        TypeHint(jc.Short_Arr, List[int]),
+        TypeHint(JInt, int),
+        TypeHint(jc.Integer, int),
+        TypeHint(jc.Integer_Arr, List[int]),
+        TypeHint(JLong, int),
+        TypeHint(jc.Long, int),
+        TypeHint(jc.Long_Arr, List[int]),
+        TypeHint(JFloat, float),
+        TypeHint(jc.Float, float),
+        TypeHint(jc.Float_Arr, List[float]),
+        TypeHint(JDouble, float),
+        TypeHint(jc.Double, float),
+        TypeHint(jc.Double_Arr, List[float]),
+        TypeHint(jc.BigInteger, int),
+        TypeHint(jc.BigDecimal, float),
+        TypeHint(jc.IntegerType, int, Priority.LOW),
+        TypeHint(jc.RealType, float, Priority.LOW - 1),
+        TypeHint(jc.ComplexType, complex, Priority.LOW - 2),
+        TypeHint(jc.NumericType, float, Priority.VERY_LOW),
+    ]
 
 
-@map_category
-def strings() -> Dict[Any, Any]:
-    return {
-        JChar: str,
-        jc.Character_Arr: str,
-        jc.Character: str,
-        jc.String: str,
-    }
+@hint_category
+def strings() -> List[TypeHint]:
+    return [
+        TypeHint(JChar, str),
+        TypeHint(jc.Character_Arr, str),
+        TypeHint(jc.Character, str),
+        TypeHint(jc.String, str),
+    ]
 
 
-@map_category
-def labels() -> Dict[Any, Any]:
-    return {jc.ImgLabeling: "napari.layers.Labels"}
+@hint_category
+def labels() -> List[TypeHint]:
+    return [TypeHint(jc.ImgLabeling, "napari.layers.Labels", priority=Priority.HIGH)]
 
 
-@map_category
-def images() -> Dict[Any, Any]:
-    return {
-        jc.RandomAccessibleInterval: "napari.layers.Image",
-        jc.RandomAccessible: "napari.layers.Image",
-        jc.IterableInterval: "napari.layers.Image",
-        jc.Img: "napari.layers.Image",
-        jc.ImageDisplay: "napari.layers.Image",
-        jc.Dataset: "napari.layers.Image",
-        jc.DatasetView: "napari.layers.Image",
-        jc.ImagePlus: "napari.layers.Image",
-    }
+@hint_category
+def images() -> List[TypeHint]:
+    return [
+        TypeHint(
+            jc.RandomAccessibleInterval, "napari.layers.Image", priority=Priority.LOW
+        ),
+        TypeHint(
+            jc.RandomAccessible, "napari.layers.Image", priority=Priority.VERY_LOW
+        ),
+        TypeHint(
+            jc.IterableInterval, "napari.layers.Image", priority=Priority.VERY_LOW
+        ),
+        TypeHint(jc.Img, "napari.layers.Image"),
+        TypeHint(jc.ImageDisplay, "napari.layers.Image"),
+        TypeHint(jc.Dataset, "napari.layers.Image"),
+        TypeHint(jc.DatasetView, "napari.layers.Image"),
+        TypeHint(jc.ImagePlus, "napari.layers.Image"),
+    ]
 
 
-@map_category
-def points() -> Dict[Any, Any]:
-    return {
-        jc.PointMask: "napari.types.PointsData",
-        jc.RealPointCollection: "napari.types.PointsData",
-    }
+@hint_category
+def points() -> List[TypeHint]:
+    return [
+        TypeHint(jc.PointMask, "napari.types.PointsData"),
+        TypeHint(jc.RealPointCollection, "napari.types.PointsData"),
+    ]
 
 
-@map_category
-def shapes() -> Dict[Any, Any]:
-    return {
-        jc.Line: "napari.layers.Shapes",
-        jc.Box: "napari.layers.Shapes",
-        jc.SuperEllipsoid: "napari.layers.Shapes",
-        jc.Polygon2D: "napari.layers.Shapes",
-        jc.Polyline: "napari.layers.Shapes",
-        jc.ROITree: "napari.layers.Shapes",
-    }
+@hint_category
+def shapes() -> List[TypeHint]:
+    return [
+        TypeHint(jc.Line, "napari.layers.Shapes"),
+        TypeHint(jc.Box, "napari.layers.Shapes"),
+        TypeHint(jc.SuperEllipsoid, "napari.layers.Shapes"),
+        TypeHint(jc.Polygon2D, "napari.layers.Shapes"),
+        TypeHint(jc.Polyline, "napari.layers.Shapes"),
+        TypeHint(jc.ROITree, "napari.layers.Shapes"),
+    ]
 
 
-@map_category
-def surfaces() -> Dict[Any, Any]:
-    return {jc.Mesh: "napari.types.SurfaceData"}
+@hint_category
+def surfaces() -> List[TypeHint]:
+    return [TypeHint(jc.Mesh, "napari.types.SurfaceData")]
 
 
-@map_category
-def color_tables() -> Dict[Any, Any]:
-    return {
-        jc.ColorTable: "vispy.color.Colormap",
-    }
+@hint_category
+def color_tables() -> List[TypeHint]:
+    return [
+        TypeHint(jc.ColorTable, "vispy.color.Colormap"),
+    ]
 
 
-@map_category
-def pd() -> Dict[Any, Any]:
-    return {
-        jc.Table: "pandas.DataFrame",
-    }
+@hint_category
+def pd() -> List[TypeHint]:
+    return [
+        TypeHint(jc.Table, "pandas.DataFrame"),
+    ]
 
 
-@map_category
-def paths() -> Dict[Any, Any]:
-    return {
-        jc.Character_Arr: str,
-        jc.Character: str,
-        jc.String: str,
-        jc.File: "pathlib.PosixPath",
-        jc.Path: "pathlib.PosixPath",
-    }
+@hint_category
+def paths() -> List[TypeHint]:
+    return [
+        TypeHint(jc.Character_Arr, str),
+        TypeHint(jc.Character, str),
+        TypeHint(jc.String, str),
+        TypeHint(jc.File, "pathlib.PosixPath"),
+        TypeHint(jc.Path, "pathlib.PosixPath"),
+    ]
 
 
-@map_category
-def enums() -> Dict[Any, Any]:
-    return {
-        jc.Enum: "enum.Enum",
-    }
+@hint_category
+def enums() -> List[TypeHint]:
+    return [
+        TypeHint(jc.Enum, "enum.Enum"),
+    ]
 
 
-@map_category
-def dates() -> Dict[Any, Any]:
-    return {
-        jc.Date: "datetime.datetime",
-    }
+@hint_category
+def dates() -> List[TypeHint]:
+    return [
+        TypeHint(jc.Date, "datetime.datetime"),
+    ]
