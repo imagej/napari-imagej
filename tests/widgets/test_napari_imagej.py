@@ -233,7 +233,7 @@ def test_info_validity(imagej_widget: NapariImageJWidget, qtbot, asserter):
     # Check the version
     info_box = imagej_widget.info_box
 
-    asserter(lambda: info_box.version_bar.text() == "ImageJ " + str(ij().getVersion()))
+    asserter(lambda: info_box.version_bar.text() == f"ImageJ2 v{ij().getVersion()}")
 
 
 def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):
