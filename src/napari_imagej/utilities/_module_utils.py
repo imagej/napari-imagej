@@ -195,8 +195,11 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
 
 def _module_param(input: "jc.ModuleItem") -> Parameter:
     """Converts a java ModuleItem into a python Parameter"""
-    # NB ModuleInfo.py_name() defined using JImplementationFor
-    name = input.py_name()
+    name = str(input.getName())
+    if name == "in":
+        # HACK: The name "in" is a keyword in Python.
+        # So we use the name "input" instead.
+        name = "input"
     kind = Parameter.POSITIONAL_OR_KEYWORD
     default = _param_default_or_none(input)
     type_hint = type_hint_for(input)
