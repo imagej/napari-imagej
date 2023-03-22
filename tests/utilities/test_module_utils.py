@@ -141,7 +141,7 @@ def test_napari_param_new_window_checkbox():
 
 def assert_item_annotation(jtype, ptype, isRequired):
     module_item = DummyModuleItem(jtype=jtype, isRequired=isRequired)
-    param_type = _module_utils._type_hint_for_module_item(module_item)
+    param_type = _module_utils.type_hint_for(module_item)
     assert param_type == ptype
 
 
