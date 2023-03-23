@@ -3,13 +3,15 @@ A module testing napari_imagej.widgets.results
 """
 
 import pytest
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QRunnable, Qt, QThreadPool
+from qtpy.QtWidgets import QApplication, QMenu
 
 from napari_imagej.widgets.result_tree import (
     SearcherTreeItem,
     SearchResultTree,
     SearchResultTreeItem,
 )
+from napari_imagej.widgets.widget_utils import python_actions_for
 from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult
 from tests.widgets.widget_utils import _populate_tree
 
@@ -135,3 +137,44 @@ def test_search_tree_disable(fixed_tree: SearchResultTree, asserter):
     asserter(lambda: searcher_item.text(0) == searcher_item._searcher.title())
     asserter(lambda: not searcher_item.isExpanded())
     asserter(lambda: searcher_item.childCount() == 0)
+
+
+def test_right_click(fixed_tree: SearchResultTree, asserter):
+    """
+    Ensures that SearchResultTree has a CustomContextMenuPolicy,
+    creating a menu that has the SciJava Search Actions relevant for
+    an arbitrary SearchResult
+    """
+    # First, assert the policy
+    assert fixed_tree.contextMenuPolicy() == Qt.CustomContextMenu
+    # Then, grab an arbitratry Search Result
+    item = fixed_tree.topLevelItem(0).child(0)
+    rect = fixed_tree.visualItemRect(item)
+    # Find its SearchActions
+    expected_action_names = [pair[0] for pair in python_actions_for(item.result, None)]
+
+    # NB when the menu pops, this thread will freeze until the menu is resolved
+    # To inspect (and close) the menu, we must do so on another thread.
+    class Handler(QRunnable):
+        def run(self) -> None:
+            # Wait for the menu to arise
+            asserter(lambda: isinstance(QApplication.activePopupWidget(), QMenu))
+            menu = QApplication.activePopupWidget()
+            # Assert equality of actions (by name)
+            for expected, actual in zip(expected_action_names, menu.actions()):
+                assert expected == actual.text()
+            # Close the menu (later, on the GUI thread)
+            menu.deleteLater()
+            self._passed = True
+
+        def passed(self) -> bool:
+            return self._passed
+
+    # Start the Runner, so we can evaluate the Menu
+    runnable = Handler()
+    QThreadPool.globalInstance().start(runnable)
+    # Launch the menu
+    fixed_tree.customContextMenuRequested.emit(rect.center())
+    # Wait for the the runner to finish evaluating, and ensure assertions passed.
+    asserter(QThreadPool.globalInstance().waitForDone)
+    assert runnable.passed()
