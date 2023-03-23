@@ -4,8 +4,10 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
+from typing import Callable
+
 from jpype import JArray, JImplements, JOverride
-from magicgui.widgets import Widget
+from magicgui.widgets import FunctionGui, Widget
 from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
@@ -48,7 +50,7 @@ class NapariImageJWidget(QWidget):
         self.search: JVMEnabledSearchbar = JVMEnabledSearchbar()
         self.layout().addWidget(self.search)
         # Then: The results tree
-        self.result_tree: SearchResultTree = SearchResultTree()
+        self.result_tree: SearchResultTree = SearchResultTree(self.output_handler)
         self.layout().addWidget(self.result_tree)
         # Second-to-lastly: The SearchResult runner
         self.result_runner: ResultRunner = ResultRunner(
@@ -146,6 +148,8 @@ class NapariImageJWidget(QWidget):
                 self.napari_viewer.window.add_dock_widget(
                     widget, name=data.get("name", "")
                 )
+        elif isinstance(data, (FunctionGui, Callable)):
+            self.napari_viewer.window.add_dock_widget(data, name=data.name)
         else:
             raise TypeError(f"Do not know how to display {data}")
 
