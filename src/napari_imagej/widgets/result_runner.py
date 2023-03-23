@@ -6,19 +6,13 @@ on the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
 from typing import Callable, Dict, List, Union
 
-from magicgui import magicgui
 from napari import Viewer
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from napari_imagej.java import ij, jc
-from napari_imagej.utilities._module_utils import (
-    execute_function_modally,
-    functionify_module_execution,
-    info_for,
-)
-from napari_imagej.utilities.logging import log_debug
+from napari_imagej.java import jc
 from napari_imagej.widgets.layouts import QFlowLayout
+from napari_imagej.widgets.widget_utils import python_actions_for
 
 _action_tooltips: Dict[str, str] = {
     "Widget": "Creates a napari widget for executing this command with varying inputs",
@@ -108,53 +102,6 @@ class ResultRunner(QWidget):
             self.selected_module_label.hide()
 
     def _buttons_for(self, result: "jc.SearchResult") -> List[ActionButton]:
-        buttons: List[ActionButton] = []
-
-        # Iterate over all available python actions
-        searchService = ij().get("org.scijava.search.SearchService")
-        for action in searchService.actions(result):
-            action_name = str(action.toString())
-            # Add buttons for the java action
-            if action_name == "Run":
-                buttons.extend(self._run_actions_for(result))
-            else:
-                buttons.append(ActionButton(action_name, action.run))
-
-        return buttons
-
-    def _run_actions_for(self, result: "jc.SearchResult") -> List["ActionButton"]:
-        def execute_result(modal: bool):
-            """Helper function to perform module execution."""
-            log_debug("Creating module...")
-
-            name = str(result.name())
-            moduleInfo = info_for(result)
-            if not moduleInfo:
-                log_debug(f"Search Result {result} cannot be run!")
-                return []
-
-            module = ij().module().createModule(moduleInfo)
-
-            # preprocess using napari GUI
-            func, param_options = functionify_module_execution(
-                lambda o: self.output_signal.emit(o),
-                module,
-                moduleInfo,
-            )
-            if modal:
-                execute_function_modally(
-                    name=name,
-                    func=func,
-                    param_options=param_options,
-                )
-            else:
-                widget = magicgui(function=func, **param_options)
-                self.viewer.window.add_dock_widget(widget, name=name)
-                widget[0].native.setFocus()
-
-        buttons = [
-            ActionButton(name="Run", func=lambda: execute_result(modal=True)),
-            ActionButton(name="Widget", func=lambda: execute_result(modal=False)),
+        return [
+            ActionButton(*a) for a in python_actions_for(result, self.output_signal)
         ]
-
-        return buttons

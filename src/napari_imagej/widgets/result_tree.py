@@ -6,11 +6,12 @@ SearchResults are grouped by the SciJava Searcher that created them.
 from typing import List, Optional
 
 from qtpy.QtCore import Qt, Signal, Slot
-from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
+from qtpy.QtWidgets import QAction, QMenu, QTreeWidget, QTreeWidgetItem
 from scyjava import Priority
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities.logging import log_debug
+from napari_imagej.widgets.widget_utils import python_actions_for
 
 
 class SearchResultTreeItem(QTreeWidgetItem):
@@ -99,8 +100,10 @@ class SearchResultTree(QTreeWidget):
 
     def __init__(
         self,
+        output_signal: Signal,
     ):
         super().__init__()
+        self.output_signal = output_signal
 
         # -- Configure GUI Options -- #
         self.setColumnCount(1)
@@ -113,6 +116,9 @@ class SearchResultTree(QTreeWidget):
         # Connect topLevelItem insertion signal to function
         self.insert.connect(self._add_searcher_tree_item)
         self.itemChanged.connect(self._register_item_change)
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._create_custom_menu)
 
     def search(self, text: str):
         self._searchOperation.search(text)
@@ -139,6 +145,19 @@ class SearchResultTree(QTreeWidget):
             header.update(result_items)
         else:
             log_debug(f"Searcher {event.searcher()} not found!")
+
+    def _create_custom_menu(self, pos):
+        item: QTreeWidgetItem = self.itemAt(pos)
+        if not isinstance(item, SearchResultTreeItem):
+            return
+        menu: QMenu = QMenu(self)
+
+        for name, action in python_actions_for(item.result, self.output_signal):
+            newAct = QAction(name, self)
+            newAct.triggered.connect(action)
+            menu.addAction(newAct)
+
+        menu.exec_(self.mapToGlobal(pos))
 
     # -- QWidget Overrides -- #
 
