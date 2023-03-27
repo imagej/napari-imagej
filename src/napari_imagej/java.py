@@ -215,6 +215,11 @@ class ImageJInitializer(QThread):
             (jc.Module, "org.scijava:scijava-common", "2.91.0"),
             (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
         ]
+        # Add additional minimum versions for legacy components
+        if ij().legacy and ij().legacy.isActive():
+            component_requirements.append(
+                (ij().legacy.getClass(), "net.imagej:imagej-legacy", "1.1.0")
+            )
 
         # Find version that violate the minimum
         violations = []
