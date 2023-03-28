@@ -3,7 +3,7 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
@@ -166,11 +166,11 @@ class FromIJButton(QPushButton):
             display = ij().display().getDisplay(name)
             # if the image is displayed, convert the DatasetView
             if display:
-                self._add_image(display.get(0))
+                self._add_layer(display.get(0))
             # Otherwise, just convert the object
             else:
                 image = images[names.index(name)]
-                self._add_image(image)
+                self._add_layer(image)
 
     def get_active_layer(self) -> None:
         # HACK: Sync ImagePlus before transferring
@@ -186,16 +186,20 @@ class FromIJButton(QPushButton):
         # https://github.com/imagej/imagej-legacy/pull/287 is merged.
         view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
         if view is not None:
-            self._add_image(view)
+            self._add_layer(view)
+            # Finally, transfer any rois
+            if rois := view.getData().getProperties().get("rois"):
+                self._add_layer(rois)
         else:
             self.handle_no_choices()
 
-    def _add_image(self, view: Union["jc.Dataset", "jc.DatasetView"]):
+    def _add_layer(self, view):
         # Get the stuff needed for a new layer
         py_image = ij().py.from_java(view)
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
+        # Other
         elif is_arraylike(py_image):
             name = ij().object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
