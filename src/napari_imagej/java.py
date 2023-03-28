@@ -36,7 +36,6 @@ minimum_versions = {
     "net.imagej:imagej-legacy": "1.1.0",
 }
 
-
 # -- ImageJ API -- #
 
 
@@ -263,6 +262,17 @@ class ImageJInitializer(QThread):
                 "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
             )
             raise RuntimeError(failure_str)
+
+    def _optional_requirements(self):
+        optionals = []
+        # TrackMate
+        try:
+            TrackMate = jimport("fiji.plugin.trackmate.TrackMate")
+            optionals.append((TrackMate, "sc.fiji:TrackMate", "7.10.3"))
+        except ImportError:
+            pass
+
+        return optionals
 
 
 class ImageJ_Callbacks(QObject):
@@ -789,6 +799,16 @@ class JavaClasses(object):
     @blocking_import
     def ImagePlus(self):
         return "ij.ImagePlus"
+
+    @blocking_import
+    def Roi(self):
+        return "ij.gui.Roi"
+
+    # ImageJ-Legacy Types
+
+    @blocking_import
+    def IJRoiWrapper(self):
+        return "net.imagej.legacy.convert.roi.IJRoiWrapper"
 
     # ImageJ-Ops Types
 

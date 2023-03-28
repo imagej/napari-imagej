@@ -59,6 +59,7 @@ dev = [
     "flake8-pyproject",
     "flake8-typing-imports",
     "isort",
+    "myst-parser",
     "pre-commit",
     "pyqt5",
     "pytest",
