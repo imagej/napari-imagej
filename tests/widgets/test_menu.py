@@ -29,9 +29,14 @@ from napari_imagej.widgets.menu import (
 from napari_imagej.widgets.widget_utils import _run_actions_for
 from tests.utils import DummySearchResult, jc
 
+
 # Determine whether we are testing headlessly
-TESTING_HEADLESS: bool = settings["jvm_mode"].get(str) == "headless"
-TESTING_LEGACY: bool = settings["include_imagej_legacy"].get(bool)
+def testing_headless():
+    return settings["jvm_mode"].get(str) == "headless"
+
+
+def testing_legacy():
+    return settings["include_imagej_legacy"].get(bool)
 
 
 @pytest.fixture(autouse=True)
@@ -177,9 +182,11 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
     assert isinstance(subwidgets[4], SettingsButton)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
     """Tests headful-specific settings of GUIButton"""
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+
     button: GUIButton = gui_widget.gui_button
 
     expected: QPixmap = QPixmap(resource_path("imagej2-16x16-flat"))
@@ -198,9 +205,10 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
     asserter(ij.ui().isVisible)
 
 
-@pytest.mark.skipif(not TESTING_HEADLESS, reason="Only applies when running headlessly")
 def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
+    if not testing_headless():
+        pytest.skip("Only applies when running headlessly")
     # Wait until the JVM starts to test settings
     button: GUIButton = gui_widget.gui_button
 
@@ -223,13 +231,16 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     popup_handler(expected_popup_text, True, QMessageBox.Ok, button.clicked.emit)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
-@pytest.mark.skipif(
-    TESTING_LEGACY,
-    reason="""HACK: Disabled with ImageJ legacy.
-    See https://github.com/imagej/napari-imagej/issues/181""",
-)
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+    if testing_legacy():
+        pytest.skip(
+            """HACK: Disabled with ImageJ legacy.
+    See https://github.com/imagej/napari-imagej/issues/181
+            """
+        )
+
     button: ToIJButton = gui_widget.to_ij
     assert button.isEnabled()
 
@@ -254,13 +265,16 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     asserter(check_active_display)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
-@pytest.mark.skipif(
-    TESTING_LEGACY,
-    reason="""HACK: Disabled with ImageJ legacy.
-    See https://github.com/imagej/napari-imagej/issues/181""",
-)
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+    if testing_legacy():
+        pytest.skip(
+            """HACK: Disabled with ImageJ legacy.
+    See https://github.com/imagej/napari-imagej/issues/181
+            """
+        )
+
     button: FromIJButton = gui_widget.from_ij
     assert button.isEnabled()
 
@@ -284,8 +298,10 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     assert (10, 10, 10) == layer.data.shape
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+
     button_to: ToIJButton = gui_widget_chooser.to_ij
     button_from: FromIJButton = gui_widget_chooser.from_ij
     assert button_to.isEnabled()
@@ -375,7 +391,7 @@ def test_empty_ij_dir_str_prevention(popup_handler, gui_widget: NapariImageJMenu
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    assert settings["imagej_directory_or_endpoint"].get() == "net.imagej:imagej"
+    default_endpoint = settings["imagej_directory_or_endpoint"].get(str)
 
     def newfunc(values={}, title="", **kwargs):
         results = {}
@@ -413,7 +429,7 @@ def test_empty_ij_dir_str_prevention(popup_handler, gui_widget: NapariImageJMenu
     menu.request_values = oldfunc
 
     # Assert no change in the settings
-    assert settings["imagej_directory_or_endpoint"].get() == "net.imagej:imagej"
+    assert settings["imagej_directory_or_endpoint"].get(str) == default_endpoint
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="Only applies testing on MacOS")
@@ -460,11 +476,12 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
     assert settings["jvm_mode"].get() == "headless"
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
-@pytest.mark.skipif(
-    not settings["include_imagej_legacy"].get(bool), reason="Tests legacy behavior"
-)
 def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+    if not testing_legacy():
+        pytest.skip("Tests legacy behavior")
+
     to_button: ToIJButton = gui_widget.to_ij
     from_button: FromIJButton = gui_widget.from_ij
 
@@ -499,11 +516,12 @@ def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMen
     assert numpy.all(modified_layer[1:, :, :] == 1)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
-@pytest.mark.skipif(
-    not settings["include_imagej_legacy"].get(bool), reason="Tests legacy behavior"
-)
 def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+    if not testing_legacy():
+        pytest.skip("Tests legacy behavior")
+
     from_button: FromIJButton = gui_widget.from_ij
 
     # Show the button
@@ -523,8 +541,10 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
     asserter(lambda: "blobs.gif" in current_viewer().layers)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+
     # Open the GUI
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
     frame = ij.ui().getDefaultUI().getApplicationFrame()
@@ -573,11 +593,11 @@ def legacy_module(ij):
     return ij.module().createModule(info)
 
 
-@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
-@pytest.mark.skipif(not TESTING_LEGACY, reason="Only applies to legacy modules")
-def test_legacy_directed_to_ij_ui(
-    asserter, ij, popup_handler, gui_widget: NapariImageJMenu
-):
+def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
+    if testing_headless():
+        pytest.skip("Only applies when not running headlessly")
+    if not testing_legacy():
+        pytest.skip("Tests legacy behavior")
     info = ij.module().getModuleById("legacy:ij.plugin.filter.GaussianBlur")
     actions = _run_actions_for(DummySearchResult(info), None, gui_widget)
 
