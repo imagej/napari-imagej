@@ -17,11 +17,8 @@ from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
     """Wraps qtbot.waitUntil with a standardized timeout"""
 
-    # Determine timeout length
-    if "NAPARI_IMAGEJ_TEST_TIMEOUT" in os.environ:
-        timeout = int(os.environ["NAPARI_IMAGEJ_TEST_TIMEOUT"])
-    else:
-        timeout = 5000  # 5 seconds
+    # Determine timeout length - defaults to 5
+    timeout = int(os.environ.get("NAPARI_IMAGEJ_TEST_TIMEOUT", "5000"))
 
     # Define timeout function
     def assertFunc(func: Callable[[], bool]):
@@ -65,7 +62,7 @@ def preserve_user_settings():
 
 
 @pytest.fixture(autouse=True)
-def launch_imagej():
+def launch_imagej(ij):
     """Fixture ensuring that ImageJ is running before any tests run"""
     init_ij()
     yield
