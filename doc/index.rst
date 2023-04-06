@@ -32,4 +32,6 @@ napari-imagej handles the burden of data transfer between these two applications
 
    Development
 
+   Architecture
+
    Benchmarking
