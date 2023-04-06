@@ -12,7 +12,7 @@ The napari-imagej plugin strives to unite these communities by providing access 
 
 napari-imagej handles the burden of data transfer between these two applications, enabling accessible, convenient, synergistic workflows.
 
-.. figure:: /doc-images/napari-imagej_front_page.png
+.. figure:: https://media.imagej.net/napari-imagej/front_page.png
 
    Using ImageJ's `Analyze Particles <https://imagej.net/imaging/particle-analysis>`_ routine within napari
 
@@ -31,5 +31,7 @@ napari-imagej handles the burden of data transfer between these two applications
    Use_Cases
 
    Development
+
+   Architecture
 
    Benchmarking
