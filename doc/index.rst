@@ -33,10 +33,3 @@ napari-imagej handles the burdens of inter-language workflows, enabling accessib
    Development
 
    Benchmarking
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
