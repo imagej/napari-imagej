@@ -93,7 +93,10 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
 
     data = np.array(spots)
 
-    return Tracks(data=data, graph=graph)
+    src_image = obj.children()[0].data().getRoi().getImage()
+    name = f"{src_image.getTitle()}-tracks"
+
+    return Tracks(data=data, graph=graph, name=name)
 
 
 class TrackMateClasses(JavaClasses):

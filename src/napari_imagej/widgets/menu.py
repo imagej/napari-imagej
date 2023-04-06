@@ -187,18 +187,19 @@ class FromIJButton(QPushButton):
         view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
         if view is not None:
             self._add_layer(view)
-            # Finally, transfer any rois
-            if rois := view.getData().getProperties().get("rois"):
-                self._add_layer(rois)
         else:
             self.handle_no_choices()
 
     def _add_layer(self, view):
-        # Get the stuff needed for a new layer
+        # Convert the object into Python
         py_image = ij().py.from_java(view)
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
+            # Check the metadata for additonal layers, like Shapes/Tracks/Points
+            for _, v in py_image.metadata.items():
+                if isinstance(v, Layer):
+                    self.viewer.add_layer(v)
         # Other
         elif is_arraylike(py_image):
             name = ij().object().getName(view)
