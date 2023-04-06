@@ -28,6 +28,8 @@ def _dataset_view_to_image(image: Any) -> Image:
         data=java_to_xarray(ij(), view.getData()),
         name=view.getData().getName(),
     )
+    if hasattr(kwargs["data"], "attrs"):
+        kwargs["metadata"] = kwargs["data"].attrs
     if view.getColorTables() and view.getColorTables().size() > 0:
         if not jc.ColorTables.isGrayColorTable(view.getColorTables().get(0)):
             kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
