@@ -32,6 +32,17 @@ Additionally, you can open your data through ``File>Open...`` in the ImageJ UI, 
 
 With your data open, you can launch TrackMate through ``Plugins>Tracking>Trackmate``. For information on running TrackMate, we defer to `one of the many guides <https://imagej.net/plugins/trackmate/#documentation-and-tutorials>`_ on the ImageJ Wiki.
 
+Transferring Data
+-----------------
+
+Once TrackMate Tracks are overlaid onto ImageJ Image windows, they can be transferred back into napari as `Tracks` layers.
+
+To transfer the data back into napari, ensure that the TrackMate Image is active and then click the left arrow in the napari-imagej menu:
+
+.. figure:: https://media.imagej.net/napari-imagej/trackmate.gif
+
+    The `Getting Started <https://imagej.net/plugins/trackmate/tutorials/getting-started>`_ TrackMate tutorial, run in napari-imagej. Once the tracks are visible on the input data, the left arrow button in napari-imagej transfers the tracks into a napari `Tracks` layer.
+
 
 
 .. _TrackMate: https://imagej.net/plugins/trackmate
