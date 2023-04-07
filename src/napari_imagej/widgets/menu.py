@@ -17,7 +17,7 @@ from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 from scyjava import is_arraylike
 
 from napari_imagej import settings
-from napari_imagej.java import ij, java_signals, jc, log_debug
+from napari_imagej.java import ij, java_signals, jc
 from napari_imagej.resources import resource_path
 
 
@@ -43,8 +43,6 @@ class NapariImageJMenu(QWidget):
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
             self.gui_button.clicked.connect(self._showUI)
-            self.gui_button.clicked.connect(lambda: self.to_ij.setEnabled(True))
-            self.gui_button.clicked.connect(lambda: self.from_ij.setEnabled(True))
 
     @property
     def gui(self) -> "jc.UserInterface":
@@ -142,7 +140,6 @@ class ToIJButton(QPushButton):
         super().__init__()
         self.viewer = viewer
 
-        self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
         if settings["choose_active_layer"].get():
@@ -161,7 +158,7 @@ class ToIJButton(QPushButton):
         if active_layer:
             self._show(active_layer)
         else:
-            log_debug("There is no active layer to export to ImageJ2")
+            self.handle_no_choices()
 
     def send_chosen_layer(self):
         # Get Layer choice
@@ -170,7 +167,9 @@ class ToIJButton(QPushButton):
             layer={"annotation": Layer, "options": {"choices": get_layers}},
         )
         # Parse choices for the layer
-        if choices is not None:
+        if choices is None:
+            self.handle_no_choices()
+        else:
             layer = choices["layer"]
             if isinstance(layer, Layer):
                 # Pass the relevant data to ImageJ2
@@ -181,13 +180,18 @@ class ToIJButton(QPushButton):
         # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
         ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
 
+    def handle_no_choices(self):
+        RichTextPopup(
+            rich_message="There is no active window to export to ImageJ!",
+            exec=True,
+        )
+
 
 class FromIJButton(QPushButton):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
 
-        self.setEnabled(False)
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
         if settings["choose_active_layer"].get():
@@ -215,7 +219,9 @@ class FromIJButton(QPushButton):
             title="Send layers to napari",
             data={"annotation": Enum, "options": {"choices": names}},
         )
-        if choices is not None:
+        if choices is None:
+            self.handle_no_choices
+        else:
             # grab the chosen name
             name = choices["data"]
             display = ij().display().getDisplay(name)
@@ -240,10 +246,10 @@ class FromIJButton(QPushButton):
         # TODO: simplify to no-args once
         # https://github.com/imagej/imagej-legacy/pull/287 is merged.
         view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
-        if view is None:
-            log_debug("There is no active window to export to napari")
-            return
-        self._add_image(view)
+        if view is not None:
+            self._add_image(view)
+        else:
+            self.handle_no_choices()
 
     def _add_image(self, view: Union["jc.Dataset", "jc.DatasetView"]):
         # Get the stuff needed for a new layer
@@ -256,6 +262,12 @@ class FromIJButton(QPushButton):
             self.viewer.add_image(data=py_image, name=name)
         else:
             raise ValueError(f"{view} cannot be displayed in napari!")
+
+    def handle_no_choices(self):
+        RichTextPopup(
+            rich_message="There is no active window to export to napari!",
+            exec=True,
+        )
 
 
 class GUIButton(QPushButton):

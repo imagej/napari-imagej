@@ -144,13 +144,8 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
-    assert not subwidgets[1].isEnabled()
-
     assert isinstance(subwidgets[2], ToIJButton)
-    assert not subwidgets[2].isEnabled()
-
     assert isinstance(subwidgets[3], GUIButton)
-
     assert isinstance(subwidgets[4], SettingsButton)
 
 
@@ -208,7 +203,7 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 )
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: ToIJButton = gui_widget.to_ij
-    assert not button.isEnabled()
+    assert button.isEnabled()
 
     # Show the button
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
@@ -239,7 +234,7 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 )
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     button: FromIJButton = gui_widget.from_ij
-    assert not button.isEnabled()
+    assert button.isEnabled()
 
     # Show the button
     gui_widget.gui_button.clicked.emit()
@@ -265,13 +260,8 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
     button_to: ToIJButton = gui_widget_chooser.to_ij
     button_from: FromIJButton = gui_widget_chooser.from_ij
-    assert not button_to.isEnabled()
-    assert not button_from.isEnabled()
-
-    # Show the button
-    qtbot.mouseClick(gui_widget_chooser.gui_button, Qt.LeftButton, delay=1)
-    asserter(button_to.isEnabled)
-    asserter(button_from.isEnabled)
+    assert button_to.isEnabled()
+    assert button_from.isEnabled()
 
     # Add a layer
     sample_data = numpy.ones((100, 100, 3))
