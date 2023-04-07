@@ -10,7 +10,7 @@ The `napari <https://napari.org/>`_ application has brought n-dimensional image 
 
 The napari-imagej plugin strives to unite these communities by providing access to an ImageJ2 instance within a napari widget. From this widget, users can launch the ImageJ user interface to run **any** ImageJ ecosystem functionality, and can additionally access **ImageJ2** framework functionality directly from the napari widget.
 
-napari-imagej handles the burdens of inter-language workflows, enabling accessible, synergistic workflows between the two applications.
+napari-imagej handles the burden of data transfer between these two applications, enabling accessible, convenient, synergistic workflows.
 
 .. figure:: /doc-images/napari-imagej_front_page.png
 
