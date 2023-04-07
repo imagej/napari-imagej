@@ -3,12 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to napari-imagej's documentation!
-=========================================
+napari-imagej: ImageJ ecosystem access within napari
+====================================================
 
-napari-imagej aims to provide access to all `ImageJ2 <https://imagej.net/software/imagej2>`_ functionality through the `napari <https://github.com/napari/napari>`_ graphical user interface.
+The `napari <https://napari.org/>`_ application has brought n-dimensional image browsing and analysis to the Python ecosystem. At the same time, the ImageJ software ecosystem, including `ImageJ <https://imagej.net/ij/index.html>`_, `ImageJ2 <https://imagej.net/software/imagej2>`_, `Fiji <https://fiji.sc/>`_ and `thousands of community plugins <https://imagej.net/list-of-extensions>`_, have been curated over decades, and are utilized by a highly active community of their own.
 
-napari-imagej builds on the foundation of `PyImageJ <https://github.com/imagej/pyimagej>`_, a project allowing ImageJ2 access from Python.
+The napari-imagej plugin strives to unite these communities by providing access to an ImageJ2 instance within a napari widget. From this widget, users can launch the ImageJ user interface to run **any** ImageJ ecosystem functionality, and can additionally access **ImageJ2** framework functionality directly from the napari widget.
+
+napari-imagej handles the burden of data transfer between these two applications, enabling accessible, convenient, synergistic workflows.
+
+.. figure:: /doc-images/napari-imagej_front_page.png
+
+   Using ImageJ's `Analyze Particles <https://imagej.net/imaging/particle-analysis>`_ routine within napari
 
 .. toctree::
    :maxdepth: 3
@@ -27,10 +33,3 @@ napari-imagej builds on the foundation of `PyImageJ <https://github.com/imagej/p
    Development
 
    Benchmarking
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
