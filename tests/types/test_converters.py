@@ -761,8 +761,9 @@ def test_image_layer_to_dataset(ij):
     assert name == j_img.getName()
     assert 0 == j_img.getColorTableCount()
 
-    assert 0 == j_img.dimensionIndex(jc.Axes.X)
-    assert 1 == j_img.dimensionIndex(jc.Axes.Y)
+    if not ij.legacy or not ij.legacy.isActive():
+        assert 0 == j_img.dimensionIndex(jc.Axes.X)
+        assert 1 == j_img.dimensionIndex(jc.Axes.Y)
 
 
 def test_colormap_image_layer_to_dataset(ij):

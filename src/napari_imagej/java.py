@@ -692,6 +692,10 @@ class JavaClasses(object):
     # ImageJ2 Types
 
     @blocking_import
+    def Axes(self):
+        return "net.imagej.axis.Axes"
+
+    @blocking_import
     def Dataset(self):
         return "net.imagej.Dataset"
 
