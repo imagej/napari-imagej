@@ -59,23 +59,24 @@ def _dataset_to_image(image: Any) -> Image:
 def _image_to_dataset(image: Image) -> "jc.Dataset":
     # Construct a dataset from the data
     dataset: "jc.Dataset" = ij().py.to_dataset(image.data)
-    # NB We need to match dimensions to axes, or ImageJ2 doesn't know
-    # how to display it.
-    if not ij().legacy or not ij().legacy.isActive():
-        if dataset.dimensionIndex(jc.Axes.X) == -1:
-            # find the first "unknown" dimension
-            for i in range(dataset.numDimensions()):
-                axis = dataset.axis(i)
-                if "dim" in axis.type().getLabel():
-                    axis.setType(jc.Axes.X)
-                    break
-        if dataset.dimensionIndex(jc.Axes.Y) == -1:
-            # find the first "unknown" dimension
-            for i in range(dataset.numDimensions()):
-                axis = dataset.axis(i)
-                if "dim" in axis.type().getLabel():
-                    axis.setType(jc.Axes.Y)
-                    break
+    # We need an "X" axis, or ImageJ2 doesn't know how to display the dataset
+    if dataset.dimensionIndex(jc.Axes.X) == -1:
+        # find the first "unknown" dimension
+        for i in range(dataset.numDimensions()):
+            axis = dataset.axis(i)
+            if "dim" in axis.type().getLabel():
+                # and set it to "X"
+                axis.setType(jc.Axes.X)
+                break
+    # We need an "Y" axis, or ImageJ2 doesn't know how to display the dataset
+    if dataset.dimensionIndex(jc.Axes.Y) == -1:
+        # find the first "unknown" dimension
+        for i in range(dataset.numDimensions()):
+            axis = dataset.axis(i)
+            if "dim" in axis.type().getLabel():
+                # and set it to "Y"
+                axis.setType(jc.Axes.Y)
+                break
 
     # Add name
     dataset.setName(image.name)
