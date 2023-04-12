@@ -60,6 +60,8 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
     model: jc.Model = trackmate_plugins[-1].getModel()
     neighbor_index = model.getTrackModel().getDirectedNeighborIndex()
 
+    src_image = obj.children()[0].data().getRoi().getImage()
+
     spots = []
     graph = {}
     branch_ids = {}
@@ -92,8 +94,9 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
                 graph[branch_id].append(branch_ids[parent_branch])
 
     data = np.array(spots)
+    if "Z" not in src_image.dims:
+        data = np.delete(data, 2, 1)
 
-    src_image = obj.children()[0].data().getRoi().getImage()
     name = f"{src_image.getTitle()}-tracks"
 
     return Tracks(data=data, graph=graph, name=name)
