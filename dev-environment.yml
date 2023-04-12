@@ -19,7 +19,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python >= 3.8
+  # Breaking change in 3.11.1 breaks napari - see
+  # https://github.com/napari/napari/issues/5705 for the fix
+  - python >= 3.8, <=3.11.0
   # Project dependencies
   - confuse
   - jpype1 >= 1.4.1

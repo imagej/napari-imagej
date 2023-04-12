@@ -32,7 +32,9 @@ classifiers = [
 ]
 
 # NB: Keep this in sync with environment.yml AND dev-environment.yml!
-requires-python = ">=3.8"
+# Breaking change in 3.11.1 breaks napari - see
+# https://github.com/napari/napari/issues/5705 for the fix
+requires-python = ">=3.8, <=3.11.0"
 dependencies = [
     "confuse",
     "jpype1 >= 1.4.1",
