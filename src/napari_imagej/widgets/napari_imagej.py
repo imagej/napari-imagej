@@ -15,7 +15,7 @@ from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
-from napari_imagej.utilities._module_utils import _non_layer_widget
+from napari_imagej.utilities._module_utils import _non_layer_widget, _update_progress
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -32,10 +32,12 @@ class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
     output_handler = Signal(object)
+    progress_handler = Signal(object)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.napari_viewer = napari_viewer
+        self.prog = None
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
@@ -109,6 +111,7 @@ class NapariImageJWidget(QWidget):
         self.search.bar.returnPressed.connect(return_search_bar)
 
         self.output_handler.connect(self._handle_output)
+        self.progress_handler.connect(self._update_progress)
 
         # -- Final setup -- #
 
@@ -152,6 +155,16 @@ class NapariImageJWidget(QWidget):
             self.napari_viewer.window.add_dock_widget(data, name=data.name)
         else:
             raise TypeError(f"Do not know how to display {data}")
+
+    @Slot(object)
+    def _update_progress(self, event: "jc.ModuleEvent"):
+        module = event.getModule()
+        if isinstance(event, jc.ModuleExecutingEvent):
+            _update_progress(module)
+        if isinstance(event, jc.ModuleExecutedEvent):
+            _update_progress(module)
+        elif isinstance(event, jc.ModuleFinishedEvent):
+            _update_progress(module)
 
 
 class WidgetFinalizer(QThread):
@@ -219,6 +232,17 @@ class WidgetFinalizer(QThread):
 
     def _finalize_info_bar(self):
         self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")
+        # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+        # See https://github.com/scijava/scijava-common/issues/452
+        event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
+        event_bus_field.setAccessible(True)
+        event_bus = event_bus_field.get(ij().event())
+
+        progress_listener = ProgressBarListener(self.widget.progress_handler)
+        # NB We need to retain a reference to this object or GC will delete it
+        ij().object().addObject(progress_listener)
+        # Subscribe to all ModuleEvents
+        event_bus.subscribe(jc.ModuleEvent.class_, progress_listener)
 
     def _finalize_exception_printer(self):
         # HACK: Tap into the EventBus to obtain SciJava Module debug info.
@@ -226,7 +250,10 @@ class WidgetFinalizer(QThread):
         event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
         event_bus_field.setAccessible(True)
         event_bus = event_bus_field.get(ij().event())
+
         subscriber = NapariEventSubscriber()
+        # NB We need to retain a reference to this object or GC will delete it
+        ij().object().addObject(subscriber)
         event_bus.subscribe(jc.SciJavaEvent.class_, subscriber)
 
 
@@ -243,3 +270,21 @@ class NapariEventSubscriber(object):
     @JOverride
     def equals(self, other):
         return isinstance(other, NapariEventSubscriber)
+
+
+@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
+class ProgressBarListener(object):
+    def __init__(self, progress_signal: Signal):
+        self.progress_signal = progress_signal
+
+    @JOverride
+    def onEvent(self, event):
+        self.progress_signal.emit(event)
+
+    @JOverride
+    def getEventClass(self):
+        return jc.ModuleEvent.class_
+
+    @JOverride
+    def equals(self, other):
+        return isinstance(other, ProgressBarListener)
