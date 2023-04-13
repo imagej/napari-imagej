@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
 from napari.layers import Layer
+from napari.utils import progress
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
@@ -411,6 +412,20 @@ def _get_postprocessors():
     return postprocessors
 
 
+prog_bars = {}
+
+
+def _init_progress(module: "jc.Module"):
+    prog_bars[module] = progress(desc=str(module.getInfo().getTitle()), total=3)
+
+
+def _update_progress(module: "jc.Module"):
+    if pbr := prog_bars.get(module):
+        pbr.update()
+        if pbr.total == pbr.n:
+            pbr.close()
+
+
 def functionify_module_execution(
     output_handler: Callable[[object], None],
     module: "jc.Module",
@@ -464,6 +479,8 @@ def functionify_module_execution(
             )
 
             log_debug("Processing...")
+
+            _init_progress(module)
 
             ij().module().run(
                 module,

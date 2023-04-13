@@ -448,12 +448,32 @@ class JavaClasses(object):
         return "org.scijava.module.Module"
 
     @blocking_import
+    def ModuleEvent(self):
+        return "org.scijava.module.event.ModuleEvent"
+
+    @blocking_import
+    def ModuleExecutedEvent(self):
+        return "org.scijava.module.event.ModuleExecutedEvent"
+
+    @blocking_import
+    def ModuleExecutingEvent(self):
+        return "org.scijava.module.event.ModuleExecutingEvent"
+
+    @blocking_import
+    def ModuleFinishedEvent(self):
+        return "org.scijava.module.event.ModuleFinishedEvent"
+
+    @blocking_import
     def ModuleInfo(self):
         return "org.scijava.module.ModuleInfo"
 
     @blocking_import
     def ModuleItem(self):
         return "org.scijava.module.ModuleItem"
+
+    @blocking_import
+    def ModuleStartedEvent(self):
+        return "org.scijava.module.event.ModuleStartedEvent"
 
     @blocking_import
     def PostprocessorPlugin(self):
