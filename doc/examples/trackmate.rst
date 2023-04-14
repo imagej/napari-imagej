@@ -2,7 +2,7 @@ Tracking viral particles with TrackMate
 =======================================
 
 The `TrackMate`_ plugin for ImageJ2 provides a streamlined interface for object tracking. 
-This use cases demonstrates how you can use napari-imagej to run the TrackMate plugin on 3D data **(X, Y, Time)** and view the results with napari.
+This use case demonstrates how you can use napari-imagej to run the TrackMate plugin on 3D data **(X, Y, Time)** and view the results with napari.
 
 For this use case we will analyze live cell wide-field microscopy data of HeLa cells infected with a modified HIV-1 reporter viruses that expresses a Gag-mVenus fusion protein [REF] to fluorescently tag HIV-1 viral particles budding at the cell surface. With TrackMate we can
 track these particles and then view them in both the ImageJ UI and also napari. The data used in this use case is available in the `napari-imagej repository`_ on GitHub.
@@ -82,5 +82,5 @@ Once the tracks and spots have been generated use left napari-imagej transfer bu
 .. figure:: ../doc-images/napari-imagej_trackmate_3.gif
 
 .. _TrackMate: https://imagej.net/plugins/trackmate
-.. _napari-imagej repository: ../sample-data/sample_1.tif
+.. _napari-imagej repository: https://github.com/imagej/napari-imagej/tree/main/doc/sample-data/trackmate_example_data.tif
 .. _scikit-image dimension order: https://scikit-image.org/docs/stable/user_guide/numpy_images.html#a-note-on-the-time-dimension
