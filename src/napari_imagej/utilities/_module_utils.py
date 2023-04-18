@@ -480,8 +480,11 @@ def functionify_module_execution(
 
             log_debug("Processing...")
 
+            # Start this module's progress bar.
+            # We do it here, because it can be done on the GUI thread,
+            # before the module can update it through its own execution.
             _init_progress(module)
-
+            # Run the module asynchronously using the ModuleService
             ij().module().run(
                 module,
                 remaining_preprocessors,
