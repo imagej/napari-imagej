@@ -158,6 +158,14 @@ class NapariImageJWidget(QWidget):
 
     @Slot(object)
     def _update_progress(self, event: "jc.ModuleEvent"):
+        """
+        Updates the napari progress bar of the given module.
+
+        NB: This MUST be done within this slot, as slot functions
+        are run on the GUI thread. The module itself is run on
+        Java threads spawned within the ModuleService, and we cannot
+        update Qt GUI elements from those threads.
+        """
         module = event.getModule()
         if isinstance(event, jc.ModuleExecutingEvent):
             _update_progress(module)
