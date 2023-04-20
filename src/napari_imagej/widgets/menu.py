@@ -3,7 +3,7 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
@@ -200,6 +200,10 @@ class FromIJButton(QPushButton):
             for _, v in py_image.metadata.items():
                 if isinstance(v, Layer):
                     self.viewer.add_layer(v)
+                elif isinstance(v, Iterable):
+                    for itm in v:
+                        if isinstance(itm, Layer):
+                            self.viewer.add_layer(itm)
         # Other
         elif is_arraylike(py_image):
             name = ij().object().getName(view)
