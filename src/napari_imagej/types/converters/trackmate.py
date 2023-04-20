@@ -1,5 +1,5 @@
 import numpy as np
-from napari.layers import Tracks
+from napari.layers import Labels, Tracks
 from scyjava import Priority
 
 from napari_imagej.java import JavaClasses, ij
@@ -35,14 +35,14 @@ def track_overlay_predicate(obj):
     for child in children:
         if not isinstance(child, jc.IJRoiWrapper):
             return False
-    # More specifically, there must be two IJRoiWrapper children.
-    if len(children) != 2:
+    # More specifically, there must be (at least) two IJRoiWrapper children.
+    if len(children) < 2:
         return False
-    # The first is a SpotOverlay
-    if not isinstance(children[0].getRoi(), jc.SpotOverlay):
+    # One must be a SpotOverlay
+    if not any(isinstance(child.getRoi(), jc.SpotOverlay) for child in children):
         return False
-    # And the second is a TrackOverlay
-    if not isinstance(children[1].getRoi(), jc.TrackOverlay):
+    # And another is a TrackOverlay
+    if not any(isinstance(child.getRoi(), jc.TrackOverlay) for child in children):
         return False
     return True
 
@@ -61,6 +61,7 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
     neighbor_index = model.getTrackModel().getDirectedNeighborIndex()
 
     src_image = obj.children()[0].data().getRoi().getImage()
+    cal = jc.TMUtils.getSpatialCalibration(src_image)
 
     spots = []
     graph = {}
@@ -82,7 +83,8 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
                 y = spot.getFeature(jc.Spot.POSITION_Y)
                 z = spot.getFeature(jc.Spot.POSITION_Z)
                 t = spot.getFeature(jc.Spot.FRAME).intValue()
-                spots.append([index, t, z, y, x])
+                spots.append([index, t, z / cal[2], y / cal[1], x / cal[0]])
+
             index += 1
         # Pass 2 - establish parent-child relationships
         for branch in branch_graph.vertexSet():
@@ -93,13 +95,21 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
                 parent_branch = branch_graph.getEdgeSource(parent_edge)
                 graph[branch_id].append(branch_ids[parent_branch])
 
-    data = np.array(spots)
+    spot_data = np.array(spots)
     if "Z" not in src_image.dims:
-        data = np.delete(data, 2, 1)
+        spot_data = np.delete(spot_data, 2, 1)
+        # rois = [np.delete(roi, 2, 1) for roi in rois]
 
-    name = f"{src_image.getTitle()}-tracks"
+    tracks_name = f"{src_image.getTitle()}-tracks"
+    tracks = Tracks(data=spot_data, graph=graph, name=tracks_name)
+    rois_name = f"{src_image.getTitle()}-rois"
+    java_label_img = jc.LabelImgExporter.createLabelImagePlus(
+        trackmate_plugins[-1], False, False, False
+    )
+    py_label_img = ij().py.from_java(java_label_img)
+    labels = Labels(data=py_label_img.data, name=rois_name)
 
-    return Tracks(data=data, graph=graph, name=name)
+    return (tracks, labels)
 
 
 class TrackMateClasses(JavaClasses):
@@ -114,6 +124,10 @@ class TrackMateClasses(JavaClasses):
         return "fiji.plugin.trackmate.graph.ConvexBranchesDecomposition"
 
     @JavaClasses.blocking_import
+    def LabelImgExporter(self):
+        return "fiji.plugin.trackmate.action.LabelImgExporter"
+
+    @JavaClasses.blocking_import
     def Model(self):
         return "fiji.plugin.trackmate.Model"
 
@@ -124,6 +138,10 @@ class TrackMateClasses(JavaClasses):
     @JavaClasses.blocking_import
     def SpotOverlay(self):
         return "fiji.plugin.trackmate.visualization.hyperstack.SpotOverlay"
+
+    @JavaClasses.blocking_import
+    def TMUtils(self):
+        return "fiji.plugin.trackmate.util.TMUtils"
 
     @JavaClasses.blocking_import
     def TrackMate(self):
