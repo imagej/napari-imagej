@@ -1,9 +1,12 @@
 """
 A module testing napari_imagej.types.converters.trackmate
 """
+from typing import Tuple
+
 import numpy as np
 import pytest
-from napari.layers import Tracks
+from napari import Viewer
+from napari.layers import Labels, Tracks
 
 from napari_imagej import settings
 from napari_imagej.java import JavaClasses
@@ -29,7 +32,9 @@ jc = TestTrackMateClasses()
 
 TESTING_LEGACY: bool = settings["include_imagej_legacy"].get(bool)
 endpoint = settings["imagej_directory_or_endpoint"].get(str)
-TESTING_TRACKMATE = "trackmate.sc:TrackMate" in endpoint or "sc.fiji:Fiji" in endpoint
+TESTING_TRACKMATE = (
+    "sc.fiji:trackmate" in endpoint.lower() or "sc.fiji:fiji" in endpoint.lower()
+)
 
 
 @pytest.fixture
@@ -87,6 +92,54 @@ def trackMate_example(ij):
     return trackMate
 
 
+def ui_visible(ij):
+    frame = ij.ui().getDefaultUI().getApplicationFrame()
+    if isinstance(frame, jc.UIComponent):
+        frame = frame.getComponent()
+    return frame and frame.isVisible()
+
+
+@pytest.fixture(autouse=True)
+def clean_gui_elements(asserter, ij, viewer: Viewer):
+    """Fixture to remove image data from napari and ImageJ2"""
+
+    # Test pre-processing
+
+    # Test processing
+    yield
+
+    # Test post-processing
+
+    # After each test runs, clear all layers from napari
+    if viewer is not None:
+        viewer.layers.clear()
+
+    # After each test runs, clear all ImagePlus objects from ImageJ
+    if ij.legacy and ij.legacy.isActive():
+        while ij.WindowManager.getCurrentImage():
+            imp = ij.WindowManager.getCurrentImage()
+            imp.changes = False
+            imp.close()
+
+    # After each test runs, clear all displays from ImageJ2
+    while not ij.display().getDisplays().isEmpty():
+        for display in ij.display().getDisplays():
+            display.close()
+
+    # Close the UI if needed
+    if ui_visible(ij):
+        frame = ij.ui().getDefaultUI().getApplicationFrame()
+        if isinstance(frame, jc.UIComponent):
+            frame = frame.getComponent()
+        ij.thread().queue(
+            lambda: frame.dispatchEvent(
+                jc.WindowEvent(frame, jc.WindowEvent.WINDOW_CLOSING)
+            )
+        )
+        # Wait for the Frame to be hidden
+        asserter(lambda: not ui_visible(ij))
+
+
 pytest.mark.skipif(
     not (TESTING_TRACKMATE and TESTING_LEGACY),
     "TrackMate functionality requires ImageJ and TrackMate!",
@@ -109,27 +162,30 @@ def test_Model_to_Tracks(ij, trackMate_example):
     dataset = ij.convert().convert(imp, jc.Dataset)
 
     # Convert the dataset's rois into its Python equivalent
-    tracks = ij.py.from_java(dataset.getProperties()["rois"])
+    layers = ij.py.from_java(dataset.getProperties()["rois"])
     # Assert we receive a Tracks Layer
+    assert isinstance(layers, Tuple)
+    tracks, labels = layers
     assert isinstance(tracks, Tracks)
+    assert isinstance(labels, Labels)
     # Assert there are 5 branches
     assert len(tracks.graph) == 5
     # Assert that tracks 1 and 2 split from track 0
     assert tracks.graph == {0: [], 1: [0], 2: [0], 3: [], 4: []}
     expected_data = np.array(
         [
-            [0.0, 0.0, 0.0, 0.0, 0.0],  # S1
-            [0.0, 1.0, 0.0, 0.0, 0.0],  # S2
-            [0.0, 2.0, 0.0, 0.0, 0.0],  # S3
-            [0.0, 3.0, 0.0, 0.0, 0.0],  # S4
-            [1.0, 4.0, 0.0, 0.0, -1.0],  # S5a
-            [1.0, 5.0, 0.0, 0.0, -1.0],  # S5b
-            [2.0, 4.0, 1.0, 1.0, 1.0],  # S6a
-            [2.0, 5.0, 1.0, 1.0, 1.0],  # S6b
-            [3.0, 0.0, 0.0, 0.0, 0.0],  # S7
-            [3.0, 1.0, 0.0, 0.0, 0.0],  # S8
-            [4.0, 0.0, 0.0, 0.0, 0.0],  # S9
-            [4.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],  # S1
+            [0.0, 1.0, 0.0, 0.0],  # S2
+            [0.0, 2.0, 0.0, 0.0],  # S3
+            [0.0, 3.0, 0.0, 0.0],  # S4
+            [1.0, 4.0, 0.0, -1.0],  # S5a
+            [1.0, 5.0, 0.0, -1.0],  # S5b
+            [2.0, 4.0, 1.0, 1.0],  # S6a
+            [2.0, 5.0, 1.0, 1.0],  # S6b
+            [3.0, 0.0, 0.0, 0.0],  # S7
+            [3.0, 1.0, 0.0, 0.0],  # S8
+            [4.0, 0.0, 0.0, 0.0],  # S9
+            [4.0, 1.0, 0.0, 0.0],
         ]
     )  # S11
 
