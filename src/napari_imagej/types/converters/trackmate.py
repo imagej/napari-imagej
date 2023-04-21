@@ -47,21 +47,10 @@ def track_overlay_predicate(obj):
     return True
 
 
-@java_to_py_converter(
-    predicate=track_overlay_predicate, priority=Priority.EXTREMELY_HIGH
-)
-def _trackMate_model_to_tracks(obj: "jc.ROITree"):
-    """
-    Converts a TrackMate overlay into a napari Tracks layer
-    """
-    trackmate_plugins = ij().object().getObjects(jc.TrackMate)
-    if len(trackmate_plugins) == 0:
-        raise IndexError("Expected a TrackMate instance, but there was none!")
-    model: jc.Model = trackmate_plugins[-1].getModel()
+def model_and_image_to_tracks(model: "jc.Model", imp: "jc.ImagePlus"):
     neighbor_index = model.getTrackModel().getDirectedNeighborIndex()
 
-    src_image = obj.children()[0].data().getRoi().getImage()
-    cal = jc.TMUtils.getSpatialCalibration(src_image)
+    cal = jc.TMUtils.getSpatialCalibration(imp)
 
     spots = []
     graph = {}
@@ -96,20 +85,35 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
                 graph[branch_id].append(branch_ids[parent_branch])
 
     spot_data = np.array(spots)
-    if "Z" not in src_image.dims:
+    if "Z" not in imp.dims:
         spot_data = np.delete(spot_data, 2, 1)
         # rois = [np.delete(roi, 2, 1) for roi in rois]
 
-    tracks_name = f"{src_image.getTitle()}-tracks"
+    tracks_name = f"{imp.getTitle()}-tracks"
     tracks = Tracks(data=spot_data, graph=graph, name=tracks_name)
-    rois_name = f"{src_image.getTitle()}-rois"
+    rois_name = f"{imp.getTitle()}-rois"
     java_label_img = jc.LabelImgExporter.createLabelImagePlus(
-        trackmate_plugins[-1], False, False, False
+        model, imp, False, False, False
     )
     py_label_img = ij().py.from_java(java_label_img)
     labels = Labels(data=py_label_img.data, name=rois_name)
 
     return (tracks, labels)
+
+
+@java_to_py_converter(
+    predicate=track_overlay_predicate, priority=Priority.EXTREMELY_HIGH
+)
+def _trackMate_model_to_tracks(obj: "jc.ROITree"):
+    """
+    Converts a TrackMate overlay into a napari Tracks layer
+    """
+    trackmate_plugins = ij().object().getObjects(jc.TrackMate)
+    if len(trackmate_plugins) == 0:
+        raise IndexError("Expected a TrackMate instance, but there was none!")
+    model: jc.Model = trackmate_plugins[-1].getModel()
+    src_image = obj.children()[0].data().getRoi().getImage()
+    return model_and_image_to_tracks(model, src_image)
 
 
 class TrackMateClasses(JavaClasses):
