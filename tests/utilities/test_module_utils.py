@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.utilities._module_utils
 """
+import sys
 from collections import OrderedDict
 from inspect import Parameter, _empty, signature
 from typing import Any, Dict, Optional
@@ -603,7 +604,11 @@ def test_request_values_args():
     assert args["f"]["value"] == "also default"
 
 
-def test_functionify_module_exercution_execution(imagej_widget, ij, asserter):
+@pytest.mark.skipif(
+    condition=sys.platform == "darwin",
+    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
+)
+def test_functionify_module_execution(imagej_widget, ij, asserter):
     viewer: Viewer = imagej_widget.napari_viewer
     info = ij.module().getModuleById(
         "command:net.imagej.ops.commands.filter.FrangiVesselness"
