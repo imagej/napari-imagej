@@ -15,8 +15,9 @@ from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
-from napari_imagej.utilities._module_utils import _non_layer_widget, _update_progress
+from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -37,7 +38,6 @@ class NapariImageJWidget(QWidget):
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.napari_viewer = napari_viewer
-        self.prog = None
         self.setLayout(QVBoxLayout())
 
         # First things first, let's start up imagej (in the background)
@@ -167,12 +167,11 @@ class NapariImageJWidget(QWidget):
         update Qt GUI elements from those threads.
         """
         module = event.getModule()
-        if isinstance(event, jc.ModuleExecutingEvent):
-            _update_progress(module)
-        if isinstance(event, jc.ModuleExecutedEvent):
-            _update_progress(module)
-        elif isinstance(event, jc.ModuleFinishedEvent):
-            _update_progress(module)
+        if isinstance(
+            event,
+            (jc.ModuleExecutingEvent, jc.ModuleExecutedEvent, jc.ModuleFinishedEvent),
+        ):
+            pm.update_progress(module)
 
 
 class WidgetFinalizer(QThread):

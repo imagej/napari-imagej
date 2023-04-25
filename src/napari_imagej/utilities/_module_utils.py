@@ -17,7 +17,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
 from napari.layers import Layer
-from napari.utils import progress
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
@@ -27,6 +26,7 @@ from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.progress_manager import pm
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
@@ -412,20 +412,6 @@ def _get_postprocessors():
     return postprocessors
 
 
-prog_bars = {}
-
-
-def _init_progress(module: "jc.Module"):
-    prog_bars[module] = progress(desc=str(module.getInfo().getTitle()), total=3)
-
-
-def _update_progress(module: "jc.Module"):
-    if pbr := prog_bars.get(module):
-        pbr.update()
-        if pbr.total == pbr.n:
-            pbr.close()
-
-
 def functionify_module_execution(
     output_handler: Callable[[object], None],
     module: "jc.Module",
@@ -483,7 +469,7 @@ def functionify_module_execution(
             # Start this module's progress bar.
             # We do it here, because it can be done on the GUI thread,
             # before the module can update it through its own execution.
-            _init_progress(module)
+            pm.init_progress(module)
             # Run the module asynchronously using the ModuleService
             ij().module().run(
                 module,
