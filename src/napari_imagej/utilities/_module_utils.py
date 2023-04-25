@@ -26,6 +26,7 @@ from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.progress_manager import pm
 
 
 def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
@@ -465,6 +466,11 @@ def functionify_module_execution(
 
             log_debug("Processing...")
 
+            # Start this module's progress bar.
+            # We do it here, because it can be done on the GUI thread,
+            # before the module can update it through its own execution.
+            pm.init_progress(module)
+            # Run the module asynchronously using the ModuleService
             ij().module().run(
                 module,
                 remaining_preprocessors,
