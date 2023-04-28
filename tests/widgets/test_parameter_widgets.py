@@ -72,9 +72,14 @@ def input_widget(mutable_output_widget):
 def test_mutable_output_widget_layout(output_widget):
     children = [w for w in output_widget]
     assert len(children) == 2
-    assert isinstance(children[0], ComboBox)
-    assert isinstance(children[1], PushButton)
-    assert children[1].max_width == 53
+    assert isinstance(children[0], PushButton)
+    assert isinstance(children[1], ComboBox)
+    assert children[0].tooltip == "Create a new output container"
+    assert children[0].max_width == 53
+    assert (
+        children[1].tooltip
+        == "Optional - produces a new layer unless an output container is provided"
+    )
     assert output_widget.current_choice == ""
     assert output_widget.layout == "horizontal"
     assert output_widget.margins == (0, 0, 0, 0)
