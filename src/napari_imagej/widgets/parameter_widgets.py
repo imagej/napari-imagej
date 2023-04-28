@@ -106,11 +106,16 @@ class MutableOutputWidget(Container):
         if value is None:
             value = ""
 
-        self.layer_select = ComboBox(choices=choices, nullable=nullable, **kwargs)
-        self.new_btn = PushButton(text="New")
+        layer_tooltip = (
+            "Optional - produces a new layer unless an output container is provided"
+        )
+        self.layer_select = ComboBox(
+            choices=choices, nullable=nullable, tooltip=layer_tooltip, **kwargs
+        )
+        self.new_btn = PushButton(text="New", tooltip="Create a new output container")
         self.new_btn.max_width = 53
         self._nullable = nullable
-        kwargs["widgets"] = [self.new_btn, self.layer_select]
+        kwargs["widgets"] = [self.layer_select, self.new_btn]
         kwargs["labels"] = False
         kwargs["layout"] = "horizontal"
         super().__init__(**kwargs)
