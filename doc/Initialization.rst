@@ -16,7 +16,7 @@ Once triggered, napari-imagej will start up the JVM, and then the ImageJ2 gatewa
 
 .. figure:: https://media.imagej.net/napari-imagej/startup.gif
 
-Once napari-imagej is fully initilized, users should proceed to the `Usage <./Usage.html>`_ page.
+Once napari-imagej is fully initilized, you can see the `Use Cases <./Use_Cases.html>`_ page for examples of available functionality. Alternatively, if you're new to ImageJ, you may want to start with a `high-level overview <https://imagej.net/learn/>`_.
 
 **Note**: napari-imagej always downloads the latest version of ImageJ2_, along with classic ImageJ functionality. To launch a *different* ImageJ2 distribution, such as Fiji_, please see the `Configuration <./Configuration.html>`_ page
 
