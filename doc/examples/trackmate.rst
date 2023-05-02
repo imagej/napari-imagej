@@ -42,7 +42,7 @@ Viral particle tracking
 -----------------------
 
 **Note**: If you transferred your image data from napari to the ImageJ UI with the transfer buttons, than an additional step is required to make the image data compatible with TrackMate.
-If the data was opened with ImageJ then these steps are not necessary.
+If the data was opened with ImageJ then these steps are not necessary and you can proceed to `Running Trackmate <./trackmate.html#running-trackmate>`_.
 
 Modifying image dimensions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
