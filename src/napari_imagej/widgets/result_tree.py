@@ -152,7 +152,7 @@ class SearchResultTree(QTreeWidget):
             return
         menu: QMenu = QMenu(self)
 
-        for name, action in python_actions_for(item.result, self.output_signal):
+        for name, action in python_actions_for(item.result, self.output_signal, self):
             newAct = QAction(name, self)
             newAct.triggered.connect(action)
             menu.addAction(newAct)

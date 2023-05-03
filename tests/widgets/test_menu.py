@@ -499,11 +499,12 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     # Open the GUI
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    # Wait for the Frame to be created
-    asserter(lambda: gui_widget._get_AWT_frame() is not None)
-    frame = gui_widget._get_AWT_frame()
+    asserter(lambda: ij.ui().getDefaultUI().getApplicationFrame() is not None)
+    frame = ij.ui().getDefaultUI().getApplicationFrame()
+    if isinstance(frame, jc.UIComponent):
+        frame = frame.getComponent()
     # Wait for the Frame to be visible
-    asserter(lambda: frame.isVisible())
+    asserter(lambda: ij.ui().isVisible())
 
     # Close the GUI
     ij.thread().queue(
