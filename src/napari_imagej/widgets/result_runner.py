@@ -103,5 +103,6 @@ class ResultRunner(QWidget):
 
     def _buttons_for(self, result: "jc.SearchResult") -> List[ActionButton]:
         return [
-            ActionButton(*a) for a in python_actions_for(result, self.output_signal)
+            ActionButton(*a)
+            for a in python_actions_for(result, self.output_signal, self)
         ]

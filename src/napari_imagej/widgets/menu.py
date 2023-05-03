@@ -42,97 +42,36 @@ class NapariImageJMenu(QWidget):
         if settings["jvm_mode"].get(str) == "headless":
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
-            self.gui_button.clicked.connect(self._showUI)
+            # NB We need to call ij().ui().showUI() on the GUI thread.
+            # TODO: Use PyImageJ functionality
+            # see https://github.com/imagej/pyimagej/pull/260
+            def show_ui():
+                if ij().ui().isVisible():
+                    ij().thread().queue(
+                        lambda: ij()
+                        .ui()
+                        .getDefaultUI()
+                        .getApplicationFrame()
+                        .setVisible(True)
+                    )
+                else:
+                    ij().thread().queue(lambda: ij().ui().showUI())
 
-    @property
-    def gui(self) -> "jc.UserInterface":
-        """
-        Convenience function for obtaining the default UserInterface
+            self.gui_button.clicked.connect(show_ui)
 
-        NB this field is a property so we can lazily evaluate the field.
-        This means we don't have to call ij() and start the JVM until we need it.
-        """
-        return ij().ui().getDefaultUI()
+        def post_init_setup():
+            # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+            # See https://github.com/scijava/scijava-common/issues/452
+            event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
+            event_bus_field.setAccessible(True)
+            event_bus = event_bus_field.get(ij().event())
 
-    def _showUI(self):
-        """
-        NB: This must be its own function to prevent premature calling of ij()
-        """
-        # First time showing
-        if not self.gui.isVisible():
+            subscriber = UIShownListener()
+            # NB We need to retain a reference to this object or GC will delete it
+            ij().object().addObject(subscriber)
+            event_bus.subscribe(jc.UIShownEvent.class_, subscriber)
 
-            def ui_setup():
-                # First things first, show the GUI
-                ij().ui().showUI(self.gui)
-                # Then, add our custom settings to the User Interface
-                if ij().legacy and ij().legacy.isActive():
-                    self._ij1_UI_setup()
-                self._ij2_UI_setup()
-
-            # Queue UI call on the EDT
-            # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
-            ij().thread().queue(ui_setup)
-        # Later shows - the GUI is "visible", but the appFrame probably isn't
-        else:
-            # Queue UI call on the EDT
-            # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
-            ij().thread().queue(lambda: self.gui.getApplicationFrame().setVisible(True))
-
-    def _ij1_UI_setup(self):
-        """Configures the ImageJ Legacy GUI"""
-        ij().IJ.getInstance().exitWhenQuitting(False)
-
-    def _ij2_UI_setup(self):
-        """Configures the ImageJ2 Swing GUI behavior"""
-        # Overwrite the WindowListeners so we control closing behavior
-        self._kill_window_listeners(self._get_AWT_frame())
-
-    def _get_AWT_frame(self):
-        appFrame = self.gui.getApplicationFrame()
-        if isinstance(appFrame, jc.Window):
-            return appFrame
-        elif isinstance(appFrame, jc.UIComponent):
-            return appFrame.getComponent()
-
-    def _kill_window_listeners(self, window):
-        """Replaces the WindowListeners present on window with our own"""
-        # Remove all preset WindowListeners
-        for listener in window.getWindowListeners():
-            window.removeWindowListener(listener)
-
-        # Add our own behavior for WindowEvents
-        @JImplements("java.awt.event.WindowListener")
-        class NapariAdapter(object):
-            @JOverride
-            def windowOpened(self, event):
-                pass
-
-            @JOverride
-            def windowClosing(self, event):
-                # We don't want to shut down anything, we just want to hide the window.
-                window.setVisible(False)
-
-            @JOverride
-            def windowClosed(self, event):
-                pass
-
-            @JOverride
-            def windowIconified(self, event):
-                pass
-
-            @JOverride
-            def windowDeiconified(self, event):
-                pass
-
-            @JOverride
-            def windowActivated(self, event):
-                pass
-
-            @JOverride
-            def windowDeactivated(self, event):
-                pass
-
-        window.addWindowListener(NapariAdapter())
+        java_signals.when_ij_ready(post_init_setup)
 
 
 class ToIJButton(QPushButton):
@@ -432,3 +371,84 @@ class RichTextPopup(QMessageBox):
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
         if exec:
             self.exec()
+
+
+@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
+class UIShownListener(object):
+    def __init__(self):
+        self.initialized = False
+
+    @JOverride
+    def onEvent(self, event):
+        if not self.initialized:
+            # add our custom settings to the User Interface
+            if ij().legacy and ij().legacy.isActive():
+                self._ij1_UI_setup()
+            self._ij2_UI_setup(event.getUI())
+            self.initialized = True
+
+    @JOverride
+    def getEventClass(self):
+        return jc.UIShownEvent.class_
+
+    @JOverride
+    def equals(self, other):
+        return isinstance(other, UIShownListener)
+
+    def _ij1_UI_setup(self):
+        """Configures the ImageJ Legacy GUI"""
+        ij().IJ.getInstance().exitWhenQuitting(False)
+
+    def _ij2_UI_setup(self, ui: "jc.UserInterface"):
+        """Configures the ImageJ2 Swing GUI behavior"""
+        # Overwrite the WindowListeners so we control closing behavior
+        self._kill_window_listeners(self._get_AWT_frame(ui))
+
+    def _get_AWT_frame(self, ui: "jc.UserInterface"):
+        appFrame = ui.getApplicationFrame()
+        if isinstance(appFrame, jc.Window):
+            return appFrame
+        elif isinstance(appFrame, jc.UIComponent):
+            return appFrame.getComponent()
+
+    def _kill_window_listeners(self, window):
+        """Replaces the WindowListeners present on window with our own"""
+        # Remove all preset WindowListeners
+        for listener in window.getWindowListeners():
+            window.removeWindowListener(listener)
+
+        # Add our own behavior for WindowEvents
+        @JImplements("java.awt.event.WindowListener")
+        class NapariAdapter(object):
+            @JOverride
+            def windowOpened(self, event):
+                pass
+
+            @JOverride
+            def windowClosing(self, event):
+                # We don't want to shut down anything, we just want to hide the window.
+                window.setVisible(False)
+
+            @JOverride
+            def windowClosed(self, event):
+                pass
+
+            @JOverride
+            def windowIconified(self, event):
+                pass
+
+            @JOverride
+            def windowDeiconified(self, event):
+                pass
+
+            @JOverride
+            def windowActivated(self, event):
+                pass
+
+            @JOverride
+            def windowDeactivated(self, event):
+                pass
+
+        listener = NapariAdapter()
+        ij().object().addObject(listener)
+        window.addWindowListener(listener)

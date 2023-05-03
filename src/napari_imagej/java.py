@@ -532,8 +532,18 @@ class JavaClasses(object):
         return "org.scijava.widget.UIComponent"
 
     @blocking_import
+    def UIShownEvent(self):
+        return "org.scijava.ui.event.UIShownEvent"
+
+    @blocking_import
     def UserInterface(self):
         return "org.scijava.ui.UserInterface"
+
+    # ImageJ Legacy Types
+
+    @blocking_import
+    def LegacyCommandInfo(self):
+        return "net.imagej.legacy.command.LegacyCommandInfo"
 
     # ImgLib2 Types
 
