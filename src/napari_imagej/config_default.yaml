@@ -17,8 +17,8 @@ imagej_directory_or_endpoint: 'net.imagej:imagej'
 imagej_base_directory: '.'
 
 # This can be used to include original ImageJ functionality.
-# Iff true, original ImageJ functionality (ij.* packages) will be available.
-# Iff false, many ImageJ2 rewrites of original ImageJ functionality are available.
+# If true, original ImageJ functionality (ij.* packages) will be available.
+# If false, many ImageJ2 rewrites of original ImageJ functionality are available.
 # Defaults to true as the ImageJ legacy UI is most popular and familiar.
 include_imagej_legacy: true
 
@@ -33,10 +33,10 @@ jvm_mode: 'interactive'
 
 # This can be used to identify whether transferred data between ImageJ2 and napari
 # should be selected via activation or by user selection via a dialog.
-# Iff true, the active layer/window is chosen for transfer between applications.
-# Iff false, a popup will be shown instead, prompting the user to select data for transfer.
+# If true, the active layer/window is always used for transfer between applications.
+# If false, a popup will be shown instead, prompting the user to select data for transfer.
 # Defaults to true.
-choose_active_layer: true
+use_active_layer: true
 
 # This setting can be used to pass command line arguments to the Java Virtual Machine (JVM). 
 # By default, no arguments are passed.

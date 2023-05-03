@@ -142,7 +142,7 @@ class ToIJButton(QPushButton):
 
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        if settings["choose_active_layer"].get():
+        if settings["use_active_layer"].get():
             self.setToolTip("Export active napari layer to ImageJ2")
             self.clicked.connect(self.send_active_layer)
         else:
@@ -194,7 +194,7 @@ class FromIJButton(QPushButton):
 
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        if settings["choose_active_layer"].get():
+        if settings["use_active_layer"].get():
             self.setToolTip("Import active ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_active_layer)
         else:

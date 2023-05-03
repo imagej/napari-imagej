@@ -111,7 +111,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce active layer selection
-    napari_imagej.settings["choose_active_layer"] = True
+    napari_imagej.settings["use_active_layer"] = True
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -130,7 +130,7 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce user layer selection via Dialog
-    napari_imagej.settings["choose_active_layer"] = False
+    napari_imagej.settings["use_active_layer"] = False
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)

@@ -80,10 +80,10 @@ Selecting ``interactive`` allows ImageJ ecosystem functionality to launch graphi
 
 ``interactive`` **mode is unavailable on MacOS**. More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_. If napari-imagej is launched on MacOS with this setting set to ``interactive``, the setting will silently be reassigned to ``headless``.
 
-*choose active layer*
-^^^^^^^^^^^^^^^^^^^^^^^
+*use active layer*
+^^^^^^^^^^^^^^^^^^^^
 
-Used to define which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
+Defines which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
 
 If active, napari-imagej will transfer highlighted napari layers to ImageJ, and will transfer the currently selected Image window to napari. This choice aligns best with ImageJ2 ecosystem layer selection.
 
