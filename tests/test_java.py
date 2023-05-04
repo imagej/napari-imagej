@@ -1,4 +1,3 @@
-from napari_imagej.java import jc
 from scyjava import get_version, jimport
 
 
@@ -10,7 +9,7 @@ def test_java_components(ij):
         "net.imagej:imagej-common": "net.imagej.Dataset",
         "net.imagej:imagej-ops": "net.imagej.ops.OpService",
         "net.imglib2:imglib2-unsafe": "net.imglib2.img.unsafe.UnsafeImg",
-        "net.imglib2:imglib2-imglyb": "net.imglib2.python.ReferenceGuardingRandomAccessibleInterval",
+        "net.imglib2:imglib2-imglyb": "net.imglib2.python.ReferenceGuardingRandomAccessibleInterval",  # noqa: E501
         "org.scijava:scijava-common": "org.scijava.Context",
         "org.scijava:scijava-search": "org.scijava.search.Searcher",
         "net.imagej:imagej-legacy": "net.imagej.legacy.LegacyService",
