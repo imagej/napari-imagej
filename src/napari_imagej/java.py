@@ -24,6 +24,19 @@ from scyjava import config, get_version, is_version_at_least, jimport, jvm_start
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
 
+# -- Constants --
+
+minimum_versions = {
+    "net.imagej:imagej-common": "2.0.2",
+    "net.imagej:imagej-ops": "0.49.0",
+    "net.imglib2:imglib2-unsafe": "1.0.0",
+    "net.imglib2:imglib2-imglyb": "1.1.0",
+    "org.scijava:scijava-common": "2.91.0",
+    "org.scijava:scijava-search": "2.0.0",
+    "net.imagej:imagej-legacy": "1.1.0",
+}
+
+
 # -- ImageJ API -- #
 
 
@@ -197,7 +210,11 @@ class ImageJInitializer(QThread):
             "imagej_directory_or_endpoint"
         ].get(str)
         init_settings["mode"] = settings["jvm_mode"].get(str)
-        init_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+        add_legacy = settings["include_imagej_legacy"].get(bool)
+        init_settings["add_legacy"] = add_legacy
+        if add_legacy:
+            # TEMP: Until imagej/napari-imagej#209 is solved.
+            config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
 
         return init_settings
 
@@ -207,33 +224,28 @@ class ImageJInitializer(QThread):
         """
         # If we want to require a minimum version for a java component, we need to
         # be able to find our current version. We do that by querying a Java class
-        # within that component. Thus for each component-version pair, we also need
-        # a class to query
-        #
-        # Some classes are commonplace, and we can grab them from jc.
+        # within that component. Thus for each component, we also need a class
+        # to query. Some classes are commonplace, and we can grab them from jc.
         # Others are not used elsewhere, and we import them here.
         RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
         UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
-        component_requirements: List[Tuple[JClass, str, str]] = [
-            (jc.Dataset, "net.imagej:imagej-common", "2.0.2"),
-            (jc.OpInfo, "net.imagej:imagej-ops", "0.49.0"),
-            (UnsafeImg, "net.imglib2:imglib2-unsafe", "1.0.0"),
-            (RGRAI, "net.imglib2:imglib2-imglyb", "1.1.0"),
-            (jc.Module, "org.scijava:scijava-common", "2.91.0"),
-            (jc.Searcher, "org.scijava:scijava-search", "2.0.0"),
-        ]
+        component_requirements = {
+            "net.imagej:imagej-common": jc.Dataset,
+            "net.imagej:imagej-ops": jc.OpInfo,
+            "net.imglib2:imglib2-unsafe": UnsafeImg,
+            "net.imglib2:imglib2-imglyb": RGRAI,
+            "org.scijava:scijava-common": jc.Module,
+            "org.scijava:scijava-search": jc.Searcher,
+        }
         # Add additional minimum versions for legacy components
         if ij().legacy and ij().legacy.isActive():
-            component_requirements.append(
-                (ij().legacy.getClass(), "net.imagej:imagej-legacy", "1.1.0")
-            )
+            component_requirements["net.imagej:imagej-legacy"] = ij().legacy.getClass()
 
-        # Find version that violate the minimum
+        # Find versions that violate the minimum
         violations = []
-        for cls, component, min_version in component_requirements:
-            # Get component's version
+        for component, cls in component_requirements.items():
+            min_version = minimum_versions[component]
             component_version = get_version(cls)
-            # Compare
             if not is_version_at_least(component_version, min_version):
                 violations.append(
                     f"{component} : {min_version} (Installed: {component_version})"

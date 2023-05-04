@@ -1,4 +1,6 @@
-from scyjava import get_version, jimport
+from scyjava import get_version, is_version_at_least, jimport
+
+from napari_imagej.java import minimum_versions
 
 
 def test_java_components(ij):
@@ -15,13 +17,25 @@ def test_java_components(ij):
         "net.imagej:imagej-legacy": "net.imagej.legacy.LegacyService",
         "net.imagej:ij": "ij.ImagePlus",
     }
+
     print()
     print("======= BEGIN JAVA VERSIONS =======")
+
     for coord, class_name in version_checks.items():
         try:
             jcls = jimport(class_name)
         except Exception:
             jcls = None
-        version = "NOT PRESENT" if jcls is None else get_version(jcls)
+
+        if jcls is None:
+            version = "NOT PRESENT"
+        else:
+            version = get_version(jcls)
+            if coord in minimum_versions:
+                assert is_version_at_least(version, minimum_versions[coord])
+            else:
+                version += " (no minimum)"
+
         print(f"{coord} {version}")
+
     print("======== END JAVA VERSIONS ========")
