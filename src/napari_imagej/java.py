@@ -14,7 +14,7 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 from threading import Lock
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict
 
 import imagej
 from jpype import JClass

@@ -1,10 +1,15 @@
 #!/bin/sh
+
 dir=$(dirname "$0")
 cd "$dir/.."
-echo "--> blacking"
+
+exitCode=0
 black src tests
-echo "--> flaking"
-flake8 src tests
-echo "--> isorting"
+code=$?; test $code -eq 0 || exitCode=$code
 isort src tests
-echo "--> Done!"
+code=$?; test $code -eq 0 || exitCode=$code
+python -m flake8 src tests
+code=$?; test $code -eq 0 || exitCode=$code
+validate-pyproject pyproject.toml
+code=$?; test $code -eq 0 || exitCode=$code
+exit $exitCode

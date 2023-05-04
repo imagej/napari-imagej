@@ -730,7 +730,9 @@ def test_binary_dataset(ij) -> "jc.Dataset":
     dataset: jc.Dataset = ij.dataset().create(
         ij.py.to_java(np.ones((10, 10), dtype=np.bool_))
     )
-    assert "net.imglib2.type.logic.NativeBoolType" == str(dataset.getType().getClass().getName())
+    assert "net.imglib2.type.logic.NativeBoolType" == str(
+        dataset.getType().getClass().getName()
+    )
     dataset.setName(name)
     return dataset
 
