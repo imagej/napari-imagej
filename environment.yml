@@ -24,6 +24,7 @@ dependencies:
   - python >= 3.8, <= 3.11.0
   # Project depenencies
   - confuse
+  - imglyb >= 2.1.0
   - jpype1 >= 1.4.1
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
@@ -31,7 +32,7 @@ dependencies:
   - numpy
   - openjdk=8
   - pandas
-  - pyimagej >= 1.4.0
+  - pyimagej >= 1.4.1
   - scyjava >= 1.8.1
   # Project from source
   - pip

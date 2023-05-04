@@ -37,13 +37,14 @@ classifiers = [
 requires-python = ">=3.8, <=3.11.0"
 dependencies = [
     "confuse",
+    "imglyb >= 2.1.0",
     "jpype1 >= 1.4.1",
     "labeling >= 0.1.12",
     "magicgui >= 0.5.1",
     "napari >= 0.4.17",
     "numpy",
     "pandas",
-    "pyimagej >= 1.4.0",
+    "pyimagej >= 1.4.1",
     "scyjava >= 1.8.1",
 ]
 
