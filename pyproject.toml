@@ -100,6 +100,7 @@ min_python_version = "3.8"
 profile = "black"
 
 [tool.pytest.ini_options]
+addopts = "-s -p no:faulthandler"
 env = [
     "NAPARI_IMAGEJ_TESTING=yes",
     "NAPARI_IMAGEJ_JVM_COMMAND_LINE_ARGUMENTS=-Dfoo=bar",
