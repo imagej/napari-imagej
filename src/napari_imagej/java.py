@@ -32,7 +32,7 @@ minimum_versions = {
     "net.imglib2:imglib2-unsafe": "1.0.0",
     "net.imglib2:imglib2-imglyb": "1.1.0",
     "org.scijava:scijava-common": "2.91.0",
-    "org.scijava:scijava-search": "2.0.0",
+    "org.scijava:scijava-search": "2.0.2",
     "net.imagej:imagej-legacy": "1.1.0",
 }
 
@@ -210,10 +210,13 @@ class ImageJInitializer(QThread):
             "imagej_directory_or_endpoint"
         ].get(str)
         init_settings["mode"] = settings["jvm_mode"].get(str)
+
         add_legacy = settings["include_imagej_legacy"].get(bool)
         init_settings["add_legacy"] = add_legacy
+
+        # TEMP: Until imagej/napari-imagej#209 is solved.
+        config.endpoints.append("org.scijava:scijava-search:2.0.2")
         if add_legacy:
-            # TEMP: Until imagej/napari-imagej#209 is solved.
             config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
 
         return init_settings

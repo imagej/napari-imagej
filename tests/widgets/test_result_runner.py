@@ -4,7 +4,6 @@ A module testing napari_imagej.widgets.result_runner
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from napari_imagej import settings
 from napari_imagej.java import JavaClasses
 from napari_imagej.widgets.layouts import QFlowLayout
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -45,10 +44,6 @@ def example_info(ij):
     )
 
 
-RUNNING_LEGACY = settings["include_imagej_legacy"].get(bool)
-
-
-@pytest.mark.skipif(RUNNING_LEGACY, reason="Tests Pure IJ2 behavior!")
 def test_button_param_regression(
     result_runner: ResultRunner, example_info: "jc.ModuleInfo"
 ):
@@ -56,28 +51,8 @@ def test_button_param_regression(
 
     result = jc.ModuleSearchResult(example_info, "")
     buttons = result_runner._buttons_for(result)
-    assert buttons[0].text() == "Run"
-    assert buttons[1].text() == "Widget"
-    assert buttons[2].text() == "Batch"
-
-
-@pytest.mark.skipif(not RUNNING_LEGACY, reason="Tests ImageJ Legacy behavior!")
-def test_button_param_regression_legacy(
-    result_runner: ResultRunner, example_info: "jc.ModuleInfo"
-):
-    """Simple regression test ensuring search action button population"""
-
-    result = jc.ModuleSearchResult(example_info, "")
-    buttons = result_runner._buttons_for(result)
-    # FIXME: Need to solve why there are two Help actions now.
-    # https://github.com/imagej/napari-imagej/issues/178
-    # assert len(buttons) == 6
-    assert buttons[0].text() == "Run"
-    assert buttons[1].text() == "Widget"
-    assert buttons[2].text() == "Help"
-    assert buttons[3].text() == "Batch"
-    # assert buttons[4].text() == "Help"
-    # assert buttons[5].text() == "Source"
+    assert len(buttons) == 5
+    assert {b.text() for b in buttons} == {"Batch", "Help", "Run", "Source", "Widget"}
 
 
 def test_widget_button_spawns_widget(
