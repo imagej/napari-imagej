@@ -22,11 +22,12 @@ from napari_imagej.widgets.menu import (
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
-    RichTextPopup,
     SettingsButton,
     ToIJButton,
+    UIShownListener,
 )
-from tests.utils import jc
+from napari_imagej.widgets.widget_utils import _run_actions_for
+from tests.utils import DummySearchResult, jc
 
 # Determine whether we are testing headlessly
 TESTING_HEADLESS: bool = settings["jvm_mode"].get(str) == "headless"
@@ -72,24 +73,31 @@ def napari_mocker(viewer: Viewer):
 def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
     """Fixture used to handle RichTextPopups"""
 
-    def handle_popup(text: str, popup_generator: Callable[[], None]):
+    def handle_popup(
+        text: str, is_rich: bool, button, popup_generator: Callable[[], None]
+    ):
         # # Start the handler in a new thread
         class Handler(QRunnable):
             # Test popup when running headlessly
             def run(self) -> None:
-                asserter(lambda: isinstance(QApplication.activeWindow(), RichTextPopup))
+                asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
                 msg = QApplication.activeWindow()
                 if text != msg.text():
+                    print("Text differed")
+                    print(text)
+                    print(msg.text())
                     self._passed = False
                     return
-                if Qt.RichText != msg.textFormat():
+                if is_rich and Qt.RichText != msg.textFormat():
+                    print("Not rich text")
                     self._passed = False
                     return
-                if Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                if is_rich and Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                    print("No browser interaction")
                     self._passed = False
                     return
 
-                ok_button = msg.button(QMessageBox.Ok)
+                ok_button = msg.button(button)
                 ok_button.clicked.emit()
                 asserter(lambda: QApplication.activeModalWidget() is not msg)
                 self._passed = True
@@ -192,7 +200,7 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
         'Initialization.html#interactive-mode">this site</a> '
         "for more information."
     )
-    popup_handler(expected_popup_text, button.clicked.emit)
+    popup_handler(expected_popup_text, True, QMessageBox.Ok, button.clicked.emit)
 
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
@@ -330,7 +338,7 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     expected_text = (
         "Please restart napari for napari-imagej settings " "changes to take effect!"
     )
-    popup_handler(expected_text, button._update_settings)
+    popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
 
     menu.request_values = oldfunc
 
@@ -380,7 +388,7 @@ def test_empty_ij_dir_str_prevention(popup_handler, gui_widget: NapariImageJMenu
         "<font face='courier'>ij_dir_or_version_or_endpoint</font> "
         "parameter for more options."
     )
-    popup_handler(expected_text, button._update_settings)
+    popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
 
     menu.request_values = oldfunc
 
@@ -424,7 +432,7 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
         'Initialization.html#interactive-mode">this site</a> '
         "for more information."
     )
-    popup_handler(expected_text, button._update_settings)
+    popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
 
     menu.request_values = oldfunc
 
@@ -499,11 +507,12 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     # Open the GUI
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    # Wait for the Frame to be created
-    asserter(lambda: gui_widget._get_AWT_frame() is not None)
-    frame = gui_widget._get_AWT_frame()
+    asserter(lambda: ij.ui().getDefaultUI().getApplicationFrame() is not None)
+    frame = ij.ui().getDefaultUI().getApplicationFrame()
+    if isinstance(frame, jc.UIComponent):
+        frame = frame.getComponent()
     # Wait for the Frame to be visible
-    asserter(lambda: frame.isVisible())
+    asserter(lambda: ij.ui().isVisible())
 
     # Close the GUI
     ij.thread().queue(
@@ -518,3 +527,42 @@ def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMe
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
     # Wait for the Frame to be visible again
     asserter(lambda: frame.isVisible())
+
+
+def test_UIShownEvent_listener_registered(ij, gui_widget: NapariImageJMenu, asserter):
+    """
+    Ensure that a UI is registered to capture SciJavaEvents.
+    """
+    # HACK: Tap into the EventBus to obtain SciJava Module debug info.
+    # See https://github.com/scijava/scijava-common/issues/452
+    event_bus_field = ij.event().getClass().getDeclaredField("eventBus")
+    event_bus_field.setAccessible(True)
+    event_bus = event_bus_field.get(ij.event())
+
+    subscribers = event_bus.getSubscribers(jc.UIShownEvent.class_)
+    for subscriber in subscribers:
+        if isinstance(subscriber, UIShownListener):
+            return True
+    return False
+
+
+@pytest.fixture
+def legacy_module(ij):
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    return ij.module().createModule(info)
+
+
+@pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
+@pytest.mark.skipif(not TESTING_LEGACY, reason="Only applies to legacy modules")
+def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
+    info = ij.module().getModuleById("legacy:ij.plugin.filter.GaussianBlur")
+    actions = _run_actions_for(DummySearchResult(info), None, gui_widget)
+
+    expected_popup_text = (
+        '"This is not a Search Result" is an original ImageJ PlugIn'
+        " and should be run from the ImageJ UI."
+        " Would you like to launch the ImageJ UI?"
+    )
+    popup_handler(expected_popup_text, False, QMessageBox.Yes, actions[0][1])
