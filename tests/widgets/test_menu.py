@@ -117,8 +117,15 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
     return handle_popup
 
 
+def ui_visible(ij):
+    frame = ij.ui().getDefaultUI().getApplicationFrame()
+    if isinstance(frame, jc.UIComponent):
+        frame = frame.getComponent()
+    return frame and frame.isVisible()
+
+
 @pytest.fixture(autouse=True)
-def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
+def clean_gui_elements(asserter, ij, viewer: Viewer):
     """Fixture to remove image data from napari and ImageJ2"""
 
     # Test pre-processing
@@ -143,6 +150,19 @@ def clean_layers_and_Displays(asserter, ij, viewer: Viewer):
     while not ij.display().getDisplays().isEmpty():
         for display in ij.display().getDisplays():
             display.close()
+
+    # Close the UI if needed
+    if ui_visible(ij):
+        frame = ij.ui().getDefaultUI().getApplicationFrame()
+        if isinstance(frame, jc.UIComponent):
+            frame = frame.getComponent()
+        ij.thread().queue(
+            lambda: frame.dispatchEvent(
+                jc.WindowEvent(frame, jc.WindowEvent.WINDOW_CLOSING)
+            )
+        )
+        # Wait for the Frame to be hidden
+        asserter(lambda: not ui_visible(ij))
 
 
 def test_widget_layout(gui_widget: NapariImageJMenu):
@@ -507,12 +527,11 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     # Open the GUI
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    asserter(lambda: ij.ui().getDefaultUI().getApplicationFrame() is not None)
     frame = ij.ui().getDefaultUI().getApplicationFrame()
     if isinstance(frame, jc.UIComponent):
         frame = frame.getComponent()
     # Wait for the Frame to be visible
-    asserter(lambda: ij.ui().isVisible())
+    asserter(lambda: ui_visible(ij))
 
     # Close the GUI
     ij.thread().queue(
@@ -521,15 +540,15 @@ def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMe
         )
     )
     # Wait for the Frame to be hidden
-    asserter(lambda: not frame.isVisible())
+    asserter(lambda: not ui_visible(ij))
 
     # Open the GUI again
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
     # Wait for the Frame to be visible again
-    asserter(lambda: frame.isVisible())
+    asserter(lambda: ui_visible(ij))
 
 
-def test_UIShownEvent_listener_registered(ij, gui_widget: NapariImageJMenu, asserter):
+def test_UIShownEvent_listener_registered(ij):
     """
     Ensure that a UI is registered to capture SciJavaEvents.
     """
@@ -556,7 +575,9 @@ def legacy_module(ij):
 
 @pytest.mark.skipif(TESTING_HEADLESS, reason="Only applies when not running headlessly")
 @pytest.mark.skipif(not TESTING_LEGACY, reason="Only applies to legacy modules")
-def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
+def test_legacy_directed_to_ij_ui(
+    asserter, ij, popup_handler, gui_widget: NapariImageJMenu
+):
     info = ij.module().getModuleById("legacy:ij.plugin.filter.GaussianBlur")
     actions = _run_actions_for(DummySearchResult(info), None, gui_widget)
 
@@ -565,4 +586,8 @@ def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMen
         " and should be run from the ImageJ UI."
         " Would you like to launch the ImageJ UI?"
     )
+    popup_handler(expected_popup_text, False, QMessageBox.No, actions[0][1])
+    assert not ui_visible(ij)
+
     popup_handler(expected_popup_text, False, QMessageBox.Yes, actions[0][1])
+    assert ui_visible(ij)
