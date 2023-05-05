@@ -164,8 +164,14 @@ class DummySearchEvent:
 
 
 class DummySearchResult(object):
+    def __init__(self, info: "jc.ModuleInfo" = None):
+        self._info = info
+
     def name(self):
         return "This is not a Search Result"
+
+    def info(self):
+        return self._info
 
 
 class DummyModuleInfo:

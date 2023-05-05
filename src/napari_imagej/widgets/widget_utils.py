@@ -49,9 +49,9 @@ def _run_actions_for(
                 parent_widget,
                 "Warning: ImageJ PlugIn",
                 (
-                    f'"{name}" is an original ImageJ PlugIn "\
-                        "and should be run from the ImageJ UI. " \
-                    "Would you like to launch the ImageJ UI?'
+                    f'"{name}" is an original ImageJ PlugIn'
+                    " and should be run from the ImageJ UI."
+                    " Would you like to launch the ImageJ UI?"
                 ),
                 QMessageBox.Yes | QMessageBox.No,
             )
