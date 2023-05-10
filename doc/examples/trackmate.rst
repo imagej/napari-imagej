@@ -26,27 +26,28 @@ We can configure napari-imagej to use a Fiji installation by opening the setting
 
 **Note that napari must be restarted for these changes to take effect!**
 
-Launching TrackMate
--------------------
+Preparing the Data
+------------------
 
-Once napari is running again, activate the napari-imagej plugin by selecting the ``ImageJ2`` plugin from the Plugins menu. Open the image data by dragging and dropping the file into the napari window or via ``File>Open File(s)...`` menu option.
+.. |ImageJ2| image:: ../../src/napari_imagej/resources/imagej2-16x16-flat.png
 
-TrackMate will only work on image data that are open in the ImageJ UI. You can transfer data from napari to the ImageJ UI by utilizing the transfer buttons in the napari-imagej menu to transfer the active
-image layer. Alternatively the ImageJ UI could be called first by clicking the ImageJ2 button and opening the image data with the ImageJ UI (``File>Open...``). This approach would avoid the need to transfer the data from
-napari to the ImageJ UI.
+Once napari is running again, activate the napari-imagej plugin by selecting the ``ImageJ2`` plugin from the Plugins menu.
+
+To run TrackMate, we first need data. TrackMate will only work on image data that are open in the ImageJ UI. napari-imagej provides two pathways for you to open data within the ImageJ UI:
+
+Opening Data in ImageJ
+^^^^^^^^^^^^^^^^^^^^^^
+
+If your data is not yet in napari, it is easiest to open it in ImageJ directly. Press |ImageJ2| in the napari-imagej menu to launch the ImageJ UI, and then locate the  ``File>Open File(s)...`` menu option to open your data. With your data open, you are now ready to `run Trackmate <./trackmate.html#nuclei-tracking>`_.
+
+Transferring Data from napari
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you already have data open in napari, you can transfer data to the ImageJ UI by utilizing the transfer buttons in the napari-imagej menu to transfer the active (highlighted in blue) napari layer.
 
 .. figure:: ../doc-images/napari-imagej_trackmate_1.gif
 
     Images open in napari can be easily transferred to the ImageJ UI with the transfer buttons.
-
-Nuclei tracking
------------------------
-
-**Note**: If you transferred your image data from napari to the ImageJ UI with the transfer buttons, than an additional step is required to make the image data compatible with TrackMate.
-If the data was opened with ImageJ then these steps are not necessary and you can proceed to `Running Trackmate <./trackmate.html#running-trackmate>`_.
-
-Modifying image dimensions
-^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Internally, napari does not utilize image dimension labels (*i.e.* ``X``, ``Y``, *etc...*) and instead assumes that the *n*-dimensional arrays (*i.e* images) conform to the `scikit-image dimension order`_ convention.
 ImageJ2 however *does* care about dimension labels and uses them to define certain operations. In this case, ImageJ2 assumes the first two dimensions are *always* ``X`` and ``Y``. The third dimension in this use case is ``Time``, but
@@ -63,11 +64,14 @@ across 40 channels.
 
     Reshape the image dimensions by swapping the number of *channels* with the number of *frames*.
 
+Nuclei tracking
+-----------------------
+
 Running TrackMate
 ^^^^^^^^^^^^^^^^^
 
-Once your image data is open and has the correct dimension order start TrackMate by either searching in the napari-imagej search bar or via the ImageJ UI. Once TrackMate has loaded, walk
-through the TrackMate tracking options to generate tracks. For this use case the following settings were used:
+Once your image data is open and has the correct dimension order start TrackMate by either searching in the napari-imagej search bar or via the menu selection ``Plugins>Tracking>TrackMate``. Once TrackMate has loaded, walk
+through the TrackMate tracking options to generate tracks. Using the sample data, we used the following settings for successful tracking:
 
 - **Detector**: LoG (Laplacian of Gaussian) detector
     - *Estimated object diameter*: 50 pixels
