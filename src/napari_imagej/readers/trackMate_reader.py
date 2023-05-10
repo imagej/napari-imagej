@@ -2,16 +2,15 @@
 A napari reader plugin for importing TrackMate data stored in XML
 """
 import xml.etree.ElementTree as ET
-from os import listdir
-from os.path import isdir, join
-from re import match
 
 from napari.utils import progress
 from scyjava import jimport
 
-from napari_imagej import settings
 from napari_imagej.java import ij, init_ij, jc
-from napari_imagej.types.converters.trackmate import model_and_image_to_tracks
+from napari_imagej.types.converters.trackmate import (
+    model_and_image_to_tracks,
+    trackmate_present,
+)
 
 
 def napari_get_reader(path):
@@ -27,15 +26,7 @@ def napari_get_reader(path):
         return None
 
     # Determine whether TrackMate available
-    endpoint = settings["imagej_directory_or_endpoint"].get(str).lower()
-    if "sc.fiji:trackmate" in endpoint or "sc.fiji:fiji" in endpoint:
-        pass
-    elif isdir(join([endpoint, "jars"])):
-        for fname in listdir(join([endpoint, "jars"])):
-            if match("TrackMate-\d.*\.jar", fname):  # noqa
-                pass
-        return None
-    else:
+    if not trackmate_present():
         return None
 
     # Ensure that the xml file is a TrackMate file
