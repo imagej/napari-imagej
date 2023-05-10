@@ -1,5 +1,5 @@
 Tracking HeLa cell nuclei with TrackMate
-=======================================
+========================================
 
 The `TrackMate`_ plugin for ImageJ2 provides a streamlined interface for object tracking. 
 This use case demonstrates how you can use napari-imagej to run the TrackMate plugin on 3D data **(X, Y, Time)** view the results with napari and
@@ -95,7 +95,7 @@ Once the tracks and spots have been generated use left napari-imagej transfer bu
 Processing tracks with napari-stracking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While the `napari-stracking`_ plugin is capable of performing it's own particle tracking, it also comes with some track processing tools.
+While the `napari-stracking`_ plugin is capable of performing its own particle tracking, it also comes with some track processing tools.
 To use napari-stracking, install the plugin from ``Install/Uninstall Plugins...`` menu in napari. After transferring TrackMate's tracks and spots to napari select the kind of track
 processing you want from the napari-stracking plugin menu.
 
