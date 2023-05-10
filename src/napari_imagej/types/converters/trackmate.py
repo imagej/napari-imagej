@@ -1,7 +1,12 @@
+from os import listdir
+from os.path import isdir, join
+from re import match
+
 import numpy as np
 from napari.layers import Labels, Tracks
 from scyjava import Priority
 
+from napari_imagej import settings
 from napari_imagej.java import JavaClasses, ij
 from napari_imagej.types.converters import java_to_py_converter
 
@@ -10,11 +15,17 @@ def trackmate_present():
     """
     Returns True iff TrackMate is on the classpath
     """
-    try:
-        jc.TrackMate
+    # Check the endpoint - this way, we can check before the JVM is running
+    endpoint = settings["imagej_directory_or_endpoint"].get(str).lower()
+    # Step 1 - check the endpoint string
+    if "sc.fiji:trackmate" in endpoint or "sc.fiji:fiji" in endpoint:
         return True
-    except ImportError:
-        return False
+    # Step 2 - check the jar directory
+    elif isdir(join(endpoint, "jars")):
+        for fname in listdir(join([endpoint, "jars"])):
+            if match("TrackMate-\d.*\.jar", fname):  # noqa
+                return True
+    return False
 
 
 def track_overlay_predicate(obj):
