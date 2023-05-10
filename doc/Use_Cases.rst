@@ -8,6 +8,8 @@ Below we document use cases for the napari-imagej plugin.
     
     examples/trackmate.rst
 
+    examples/trackmate_reader.rst
+
     examples/scripting.rst
 
     examples/ops.rst
