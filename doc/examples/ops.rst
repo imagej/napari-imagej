@@ -23,7 +23,7 @@ Ops are reusable, stateless algorithms, having:
 A simple gaussian Blur
 ----------------------
 
-A `gaussiam blur <https://en.wikipedia.org/wiki/Gaussian_blur>`_ is easily performed in ImageJ Ops.
+A `gaussian blur <https://en.wikipedia.org/wiki/Gaussian_blur>`_ is easily performed in ImageJ Ops.
 
 Ops are searchable directly from the napari-imagej search bar. Therefore, looking for a gaussian blur is as simple as typing ``gauss`` into the search bar:
 
