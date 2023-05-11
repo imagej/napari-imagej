@@ -27,6 +27,11 @@ from napari_imagej.utilities.logging import log_debug
 
 __version__ = "0.0.1.dev0"
 
+default_java_components = [
+    "net.imagej:imagej:2.11.0",
+    "org.scijava:scijava-search:2.0.3",
+]
+
 
 class _NapariImageJSettings(confuse.Configuration):
     """Napari-ImageJ Settings object"""
@@ -57,11 +62,12 @@ class _NapariImageJSettings(confuse.Configuration):
         """
         if setting == "imagej_directory_or_endpoint":
             # Ensure a valid endpoint/directory
-            if value in ["", None]:
+            if not value:
+                endpoint = "+".join(default_java_components)
                 if strict:  # Report the failure
                     raise ValueError(
                         "The imagej directory or endpoint cannot be blank! "
-                        "<p><font face='courier'>net.imagej:imagej</font> "
+                        f"<p><font face='courier'>{endpoint}</font> "
                         "is the default option."
                         "<p>Visit "
                         '<a href="https://pyimagej.readthedocs.io/en/latest/'
@@ -73,9 +79,9 @@ class _NapariImageJSettings(confuse.Configuration):
                 else:  # Assign a reasonable default
                     log_debug(
                         "No provided imagej directory or endpoint. Setting endpoint "
-                        "to net.imagej:imagej"
+                        f"to {endpoint}"
                     )
-                    self["imagej_directory_or_endpoint"] = "net.imagej:imagej"
+                    self["imagej_directory_or_endpoint"] = endpoint
         if setting == "jvm_mode":
             # Ensure a valid jvm mode choice
             self["jvm_mode"].as_choice(["interactive", "headless"])

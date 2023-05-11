@@ -29,7 +29,7 @@ This setting allows users to provide a string identifying *which Java components
 
 If you pass a **directory**, PyImageJ will look in that directory for *an existing ImageJ2 instance*.
 
-If you pass one or more **endpoints**, PyImageJ will launch an ImageJ2 instance from those components, *downloading them if necessary*.
+If you pass one or more **components** in `Maven coordinate <https://maven.apache.org/pom.html#Maven_Coordinates>`_ form, PyImageJ will launch an ImageJ2 instance from those components, *downloading them if necessary*.
 
 Below are a couple examples of ways to construct different ImageJ2 instances:
 

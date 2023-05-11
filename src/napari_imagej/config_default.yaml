@@ -5,12 +5,12 @@
 
 # Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
 # OR version of net.imagej:imagej artifact to launch (e.g. 2.3.0),
-# OR endpoint of another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
-# OR list of Maven artifacts to include (e.g.
+# OR another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
+# OR list of artifacts to include (e.g.
 #   ['net.imagej:imagej:2.3.0', 'net.imagej:imagej-legacy', 'net.preibisch:BigStitcher']).
-# Defaults to 'net.imagej:imagej', which will use the latest version of ImageJ2,
-# downloading it if needed.
-imagej_directory_or_endpoint: 'net.imagej:imagej'
+# Defaults to the empty string, which tells napari-imagej
+# to use the latest supported version of ImageJ2 components.
+imagej_directory_or_endpoint: ''
 
 # Path to the ImageJ base directory on your local machine.
 # Defaults to the current working directory.
