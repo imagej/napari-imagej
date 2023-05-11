@@ -23,6 +23,7 @@ def test_progress(ij, example_module):
     assert example_progress.n == 2
     pm.update_progress(example_module)
     assert example_progress.n == 3
+    pm.close(example_module)
     assert example_module not in pm.prog_bars
 
 
@@ -40,4 +41,20 @@ def test_progress_update_via_events(imagej_widget, ij, example_module, asserter)
 
     ij.event().publish(jc.ModuleFinishedEvent(example_module))
     asserter(lambda: pbr.n == 3)
+    asserter(lambda: example_module not in pm.prog_bars)
+
+
+def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter):
+    pm.init_progress(example_module)
+    asserter(lambda: example_module in pm.prog_bars)
+    pbr = pm.prog_bars[example_module]
+    asserter(lambda: pbr.n == 0)
+
+    ij.event().publish(jc.ModuleExecutingEvent(example_module))
+    asserter(lambda: pbr.n == 1)
+
+    ij.event().publish(jc.ModuleExecutedEvent(example_module))
+    asserter(lambda: pbr.n == 2)
+
+    ij.event().publish(jc.ModuleCanceledEvent(example_module))
     asserter(lambda: example_module not in pm.prog_bars)

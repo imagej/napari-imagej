@@ -487,6 +487,10 @@ class JavaClasses(object):
         return "org.scijava.module.event.ModuleEvent"
 
     @blocking_import
+    def ModuleCanceledEvent(self):
+        return "org.scijava.module.event.ModuleCanceledEvent"
+
+    @blocking_import
     def ModuleExecutedEvent(self):
         return "org.scijava.module.event.ModuleExecutedEvent"
 

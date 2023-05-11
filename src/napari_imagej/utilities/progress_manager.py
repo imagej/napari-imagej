@@ -33,9 +33,11 @@ class ModuleProgressManager:
     def update_progress(self, module: "jc.Module"):
         if pbr := self.prog_bars.get(module):
             pbr.update()
-            if pbr.total == pbr.n:
-                self.prog_bars.pop(module)
-                pbr.close()
+
+    def close(self, module: "jc.Module"):
+        if pbr := self.prog_bars.get(module):
+            self.prog_bars.pop(module)
+            pbr.close()
 
 
 pm = ModuleProgressManager()
