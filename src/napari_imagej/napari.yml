@@ -5,7 +5,15 @@ contributions:
     - id: napari-imagej.func
       python_name: napari_imagej.widgets.napari_imagej:NapariImageJWidget
       title: Run ImageJ2 commands
+    - id: napari-imagej.get_trackmate_reader
+      python_name: napari_imagej.readers.trackMate_reader:napari_get_reader
+      title: Open TrackMate XML
   widgets:
     - command: napari-imagej.func
       # TODO: Remove (DEVELOPER PREVIEW) once we are farther along
       display_name: ImageJ2 (DEVELOPER PREVIEW)
+  readers:
+    - command: napari-imagej.get_trackmate_reader
+      filename_patterns:
+      - '*.xml'
+      accepts_directories: false

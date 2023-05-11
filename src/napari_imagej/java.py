@@ -28,14 +28,14 @@ from napari_imagej.utilities.logging import log_debug
 
 minimum_versions = {
     "net.imagej:imagej-common": "2.0.2",
+    "net.imagej:imagej-legacy": "1.1.0",
     "net.imagej:imagej-ops": "0.49.0",
     "net.imglib2:imglib2-unsafe": "1.0.0",
     "net.imglib2:imglib2-imglyb": "1.1.0",
     "org.scijava:scijava-common": "2.91.0",
     "org.scijava:scijava-search": "2.0.2",
-    "net.imagej:imagej-legacy": "1.1.0",
+    "sc.fiji:TrackMate": "7.11.0",
 }
-
 
 # -- ImageJ API -- #
 
@@ -227,9 +227,7 @@ class ImageJInitializer(QThread):
         """
         # If we want to require a minimum version for a java component, we need to
         # be able to find our current version. We do that by querying a Java class
-        # within that component. Thus for each component, we also need a class
-        # to query. Some classes are commonplace, and we can grab them from jc.
-        # Others are not used elsewhere, and we import them here.
+        # within that component.
         RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
         UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
         component_requirements = {
@@ -240,11 +238,8 @@ class ImageJInitializer(QThread):
             "org.scijava:scijava-common": jc.Module,
             "org.scijava:scijava-search": jc.Searcher,
         }
-        # Add additional minimum versions for legacy components
-        if ij().legacy and ij().legacy.isActive():
-            component_requirements["net.imagej:imagej-legacy"] = ij().legacy.getClass()
-
-        # Find versions that violate the minimum
+        component_requirements.update(self._optional_requirements())
+        # Find version that violate the minimum
         violations = []
         for component, cls in component_requirements.items():
             min_version = minimum_versions[component]
@@ -263,6 +258,19 @@ class ImageJInitializer(QThread):
                 "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
             )
             raise RuntimeError(failure_str)
+
+    def _optional_requirements(self):
+        optionals = {}
+        # Add additional minimum versions for legacy components
+        if ij().legacy and ij().legacy.isActive():
+            optionals["net.imagej:imagej-legacy"] = ij().legacy.getClass()
+        # Add additional minimum versions for fiji components
+        try:
+            optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
+        except Exception:
+            pass
+
+        return optionals
 
 
 class ImageJ_Callbacks(QObject):
@@ -789,6 +797,16 @@ class JavaClasses(object):
     @blocking_import
     def ImagePlus(self):
         return "ij.ImagePlus"
+
+    @blocking_import
+    def Roi(self):
+        return "ij.gui.Roi"
+
+    # ImageJ-Legacy Types
+
+    @blocking_import
+    def IJRoiWrapper(self):
+        return "net.imagej.legacy.convert.roi.IJRoiWrapper"
 
     # ImageJ-Ops Types
 

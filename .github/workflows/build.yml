@@ -63,10 +63,8 @@ jobs:
           python -m pip install -e '.[dev]'
 
       - name: Test napari-imagej
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: |
-            python -m pytest -s -p no:faulthandler --color=yes
+        run: |
+          bin/test.sh
 
   ensure-clean-code:
     runs-on: ubuntu-latest
@@ -96,52 +94,6 @@ jobs:
       - name: Validate pyproject.toml
         run: |
           python -m validate_pyproject pyproject.toml
-
-  test-ij2:
-    name: Test pure IJ2
-    runs-on: ubuntu-latest
-    defaults:
-      # Steps that rely on the activated environment must be run with this shell setup.
-      # See https://github.com/marketplace/actions/setup-miniconda#important
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Cache conda
-        uses: actions/cache@v2
-        env:
-          # Increase this value to reset cache if dev-environment.yml has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('dev-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          # Create env with dev packages
-          auto-update-conda: true
-          python-version: "3.10"
-          miniforge-variant: Mambaforge
-          environment-file: dev-environment.yml
-          # Activate napari-imagej-dev environment
-          activate-environment: napari-imagej-dev
-          auto-activate-base: false
-          # Use mamba for faster setup
-          use-mamba: true
-
-      - name: Setup Qt libraries
-        uses: tlambert03/setup-qt-libs@v1
-
-      - name: Setup Testing Environment Variables
-        run: |
-          echo "NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=false" >> $GITHUB_ENV
-
-      - name: Test napari-imagej
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: |
-            conda run -n napari-imagej-dev --no-capture-output python -m pytest -s -p no:faulthandler --color=yes --cov-report=xml --cov=.
 
   conda-dev-test:
     name: Conda Setup & Code Coverage
