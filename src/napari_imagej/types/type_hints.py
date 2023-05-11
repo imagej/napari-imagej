@@ -122,8 +122,9 @@ def images() -> List[TypeHint]:
         TypeHint(
             jc.IterableInterval, "napari.layers.Image", priority=Priority.VERY_LOW
         ),
-        TypeHint(jc.Img, "napari.layers.Image"),
         TypeHint(jc.ImageDisplay, "napari.layers.Image"),
+        TypeHint(jc.Img, "napari.layers.Image"),
+        TypeHint(jc.ImgPlus, "napari.layers.Image"),
         TypeHint(jc.Dataset, "napari.layers.Image"),
         TypeHint(jc.DatasetView, "napari.layers.Image"),
         TypeHint(jc.ImagePlus, "napari.layers.Image"),
