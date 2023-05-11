@@ -167,11 +167,15 @@ class NapariImageJWidget(QWidget):
         update Qt GUI elements from those threads.
         """
         module = event.getModule()
+        # Update progress if we see one of these
         if isinstance(
             event,
             (jc.ModuleExecutingEvent, jc.ModuleExecutedEvent, jc.ModuleFinishedEvent),
         ):
             pm.update_progress(module)
+        # Close progress if we see one of these
+        if isinstance(event, (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent)):
+            pm.close(module)
 
 
 class WidgetFinalizer(QThread):
