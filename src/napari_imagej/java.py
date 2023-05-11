@@ -214,8 +214,6 @@ class ImageJInitializer(QThread):
         add_legacy = settings["include_imagej_legacy"].get(bool)
         init_settings["add_legacy"] = add_legacy
 
-        # TEMP: Until imagej/napari-imagej#209 is solved.
-        config.endpoints.append("org.scijava:scijava-search:2.0.2")
         if add_legacy:
             config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
 
@@ -250,7 +248,7 @@ class ImageJInitializer(QThread):
                 )
 
         # If there are version requirements, throw an error
-        if len(violations):
+        if violations:
             failure_str = "napari-imagej requires the following component versions:"
             violations.insert(0, failure_str)
             failure_str = "\n\t".join(violations)
