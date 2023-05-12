@@ -11,7 +11,7 @@ The napari-imagej widget provides the ability to access the ImageJ ecosystem fro
 Menu
 ####
 
-The napari-imagej menu provides buttons used to
+The napari-imagej menu provides buttons used to:
 
 * `Configure <./Configuration.html>`_ the backing ImageJ2 distribution
 * Launch the ImageJ UI
