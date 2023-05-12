@@ -56,13 +56,17 @@ information about what the third dimension should be. When an image is opened di
 dimensions order to the image. When ImageJ2 has no information on the dimension order (*e.g.* when we transfer a napari image to ImageJ) then the ``(X, Y, C, Z, T)`` dimension order is applied. Taking this into account we can see why
 the transferred image in imagej has 40 channels instead of frames.
 
-To fix this, simply right click (or ``CTRL+SHIFT+P``) on the open image in the ImageJ UI and select ``Properties...``. In the properties window change the value in the ``Channels`` field to 1 and the ``Frames`` field to 40 (or however many frames your data has).
-Click ``Ok`` to apply the change. TrackMate will now process this image data correctly. Without this change, TrackMate thinks the data has only one time point and 40 channels. Instead of tracking across time it only provides a detection for a single frame
-across 40 channels.
+Furthermore, this sample image has calibrated axes. If the image is opened in ImageJ that metadata is preserved. But when we open the image with the basic napari opener we lose the calibration information, which is simply populated as "1 pixel" in each axis when transferred to ImageJ. TrackMate **does** care about calibrations, so this needs to be fixed as well.
 
-.. figure:: https://media.imagej.net/napari-imagej/trackmate_2.gif
+Thankfully we can fix both issues in the same place. Simply right-click on the open image in the ImageJ UI and select ``Properties...`` (or use the shortcut ``CTRL+SHIFT+P``). In the properties window change the value in the ``Channels`` field to `1` and the ``Frames`` field to `40`. Then change the ``Pixel width`` to `0.325` with unit `micron`, the ``Pixel height`` to `0.325`, and the ``Voxel depth`` to `1`.
+When your ``Properties`` menu looks like this, click ``Ok`` to apply the change:
 
-    Reshape the image dimensions by swapping the number of *channels* with the number of *frames*.
+.. figure:: https://media.imagej.net/napari-imagej/trackmate_adjust_props.png
+
+    Reshape the image dimensions by swapping the number of *channels* with the number of *frames*; add calibration information
+
+TrackMate will now process this image data correctly. Without these changes, TrackMate thinks the data has only one time point and 40 channels. Instead of tracking across time it only provides a detection for a single frame
+across 40 channels, and our object diameters would be too small.
 
 Nuclei tracking
 -----------------------
@@ -78,7 +82,7 @@ Once TrackMate has loaded, walk
 through the TrackMate tracking options to generate tracks. Using the sample data, we used the following settings for successful tracking:
 
 - **Detector**: LoG (Laplacian of Gaussian) detector
-    - *Estimated object diameter*: 50 pixels
+    - *Estimated object diameter*: 17 micron
     - *Quality threshold*: 0
     - *Pre-process with media filter*: Yes
     - *sub-pixel localization*: Yes
