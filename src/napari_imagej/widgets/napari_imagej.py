@@ -174,8 +174,13 @@ class NapariImageJWidget(QWidget):
         ):
             pm.update_progress(module)
         # Close progress if we see one of these
-        if isinstance(event, (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent)):
+        if isinstance(
+            event,
+            (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent, jc.ModuleErroredEvent),
+        ):
             pm.close(module)
+        if isinstance(event, jc.ModuleErroredEvent):
+            raise event.getException()
 
 
 class WidgetFinalizer(QThread):
