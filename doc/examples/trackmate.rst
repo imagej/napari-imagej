@@ -76,7 +76,11 @@ Nuclei tracking
 Running TrackMate
 ^^^^^^^^^^^^^^^^^
 
-Once your image data is open and has the correct dimension order start TrackMate by either searching in the napari-imagej search bar or via the menu selection ``Plugins>Tracking>TrackMate``. Once TrackMate has loaded, walk
+**Note:** if you haven't started the ImageJ GUI yet, `do so now <../initialization.html#starting_the_imageJ_gui>`_. You *can* search for TrackMate in the napari-imagej search bar, but it will just tell you to open the ImageJ GUI.
+
+Once your image data is open and has the correct dimension order, start TrackMate by either searching in the ImageJ search bar or via the menu selection ``Plugins>Tracking>TrackMate``.
+
+Once TrackMate has loaded, walk
 through the TrackMate tracking options to generate tracks. Using the sample data, we used the following settings for successful tracking:
 
 - **Detector**: LoG (Laplacian of Gaussian) detector
