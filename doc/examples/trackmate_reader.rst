@@ -21,8 +21,8 @@ For this example, we use data from the following publication: |zenodo badge|
 This data tracks breast cancer cells, taken as a 2D image with time and channel dimensions. The data was segmented using `Cellpose <https://www.cellpose.org/>`_.
 
 You will need to download two files:
-#. `BreastCancerCells_multiC.xml <https://zenodo.org/record/5864646/files/BreastCancerCells_multiC.xml?download=1>`_.
-#. `BreastCancerCells_multiC.tif <https://zenodo.org/record/5864646/files/BreastCancerCells_multiC.tif?download=1>`_.
+  #. `BreastCancerCells_multiC.xml <https://zenodo.org/record/5864646/files/BreastCancerCells_multiC.xml?download=1>`_
+  #. `BreastCancerCells_multiC.tif <https://zenodo.org/record/5864646/files/BreastCancerCells_multiC.tif?download=1>`_
 
 Opening the data
 -------------------
