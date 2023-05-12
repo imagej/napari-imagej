@@ -38,7 +38,7 @@ To run TrackMate, we first need data. TrackMate will only work on image data tha
 Opening Data in ImageJ
 ^^^^^^^^^^^^^^^^^^^^^^
 
-If your data is not yet in napari, it is easiest to open it in ImageJ directly. Press |ImageJ2| in the napari-imagej menu to launch the ImageJ UI, and then locate the  ``File>Open File(s)...`` menu option to open your data. With your data open, you are now ready to `run Trackmate <./trackmate.html#nuclei-tracking>`_.
+If the sample image is not yet in napari, it is easiest to open it in ImageJ directly. Press |ImageJ2| in the napari-imagej menu to launch the ImageJ UI, and then locate the  ``File>Open File(s)...`` menu option to open the image. With the sample image open, you are now ready to `run Trackmate <./trackmate.html#nuclei-tracking>`_.
 
 Transferring Data from napari
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
