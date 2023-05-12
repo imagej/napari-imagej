@@ -11,7 +11,7 @@ from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
 from numpy import ones
-from scyjava import isjava, Priority
+from scyjava import Priority, isjava
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
