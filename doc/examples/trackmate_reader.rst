@@ -23,7 +23,7 @@ The XML can be downloaded using `this link <https://zenodo.org/record/5864646/fi
 Opening the data
 -------------------
 
-Once napari is running, you can open the data within napari through ``File>Open``, or by dragging and dropping the XML file onto the napari window.
+Once napari is running, you can open the data within napari through ``File>Open File(s)...``, or by dragging and dropping the XML file onto the napari window.
 
 Opening tracks can be an expensive operation as we require a running JVM and conversion of the TrackMate ``Model`` into napari ``Layers``, however the reader plugin displayes a progress bar in the ``Activity`` pane.
 
