@@ -8,7 +8,9 @@ If your goal is only to *use* napari-imagej to call ImageJ ecosystem routines in
 Configuring a Mamba environment for development
 -----------------------------------------------
 
-napari-imagej requires Java and Python components, and as such we *highly* recommend contributors use 
+napari-imagej requires Java and Python components, and as such we *highly* recommend contributors use virtual environments 
+to manage their development environment
+
 The first step towards development is installing napari-imagej from source. With Mamba_, this is particularly easy.
 
 .. code-block:: bash
@@ -21,14 +23,18 @@ This virtual environment must then be activated to work on the napari-imagej sou
 
 .. code-block:: bash
 
-    mamba activate napari-imagej
+    mamba activate napari-imagej-dev
 
 Testing
 -------
 
 napari-imagej uses pytest_ to automate testing. By installing the developement environment above, ``pytest`` will come installed.
 
-To test napari-imagej, simply run ``pytest`` on your command line.
+To test napari-imagej, simply run:
+
+.. code-block:: bash
+
+    pytest
 
 Documentation
 -------------
@@ -50,7 +56,7 @@ Formatting
 
 black_, flake8_, and isort_ are used to lint and standardize the napari-imagej source.
 
-To manually format the source, run:
+To manually format the source, run (MacOS/Linux):
 
 .. code-block:: bash
 
@@ -65,7 +71,7 @@ napari-imagej also includes pre-commit_ configuration for those who want it. By 
 Building distribution bundles
 -----------------------------
 
-You can run the following to bundle napari-imagej
+You can run the following to bundle napari-imagej (MacOS/Linux):
 
 .. code-block:: bash
 
