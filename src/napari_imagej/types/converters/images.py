@@ -11,14 +11,14 @@ from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
 from numpy import ones
-from scyjava import Priority
+from scyjava import isjava, Priority
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
 
 
 @java_to_py_converter(
-    predicate=lambda obj: ij().convert().supports(obj, jc.DatasetView),
+    predicate=lambda obj: isjava(obj) and ij().convert().supports(obj, jc.DatasetView),
     priority=Priority.VERY_HIGH + 1,
 )
 def _dataset_view_to_image(image: Any) -> Image:
@@ -37,7 +37,7 @@ def _dataset_view_to_image(image: Any) -> Image:
 
 
 def _can_convert_img_plus(obj: Any):
-    can_convert = ij().convert().supports(obj, jc.ImgPlus)
+    can_convert = isjava(obj) and ij().convert().supports(obj, jc.ImgPlus)
     has_axis = _has_axis(obj)
     return can_convert and has_axis
 
