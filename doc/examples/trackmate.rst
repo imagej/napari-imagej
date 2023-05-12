@@ -18,9 +18,9 @@ TrackMate plugin Setup
 
 By default, napari-imagej does not inlcude Fiji *or* TrackMate. To use the TrackMate plugin, we must first configure napari-imagej to enable TrackMate access.
 
-We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to ``sc.fiji:fiji``.
+We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing the ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_). This example was created using an endpoint of ``sc.fiji:fiji:2.11.0+sc.fiji:TrackMate:7.11.1+org.scijava:scijava-search:2.0.2``.
 
-.. figure:: ../doc-images/napari-imagej_use_fiji.gif
+.. figure:: ../doc-images/napari-imagej_trackmate_config.png
 
     Configuring napari-imagej to use Fiji instead of pure ImageJ2. With Fiji, we gain access to many popular plugins, including TrackMate.
 
