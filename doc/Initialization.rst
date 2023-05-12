@@ -20,6 +20,19 @@ Once napari-imagej is fully initilized, you can see the `Use Cases <./Use_Cases.
 
 **Note**: napari-imagej always downloads the latest version of ImageJ2_, along with classic ImageJ functionality. To launch a *different* ImageJ2 distribution, such as Fiji_, please see the `Configuration <./Configuration.html>`_ page
 
+Starting the ImageJ GUI
+----------------------
+
+While all ImageJ2 functionality should be accessible direclty through the napari-imagej widget, many original ImageJ functions require the ImageJ graphical user interface (GUI) to be visible.
+
+If you try to run one of these commands through the napari-imagej search bar you will receive a message indicating the GUI is required, with an option to show it. Alternatively, at any point you can launch the ImageJ GUI via the GUI button in the napari-imagej menu.
+
+.. figure:: ./doc-images/napari-imagej_settings_gui_button.png
+    
+    The GUI is launched through the ImageJ button on the napari-imagej menu
+
+If your ImageJ GUI button is greyed out, see the `troubleshooting section <./Troubleshooting.html#the-imagej2-gui-button-is-greyed-out>`_.
+
 .. _Fiji: https://imagej.net/software/fiji/
 .. _ImageJ2: https://imagej.net/software/imagej2/
 .. _napari: https://napari.org
