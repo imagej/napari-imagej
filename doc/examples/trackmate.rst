@@ -18,9 +18,9 @@ TrackMate plugin Setup
 
 By default, napari-imagej does not inlcude Fiji *or* TrackMate. To use the TrackMate plugin, we must first configure napari-imagej to enable TrackMate access.
 
-We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to ``sc.fiji:fiji``.
+We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing the ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_). This example was created using an endpoint of ``sc.fiji:fiji:2.11.0+sc.fiji:TrackMate:7.11.1+org.scijava:scijava-search:2.0.2``.
 
-.. figure:: https://media.imagej.net/napari-imagej/use_fiji.gif
+.. figure:: https://media.imagej.net/napari-imagej/trackmate_config.png
 
     Configuring napari-imagej to use Fiji instead of pure ImageJ2. With Fiji, we gain access to many popular plugins, including TrackMate.
 
@@ -45,13 +45,7 @@ Transferring Data from napari
 
 If you already have data open in napari, you can transfer data to the ImageJ UI by utilizing the transfer buttons in the napari-imagej menu to transfer the active (highlighted in blue) napari layer.
 
-<<<<<<< HEAD
-
-..  We might want to consider a better gif here later, ESPECIALLY if we link users to some example data.
 .. figure:: https://media.imagej.net/napari-imagej/trackmate_1.gif
-=======
-.. figure:: https://media.imagej.net/napari-imagej/trackmate_1.gif
->>>>>>> 278ce85 (Replace virus tracking TrackMate example)
 
     Images open in napari can be easily transferred to the ImageJ UI with the transfer buttons.
 
