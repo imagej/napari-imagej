@@ -1,12 +1,19 @@
-Object Tracking with TrackMate
-===========================================
+Tracking viral particles with TrackMate
+=======================================
 
-The `TrackMate`_ plugin for ImageJ2 provides a streamlined interface for object tracking. This use case shows how we can use napari-imagej to run TrackMate on data from napari.
+The `TrackMate`_ plugin for ImageJ2 provides a streamlined interface for object tracking. 
+This use cases demonstrates how you can use napari-imagej to run the TrackMate plugin on 3D data **(X, Y, Time)** and view the results with napari.
 
-Installation
-------------
+For this use case we will analyze live cell wide-field microscopy data of HeLa cells infected with a modified HIV-1 reporter viruses that expresses a Gag-mVenus fusion protein [REF] to fluorescently tag HIV-1 viral particles budding at the cell surface. With TrackMate we can
+track these particles and then view them in both the ImageJ UI and also napari. The data used in this use case is available in the `napari-imagej repository`_ on GitHub.
 
-By default, napari-imagej does not include Fiji *or* TrackMate. To access TrackMate, we must first configure napari-imagej to enable TrackMate access.
+.. image:: https://media.imagej.net/napari-imagej/trackmate_0.gif
+    :align: center
+
+TrackMate plugin Setup
+----------------------
+
+By default, napari-imagej does not inlcude Fiji *or* TrackMate. To use the TrackMate plugin, we must first configure napari-imagej to enable TrackMate access.
 
 We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to ``sc.fiji:fiji``.
 
@@ -19,30 +26,61 @@ We can configure napari-imagej to use a Fiji installation by opening the setting
 Launching TrackMate
 -------------------
 
-Once napari-imagej is running again, open the ImageJ UI from the napari-imagej menu. The ImageJ UI is necessary as TrackMate can only run on data displayed within the ImageJ UI.
+Once napari is running again, activate the napari-imagej plugin by selecting the ``ImageJ2`` plugin from the Plugins menu. Open the image data by dragging and dropping the file into the napari window or via ``File>Open File(s)...`` menu option.
 
-If you want to run TrackMate on data within napari, you can use the data transfer buttons in the napari-imagej menu to move that data into the ImageJ UI.
+TrackMate will only work on image data that are open in the ImageJ UI. You can transfer data from napari to the ImageJ UI by utilizing the transfer buttons in the napari-imagej menu to transfer the active
+image layer. Alternatively the ImageJ UI could be called first by clicking the ImageJ2 button and opening the image data with the ImageJ UI (``File>Open...``). This approach would avoid the need to transfer the data from
+napari to the ImageJ UI.
 
-Additionally, you can open your data through ``File>Open...`` in the ImageJ UI, or by dropping your data on the ImageJ UI.
 
 ..  We might want to consider a better gif here later, ESPECIALLY if we link users to some example data.
-.. figure:: https://media.imagej.net/napari-imagej/gui_and_data_transfer.gif
+.. figure:: https://media.imagej.net/napari-imagej/trackmate_1.gif
 
-    Once the ImageJ UI is visible, data can be transferred between the user interfaces with the data transfer buttons, located in the napari-imagej menu.
+    Images open in napari can be easily transferred to the ImageJ UI with the transfer buttons.
 
-With your data open, you can launch TrackMate through ``Plugins>Tracking>Trackmate``. For information on running TrackMate, we defer to `one of the many guides <https://imagej.net/plugins/trackmate/#documentation-and-tutorials>`_ on the ImageJ Wiki.
+Viral particle tracking
+-----------------------
 
-Transferring Data
------------------
+**Note**: If you transferred your image data from napari to the ImageJ UI with the transfer buttons, than an additional step is required to make the image data compatible with TrackMate.
+If the data was opened with ImageJ then these steps are not necessary.
 
-Once TrackMate Tracks are overlaid onto ImageJ Image windows, they can be transferred back into napari as `Tracks` layers.
+Modifying image dimensions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To transfer the data back into napari, ensure that the TrackMate Image is active and then click the left arrow in the napari-imagej menu:
+Internally, napari does not utilize image dimension labels (*i.e.* ``X``, ``Y``, *etc...*) and instead assumes that the *n*-dimensional arrays (*i.e* images) conform to the `scikit-image dimension order`_ convention.
+ImageJ2 however *does* care about dimension labels and uses them to define certain operations. In this case, ImageJ2 assumes the first two dimensinos are *always* ``X`` and ``Y``. The third dimension in this use case is ``Time``, but
+if we examine the transferred image's properties we will discover that ImageJ2 has confused the ``Time`` dimension with ``Channel``. Here it thinks our data has 51 channels. The reason this happens is because ImageJ2 has no
+information about what the third dimension should be. When an image is opened directly with ImageJ2, the image reader will read the dimension order in the metadata of the image file (if its present) and apply the correct
+dimensions to the image. When ImageJ2 has no information on the dimension order (*e.g.* when we transfer a napari image to ImageJ) then the (``X``, ``Y``, ``C``, ``Z``, ``T``) dimension order is applied. Taking this into account we can see why
+the transferred image in imagej has 51 channels instead of frames.
 
-.. figure:: https://media.imagej.net/napari-imagej/trackmate.gif
+To fix this, simply right click on the open image in the ImageJ UI and select ``Properties...``. In the properties window change the value in the ``Channels`` field to 1 and the ``Frames`` field to 51 (or however many frames your data has).
+Click ``Ok`` to apply the change. TrackMate will now process this image data correctly. Without this change, TrackMate thinks the data has only one time point and 51 channels. Instead of tracking across time it only provides a detection for a single frame
+across 51 channels.
 
-    The `Getting Started <https://imagej.net/plugins/trackmate/tutorials/getting-started>`_ TrackMate tutorial, run in napari-imagej. Once the tracks are visible on the input data, the left arrow button in napari-imagej transfers the tracks into a napari `Tracks` layer.
+.. figure:: https://media.imagej.net/napari-imagej/trackmate_2.gif
 
+Running TrackMate
+^^^^^^^^^^^^^^^^^
 
+Once your image data is open and has the correct dimension order start TrackMate by either searching in the napari-imagej search bar or via the ImageJ UI. Once TrackMate has loaded, walk through the TrackMate tracking options
+to generate tracks. For this use case the following settings were used:
+
+- **Detector**: Log detector
+    - *Estimated object diameter*: 3 pixels
+    - *Quality threshold*: 107.5
+    - *Pre-process with media filter*: No
+    - *sub-pixel localization*: Yes
+- **Initial thresholding**: Select all
+- **Tracker**: Simple LAP tracker
+    - *Linking max distance*: 15.0 pixels
+    - *Gap-closing max distance*: 15.0 pixels
+    - *Gap-closing max frame gap*: 2
+
+Once the tracks and spots have been generated use left napari-imagej transfer button to transfer the image data and the tracks back to napari.
+
+.. figure:: https://media.imagej.net/napari-imagej/trackmate_3.gif
 
 .. _TrackMate: https://imagej.net/plugins/trackmate
+.. _napari-imagej repository: https://media.imagej.net/napari-imagej/sample_1.tif
+.. _scikit-image dimension order: https://scikit-image.org/docs/stable/user_guide/numpy_images.html#a-note-on-the-time-dimension
