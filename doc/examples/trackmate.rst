@@ -76,25 +76,34 @@ Running TrackMate
 
 **Note:** if you haven't started the ImageJ GUI yet, `do so now <../Initialization.html#starting-the-imagej-gui>`_. You *can* search for TrackMate in the napari-imagej search bar, but it will just tell you to open the ImageJ GUI.
 
-Once your image data is open and has the correct dimension order, start TrackMate by either searching in the ImageJ search bar or via the menu selection ``Plugins>Tracking>TrackMate``.
+Once your image data is open and has the correct dimension order and calibration, start TrackMate by either searching in the ImageJ search bar or via the menu selection ``Plugins>Tracking>TrackMate``.
 
-Once TrackMate has loaded, walk
-through the TrackMate tracking options to generate tracks. Using the sample data, we used the following settings for successful tracking:
+TrackMate opens as a wizard to guide you through the tracking process. Steps are advanced with the ``Next`` button, and you can always go back and adjust parameters to tune your tracks. For this example we actually do not need to do all steps of the wizard - just those up through selecting and applying a tracker.
+Using the sample data, we used the following properties of these wizard steps:
 
-- **Detector**: LoG (Laplacian of Gaussian) detector
+- **Target image: trackmate_example_data**
+    - *No changes*
+- **Select a detector**
+    - LoG detector
+- **LoG detector**
     - *Estimated object diameter*: 17 micron
     - *Quality threshold*: 0
-    - *Pre-process with media filter*: Yes
-    - *sub-pixel localization*: Yes
-- **Initial thresholding**: Select all spots
-- **Tracker**: Simple LAP tracker
-    - *Linking max distance*: 25.0 pixels
-    - *Gap-closing max distance*: 15.0 pixels
+    - *Pre-process with media filter*: Yes (checked)
+    - *Sub-pixel localization*: Yes (checked)
+- **Initial thresholding**
+    - Selected all spots
+- **Set filters on spots**
+    - *No changes*
+- **Select a tracker**
+    - Simple LAP tracker
+- **Simple LAP tracker**
+    - *Linking max distance*: 8.3 micron
+    - *Gap-closing max distance*: 5.0 micron
     - *Gap-closing max frame gap*: 2
 
-Once the tracks and spots have been generated use left napari-imagej transfer button to transfer the image data and the tracks back to napari.
+Once the spots and tracks have been generated, you can return to napari and use the left napari-imagej transfer button to transfer the image data and the tracks back to napari.
 
-.. figure:: ../doc-images/napari-imagej_trackmate_3.gif
+.. figure:: ../doc-images/napari-imagej_trackmate_tracks_imported.png
 
     Transferring TrackMate results back to napari converts TrackMate's tracks into napari tracks and TrackMate's spots/detections into napari labels.
 
