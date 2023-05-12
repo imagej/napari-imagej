@@ -70,7 +70,7 @@ Nuclei tracking
 Running TrackMate
 ^^^^^^^^^^^^^^^^^
 
-**Note:** if you haven't started the ImageJ GUI yet, `do so now <../initialization.html#starting_the_imageJ_gui>`_. You *can* search for TrackMate in the napari-imagej search bar, but it will just tell you to open the ImageJ GUI.
+**Note:** if you haven't started the ImageJ GUI yet, `do so now <../Initialization.html#starting-the-imagej-gui>`_. You *can* search for TrackMate in the napari-imagej search bar, but it will just tell you to open the ImageJ GUI.
 
 Once your image data is open and has the correct dimension order, start TrackMate by either searching in the ImageJ search bar or via the menu selection ``Plugins>Tracking>TrackMate``.
 
