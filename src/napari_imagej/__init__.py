@@ -28,8 +28,7 @@ from napari_imagej.utilities.logging import log_debug
 __version__ = "0.0.1.dev0"
 
 default_java_components = [
-    "net.imagej:imagej:2.11.0",
-    "org.scijava:scijava-search:2.0.3",
+    "net.imagej:imagej:2.12.0",
 ]
 
 
