@@ -172,13 +172,7 @@ def _configure_imagej() -> Dict[str, Any]:
     ].get(str)
     init_settings["mode"] = settings["jvm_mode"].get(str)
 
-    add_legacy = settings["include_imagej_legacy"].get(bool)
-    init_settings["add_legacy"] = add_legacy
-
-    # TEMP: Until imagej/napari-imagej#209 is solved.
-    if add_legacy:
-        config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
-
+    init_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
     return init_settings
 
 
