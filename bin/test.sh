@@ -26,7 +26,6 @@ do
   else
     python -m pytest -p no:faulthandler tests
   fi
-  unset $var
   code=$?
   if [ $code -ne 0 ]
   then
@@ -34,6 +33,7 @@ do
     # shell's variables. So we save the failure code to a temporary file.
     echo $code >exitCode.tmp
   fi
+  unset $var
 done
 exitCode=0
 if [ -f exitCode.tmp ]
