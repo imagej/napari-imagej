@@ -6,6 +6,7 @@ from napari_imagej import settings
 from napari_imagej.java import minimum_versions
 
 version_checks = {
+    "io.scif:scifio": "io.scif.SCIFIO",
     "net.imagej:ij": "ij.ImagePlus",
     "net.imagej:imagej": "net.imagej.Main",
     "net.imagej:imagej-common": "net.imagej.Dataset",
