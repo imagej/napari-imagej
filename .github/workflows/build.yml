@@ -63,8 +63,10 @@ jobs:
           python -m pip install -e '.[dev]'
 
       - name: Test napari-imagej
-        run: |
-          bin/test.sh
+        uses: coactions/setup-xvfb@v1
+        with:
+          run:
+            bash bin/test.sh
 
   ensure-clean-code:
     runs-on: ubuntu-latest
