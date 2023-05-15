@@ -93,41 +93,9 @@ def init_ij() -> "jc.ImageJ":
         # Validate PyImageJ
         _validate_imagej()
 
-        # HACK: Avoid FlatLaf with ImageJ2 Swing UI;
-        # it doesn't work for reasons unknown.
-        # NB this SHOULD NOT be moved.
-        # This code must be in place before ANY swing components get created.
-        # Swing components could be created by any Java functionality (e.g. Commands).
-        # Therefore, we can't move it to e.g. the menu file
-        try:
-            ui = _ij.ui().getDefaultUI().getInfo().getName()
-            log_debug(f"Default SciJava UI is {ui}.")
-            if ui == "swing":
-                SwingLookAndFeelService = jimport(
-                    "org.scijava.ui.swing.laf.SwingLookAndFeelService"
-                )
-                laf = _ij.prefs().get(SwingLookAndFeelService, "lookAndFeel")
-                log_debug(f"Preferred Look+Feel is {laf}.")
-                if laf is None or laf.startsWith("FlatLaf"):
-                    UIManager = jimport("javax.swing.UIManager")
-                    fallback_laf = UIManager.getSystemLookAndFeelClassName()
-                    log_debug(
-                        f"Detected FlatLaf. Falling back to {fallback_laf} "
-                        "instead to avoid problems."
-                    )
-                    _ij.prefs().put(
-                        SwingLookAndFeelService, "lookAndFeel", fallback_laf
-                    )
-        except Exception as exc:
-            from scyjava import jstacktrace
-
-            # NB: The hack failed, but no worries, just try to keep going.
-            print(jstacktrace(exc))
-
         java_signals._startup_complete.emit()
     except Exception as e:
         java_signals._startup_error.emit(e)
-
 
 def _update_imagej_settings() -> None:
     """
