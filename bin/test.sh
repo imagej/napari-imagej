@@ -41,4 +41,4 @@ then
   exitCode=$(cat exitCode.tmp)
   rm -f exitCode.tmp
 fi
-exit "$exitCode"
+exit $exitCode
