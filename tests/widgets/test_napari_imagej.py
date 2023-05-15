@@ -13,8 +13,8 @@ from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import (
-    NapariEventSubscriber,
     NapariImageJWidget,
+    ProgressBarListener,
     ResultRunner,
 )
 from napari_imagej.widgets.result_tree import SearchResultTree
@@ -264,7 +264,7 @@ def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, asserter):
 
 def test_event_subscriber_registered(ij, imagej_widget: NapariImageJWidget, asserter):
     """
-    Ensure that a NapariEventSubscriber is registered to capture SciJavaEvents.
+    Ensure that a ProgressBarListener is registered to capture ModuleEvents.
     """
-    subs = subscribers(ij, jc.SciJavaEvent.class_)
-    assert any(isinstance(sub, NapariEventSubscriber) for sub in subs)
+    subs = subscribers(ij, jc.ModuleEvent.class_)
+    assert any(isinstance(sub, ProgressBarListener) for sub in subs)

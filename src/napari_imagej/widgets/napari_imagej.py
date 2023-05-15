@@ -17,7 +17,7 @@ from scyjava import when_jvm_stops
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.events import subscribe
-from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.logging import is_debug, log_debug
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -253,8 +253,9 @@ class WidgetFinalizer(QThread):
         subscribe(ij(), jc.ModuleEvent.class_, progress_listener)
 
     def _finalize_exception_printer(self):
-        subscriber = NapariEventSubscriber()
-        subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
+        if is_debug():
+            subscriber = NapariEventSubscriber()
+            subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
