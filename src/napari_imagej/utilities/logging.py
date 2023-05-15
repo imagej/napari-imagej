@@ -6,9 +6,12 @@ Notable functions included in the module:
         - used for logging in a standardized way
 """
 import logging
+import os
 
 _logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)  # TEMP
+
+if os.environ.get("DEBUG", None):
+    _logger.setLevel(logging.DEBUG)
 
 
 # -- LOGGER API -- #
@@ -27,5 +30,8 @@ def log_debug(msg: str):
     Provides a debug message to the logger, prefaced by 'napari-imagej: '
     :param msg: The message to output
     """
-    debug_msg = "napari-imagej: " + msg
-    _logger.debug(debug_msg)
+    _logger.debug("napari-imagej: %s", msg)
+
+
+def is_debug():
+    return _logger.isEnabledFor(logging.DEBUG)
