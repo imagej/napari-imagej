@@ -1,6 +1,10 @@
 include LICENSE
 include README.md
 include requirements.txt
+# Include napari plugin yaml
+include src/napari_imagej/napari.yml
+# Include resources
+recursive-include src/napari_imagej/resources *.*
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
