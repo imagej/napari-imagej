@@ -17,18 +17,25 @@ The script for Puncta Segmentation is written below:
 .. code-block:: python
     :caption: Puncta_Segmentation.py
 
-    #@ Img ds_src
-    #@ ConvertService convert
-    #@ DatasetService ds
-    #@ OpService ops
-    #@output org.scijava.table.Table sci_table
+    #@Img ds_src
+    #@ConvertService convert
+    #@DatasetService ds
+    #@OpService ops
+    #@OUTPUT org.scijava.table.Table sci_table
 
-    from ij import IJ, ImagePlus
+    from ij import IJ, ImagePlus, Prefs
     from ij.measure import ResultsTable
     from ij.plugin.filter import ParticleAnalyzer
     from net.imglib2.algorithm.neighborhood import HyperSphereShape
     from net.imglib2.img.display.imagej import ImageJFunctions
     from org.scijava.table import Table
+
+    # save the ImageJ settings since we need to ensure black background is checked
+    blackBackground = Prefs.blackBackground
+
+    # if using a dataset with a light background and dark data, you can comment this line out
+    # otherwise, the background will be measured instead of the points
+    Prefs.blackBackground = True
 
     # convert image to 32-bit
     ds_src = ops.convert().int32(ds_src)
@@ -61,6 +68,9 @@ The script for Puncta Segmentation is written below:
 
     # convert results table -> scijava table -> pandas dataframe
     sci_table = convert.convert(rt, Table)
+
+    # restore the settings to their original values
+    Prefs.blackBackground = blackBackground
 
 
 Note that the code is entirely the same, with the following exceptions:
