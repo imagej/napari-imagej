@@ -258,7 +258,7 @@ class SettingsButton(QPushButton):
 
     def _update_settings(self):
         """
-        Spawns a popup allowing the user to configure napari-imagej settings.
+        Spawn a popup allowing the user to configure napari-imagej settings.
         """
         args = {}
         # Build values map by iterating over all default settings.
@@ -299,7 +299,8 @@ class SettingsButton(QPushButton):
 
     def _apply_setting_param(self, setting: str, value: Any) -> bool:
         """
-        Sets setting to value, and returns true iff value is different from before
+        Set the given setting to the specified value,
+        and return true iff value is different from before.
         """
         # First, any postprocessing
         if isinstance(value, Path):
@@ -330,8 +331,8 @@ class SettingsButton(QPushButton):
 
     def _notify_settings_change(self):
         """
-        Notifies (using a popup) that a restart is required for settings changes
-        to take effect
+        Notify (using a popup) that a restart is required for settings changes
+        to take effect.
         """
         RichTextPopup(
             rich_message="Please restart napari for napari-imagej settings "
@@ -340,9 +341,7 @@ class SettingsButton(QPushButton):
         )
 
     def _write_settings(self):
-        """
-        Writes settings to a local configuration YAML file
-        """
+        """Write settings to local configuration file."""
         output = settings.dump()
         with open(settings.user_config_path(), "w") as f:
             f.write(output)
