@@ -32,7 +32,7 @@ minimum_versions = {
     "net.imagej:imagej-ops": "0.49.0",
     "net.imglib2:imglib2-unsafe": "1.0.0",
     "net.imglib2:imglib2-imglyb": "1.1.0",
-    "org.scijava:scijava-common": "2.91.0",
+    "org.scijava:scijava-common": "2.93.0",
     "org.scijava:scijava-search": "2.0.2",
     "sc.fiji:TrackMate": "7.11.0",
 }
@@ -214,6 +214,7 @@ class ImageJInitializer(QThread):
         add_legacy = settings["include_imagej_legacy"].get(bool)
         init_settings["add_legacy"] = add_legacy
 
+        # TEMP: Until imagej/napari-imagej#209 is solved.
         if add_legacy:
             config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
 
@@ -487,6 +488,10 @@ class JavaClasses(object):
     @blocking_import
     def ModuleCanceledEvent(self):
         return "org.scijava.module.event.ModuleCanceledEvent"
+
+    @blocking_import
+    def ModuleErroredEvent(self):
+        return "org.scijava.module.event.ModuleErroredEvent"
 
     @blocking_import
     def ModuleExecutedEvent(self):

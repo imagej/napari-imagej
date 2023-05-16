@@ -16,7 +16,8 @@ from scyjava import when_jvm_stops
 
 from napari_imagej.java import ij, init_ij_async, java_signals, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
-from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.events import subscribe
+from napari_imagej.utilities.logging import is_debug, log_debug
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -174,8 +175,13 @@ class NapariImageJWidget(QWidget):
         ):
             pm.update_progress(module)
         # Close progress if we see one of these
-        if isinstance(event, (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent)):
+        if isinstance(
+            event,
+            (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent, jc.ModuleErroredEvent),
+        ):
             pm.close(module)
+        if isinstance(event, jc.ModuleErroredEvent):
+            raise event.getException()
 
 
 class WidgetFinalizer(QThread):
@@ -243,29 +249,13 @@ class WidgetFinalizer(QThread):
 
     def _finalize_info_bar(self):
         self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")
-        # HACK: Tap into the EventBus to obtain SciJava Module debug info.
-        # See https://github.com/scijava/scijava-common/issues/452
-        event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
-        event_bus_field.setAccessible(True)
-        event_bus = event_bus_field.get(ij().event())
-
         progress_listener = ProgressBarListener(self.widget.progress_handler)
-        # NB We need to retain a reference to this object or GC will delete it
-        ij().object().addObject(progress_listener)
-        # Subscribe to all ModuleEvents
-        event_bus.subscribe(jc.ModuleEvent.class_, progress_listener)
+        subscribe(ij(), jc.ModuleEvent.class_, progress_listener)
 
     def _finalize_exception_printer(self):
-        # HACK: Tap into the EventBus to obtain SciJava Module debug info.
-        # See https://github.com/scijava/scijava-common/issues/452
-        event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
-        event_bus_field.setAccessible(True)
-        event_bus = event_bus_field.get(ij().event())
-
-        subscriber = NapariEventSubscriber()
-        # NB We need to retain a reference to this object or GC will delete it
-        ij().object().addObject(subscriber)
-        event_bus.subscribe(jc.SciJavaEvent.class_, subscriber)
+        if is_debug():
+            subscriber = NapariEventSubscriber()
+            subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
