@@ -17,11 +17,11 @@ The script for Puncta Segmentation is written below:
 .. code-block:: python
     :caption: Puncta_Segmentation.py
 
-    #@Img ds_src
-    #@ConvertService convert
-    #@DatasetService ds
-    #@OpService ops
-    #@OUTPUT org.scijava.table.Table sci_table
+    #@ Img ds_src
+    #@ ConvertService convert
+    #@ DatasetService ds
+    #@ OpService ops
+    #@output org.scijava.table.Table sci_table
 
     from ij import IJ, ImagePlus
     from ij.measure import ResultsTable
@@ -65,7 +65,7 @@ The script for Puncta Segmentation is written below:
 
 Note that the code is entirely the same, with the following exceptions:
 
-#. Calls to ImageJ Services using the ImageJ Gateway (e.g. ``ij.convert``) are replaced with Scripting Parameters (e.g. ``#@ConvertService convert``)
+#. Calls to ImageJ Services using the ImageJ Gateway (e.g. ``ij.convert``) are replaced with Scripting Parameters (e.g. ``#@ ConvertService convert``)
 #. Java Classes are imported using the ``from...import`` syntax, instead of using ``sj.jimport``.
 #. Calls to ``ij.py.show`` are removed - automating the process means we don't want to see these.
 #. The output is a ``org.scijava.table.Table``, **not** a pandas ``DataFrame``. We don't need to perform this conversion in napari-imagej; napari-imagej takes care of that for us!

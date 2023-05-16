@@ -368,7 +368,7 @@ c = 1
 """
 
 script_one_layer_zero_widget: str = """
-#@OUTPUT Img d
+#@output Img d
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -376,8 +376,8 @@ d = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_two_layer_zero_widget: str = """
-#@OUTPUT Img d
-#@OUTPUT Img e
+#@output Img d
+#@output Img e
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -386,13 +386,13 @@ e = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_zero_layer_one_widget: str = """
-#@OUTPUT Long a
+#@output Long a
 a = 4
 """
 
 script_one_layer_one_widget: str = """
-#@OUTPUT Long a
-#@OUTPUT Img d
+#@output Long a
+#@output Img d
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -401,9 +401,9 @@ d = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_two_layer_one_widget: str = """
-#@OUTPUT Long a
-#@OUTPUT Img d
-#@OUTPUT Img e
+#@output Long a
+#@output Img d
+#@output Img e
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -413,16 +413,16 @@ e = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_zero_layer_two_widget: str = """
-#@OUTPUT Long a
-#@OUTPUT Long b
+#@output Long a
+#@output Long b
 a = 4
 b = 1
 """
 
 script_one_layer_two_widget: str = """
-#@OUTPUT Long a
-#@OUTPUT Long b
-#@OUTPUT Img d
+#@output Long a
+#@output Long b
+#@output Img d
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -432,10 +432,10 @@ d = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_two_layer_two_widget: str = """
-#@OUTPUT Long a
-#@OUTPUT Long b
-#@OUTPUT Img d
-#@OUTPUT Img e
+#@output Long a
+#@output Long b
+#@output Img d
+#@output Img e
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -446,7 +446,7 @@ e = ArrayImgs.unsignedBytes(10, 10)
 """
 
 script_both_but_optional: str = """
-#@BOTH Img(required=false) d
+#@both Img(required=false) d
 
 from net.imglib2.img.array import ArrayImgs
 
@@ -455,7 +455,7 @@ if d is None:
 """
 
 script_both_but_required: str = """
-#@BOTH Img(required=true) d
+#@both Img(required=true) d
 
 from net.imglib2.img.array import ArrayImgs
 """

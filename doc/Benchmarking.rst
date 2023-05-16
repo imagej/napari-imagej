@@ -66,9 +66,9 @@ Unfortunately, the data is stored within separate files for each focal plane and
     .. code-block:: python
         :caption: convert_to_float.py
 
-        #@Img input
-        #@OUTPUT converted
-        #@OpService ops
+        #@ Img input
+        #@output converted
+        #@ OpService ops
 
         converted = ops.convert().float64(input)
     
@@ -94,9 +94,9 @@ To benchmark a Gaussian Blur, we use the following Python SciJava script:
 .. code-block:: python
    :caption: gaussian_napari_imagej.py
 
-    #@Img input
-    #@Img output
-    #@Double sigma
+    #@ Img input
+    #@ Img output
+    #@ Double sigma
 
     from net.imglib2.algorithm.gauss3 import Gauss3
     from net.imglib2.view import Views
@@ -138,9 +138,9 @@ Unfortunately, Fiji does not provide us with execution times, so the SciJava scr
 .. code-block:: python
     :caption: gaussian_fiji.py
 
-    #@Img input
-    #@Img output
-    #@Double sigma
+    #@ Img input
+    #@ Img output
+    #@ Double sigma
 
     from java.lang import System
     from net.imglib2.algorithm.gauss3 import Gauss3
