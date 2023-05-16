@@ -17,6 +17,7 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
 from napari_imagej.resources import resource_path
+from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
     FromIJButton,
@@ -524,17 +525,8 @@ def test_UIShownEvent_listener_registered(ij):
     """
     Ensure that a UI is registered to capture SciJavaEvents.
     """
-    # HACK: Tap into the EventBus to obtain SciJava Module debug info.
-    # See https://github.com/scijava/scijava-common/issues/452
-    event_bus_field = ij.event().getClass().getDeclaredField("eventBus")
-    event_bus_field.setAccessible(True)
-    event_bus = event_bus_field.get(ij.event())
-
-    subscribers = event_bus.getSubscribers(jc.UIShownEvent.class_)
-    for subscriber in subscribers:
-        if isinstance(subscriber, UIShownListener):
-            return True
-    return False
+    subs = subscribers(ij, jc.UIShownEvent.class_)
+    assert any(isinstance(sub, UIShownListener) for sub in subs)
 
 
 @pytest.fixture

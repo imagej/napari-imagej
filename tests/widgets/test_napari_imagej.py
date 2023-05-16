@@ -9,11 +9,12 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
 from napari_imagej.java import ij, jc
+from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import (
-    NapariEventSubscriber,
     NapariImageJWidget,
+    ProgressBarListener,
     ResultRunner,
 )
 from napari_imagej.widgets.result_tree import SearchResultTree
@@ -261,18 +262,9 @@ def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, asserter):
     asserter(check_for_new_widget)
 
 
-def test_event_subscriber_registered(imagej_widget: NapariImageJWidget, asserter):
+def test_event_subscriber_registered(ij, imagej_widget: NapariImageJWidget, asserter):
     """
-    Ensure that a NapariEventSubscriber is registered to capture SciJavaEvents.
+    Ensure that a ProgressBarListener is registered to capture ModuleEvents.
     """
-    # HACK: Tap into the EventBus to obtain SciJava Module debug info.
-    # See https://github.com/scijava/scijava-common/issues/452
-    event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
-    event_bus_field.setAccessible(True)
-    event_bus = event_bus_field.get(ij().event())
-
-    subscribers = event_bus.getSubscribers(jc.SciJavaEvent.class_)
-    for subscriber in subscribers:
-        if isinstance(subscriber, NapariEventSubscriber):
-            return True
-    return False
+    subs = subscribers(ij, jc.ModuleEvent.class_)
+    assert any(isinstance(sub, ProgressBarListener) for sub in subs)

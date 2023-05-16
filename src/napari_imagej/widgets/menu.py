@@ -19,6 +19,7 @@ from scyjava import is_arraylike
 from napari_imagej import settings
 from napari_imagej.java import ij, java_signals, jc
 from napari_imagej.resources import resource_path
+from napari_imagej.utilities.events import subscribe
 
 
 class NapariImageJMenu(QWidget):
@@ -60,16 +61,7 @@ class NapariImageJMenu(QWidget):
             self.gui_button.clicked.connect(show_ui)
 
         def post_init_setup():
-            # HACK: Tap into the EventBus to obtain SciJava Module debug info.
-            # See https://github.com/scijava/scijava-common/issues/452
-            event_bus_field = ij().event().getClass().getDeclaredField("eventBus")
-            event_bus_field.setAccessible(True)
-            event_bus = event_bus_field.get(ij().event())
-
-            subscriber = UIShownListener()
-            # NB We need to retain a reference to this object or GC will delete it
-            ij().object().addObject(subscriber)
-            event_bus.subscribe(jc.UIShownEvent.class_, subscriber)
+            subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
 
         java_signals.when_ij_ready(post_init_setup)
 

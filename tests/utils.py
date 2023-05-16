@@ -66,6 +66,10 @@ class JavaClassesTest(JavaClasses):
         return "java.awt.Frame"
 
     @JavaClasses.blocking_import
+    def IllegalArgumentException(self):
+        return "java.lang.IllegalArgumentException"
+
+    @JavaClasses.blocking_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
 
