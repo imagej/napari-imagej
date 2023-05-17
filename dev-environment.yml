@@ -49,6 +49,7 @@ dependencies:
   - pytest-env
   - pytest-qt
   - sphinx
+  - sphinx-copybutton
   - sphinx_rtd_theme
   - qtpy
   # Project from source

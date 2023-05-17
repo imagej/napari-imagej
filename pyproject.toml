@@ -67,6 +67,7 @@ dev = [
     "pytest-env",
     "pytest-qt",
     "sphinx",
+    "sphinx-copybutton",
     "sphinx-rtd-theme",
     "qtpy",
     "validate-pyproject[all]",
