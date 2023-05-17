@@ -2,6 +2,7 @@
 A module containing pytest configuration and globally-used fixtures
 """
 import os
+import sys
 from typing import Callable, Generator
 
 import pytest
@@ -65,7 +66,15 @@ def ij():
     """Fixture providing the ImageJ2 Gateway"""
     from napari_imagej.java import ij, init_ij
 
-    init_ij()
+    # BIG HACK: We run into the issue described in
+    # https://github.com/imagej/pyimagej/issues/197
+    # if we don't add this.
+    if sys.platform == "darwin":
+        viewer = Viewer()
+        init_ij()
+        viewer.close()
+    else:
+        init_ij()
 
     yield ij()
 
