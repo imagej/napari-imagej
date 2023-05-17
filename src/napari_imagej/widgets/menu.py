@@ -3,7 +3,7 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Iterable, Optional
 
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -40,7 +40,7 @@ class NapariImageJMenu(QWidget):
         self.settings_button: SettingsButton = SettingsButton(viewer)
         self.layout().addWidget(self.settings_button)
 
-        if settings["jvm_mode"].get(str) == "headless":
+        if settings.jvm_mode == "headless":
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
             # NB We need to call ij().ui().showUI() on the GUI thread.
@@ -77,7 +77,7 @@ class ToIJButton(QPushButton):
 
         icon = QColoredSVGIcon.from_resources("long_right_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        if settings["use_active_layer"].get():
+        if settings.use_active_layer:
             self.setToolTip("Export active napari layer to ImageJ2")
             self.clicked.connect(self.send_active_layer)
         else:
@@ -129,7 +129,7 @@ class FromIJButton(QPushButton):
 
         icon = QColoredSVGIcon.from_resources("long_left_arrow")
         self.setIcon(icon.colored(theme=viewer.theme))
-        if settings["use_active_layer"].get():
+        if settings.use_active_layer:
             self.setToolTip("Import active ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_active_layer)
         else:
@@ -221,7 +221,7 @@ class GUIButton(QPushButton):
         self.setEnabled(False)
 
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
-        if settings["jvm_mode"].get(str) == "headless":
+        if settings.jvm_mode == "headless":
             self.setToolTip("ImageJ2 GUI unavailable!")
         else:
             self.setToolTip("Display ImageJ2 GUI (loading)")
@@ -260,74 +260,25 @@ class SettingsButton(QPushButton):
         """
         Spawn a popup allowing the user to configure napari-imagej settings.
         """
-        args = {}
         # Build values map by iterating over all default settings.
-        # NB grabbing settings and defaults has two benefits. Firstly, it
-        # ensures that settings ALWAYS appear in the order described in
-        # config-default.yaml. Secondly, it ensures that tampering with any user
-        # setting files does not add settings to this popup that don't exist in
-        # the default file
-        default_source = next((s for s in settings.sources if s.default), None)
-        if not default_source:
-            raise ValueError(
-                "napari-imagej settings does not contain a default source!"
-            )
-        for setting in default_source:
-            self._register_setting_param(args, setting)
+        args = {k: dict(value=getattr(settings, k)) for k in settings.defaults}
+        # Setting specific additions
+        args["imagej_base_directory"] = {
+            "value": Path(settings.imagej_base_directory),
+            "annotation": Path,
+            "options": {"mode": "d"},
+        }
+        args["jvm_mode"]["options"] = {"choices": ["headless", "interactive"]}
+
         # Use magicgui.request_values to allow user to configure settings
         choices = request_values(title="napari-imagej Settings", values=args)
-        if choices is not None:
-            # Update settings with user selections
-            any_changed = False
-            for setting, value in choices.items():
-                any_changed |= self._apply_setting_param(setting, value)
+        if not choices:
+            # Canceled
+            return
 
-            if any_changed:
-                self.setting_change.emit()
-
-    def _register_setting_param(self, args: Dict[Any, Any], setting: str):
-        # General: Set name, and current value as default
-        args[setting] = dict(value=settings[setting].get())
-
-        # Setting specific additions
-        if setting == "jvm_mode":
-            args[setting]["options"] = dict(choices=["headless", "interactive"])
-        if setting == "imagej_base_directory":
-            args[setting]["annotation"] = Path
-            args[setting]["value"] = settings[setting].as_path()
-            args[setting]["options"] = dict(mode="d")
-
-    def _apply_setting_param(self, setting: str, value: Any) -> bool:
-        """
-        Set the given setting to the specified value,
-        and return true iff value is different from before.
-        """
-        # First, any postprocessing
-        if isinstance(value, Path):
-            value = str(value)
-
-        # Then, validate the new value
-        try:
-            settings._validate_setting(setting, value)
-        except Exception as exc:
-            # New value incompatible; report it to the user
-            RichTextPopup(
-                rich_message=(
-                    "<b>Ignoring selection for setting <font face='courier'>"
-                    f"{setting}"
-                    f"</font>:</b><p>{exc}"
-                ),
-                exec=True,
-            )
-            return False
-
-        # Record the old value
-        original = settings[setting].get()
-        # Set the new value
-        settings[setting] = value
-
-        # Report a change in value
-        return original != value
+        # Update settings with user selections
+        if settings.update(**choices):
+            self.setting_change.emit()
 
     def _notify_settings_change(self):
         """
@@ -342,9 +293,7 @@ class SettingsButton(QPushButton):
 
     def _write_settings(self):
         """Write settings to local configuration file."""
-        output = settings.dump()
-        with open(settings.user_config_path(), "w") as f:
-            f.write(output)
+        settings.save()
 
 
 class RichTextPopup(QMessageBox):

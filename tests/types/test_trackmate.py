@@ -29,8 +29,7 @@ class TestTrackMateClasses(TrackMateClasses):
 jc = TestTrackMateClasses()
 
 
-TESTING_LEGACY: bool = settings["include_imagej_legacy"].get(bool)
-endpoint = settings["imagej_directory_or_endpoint"].get(str)
+TESTING_LEGACY: bool = settings.include_imagej_legacy
 
 
 @pytest.fixture

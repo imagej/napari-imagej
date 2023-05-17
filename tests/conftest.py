@@ -33,33 +33,7 @@ def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
 @pytest.fixture(autouse=True)
 def install_default_settings():
     """Fixture ensuring any changes made earlier to the settings are reversed"""
-    napari_imagej.settings.clear()
-    napari_imagej.settings.read()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def preserve_user_settings():
-    """Fixture allowing the saving settings without disrupting user's settings"""
-    # Obtain prior user settings
-    user_path = napari_imagej.settings.user_config_path()
-
-    if os.path.exists(user_path):
-        # If they existed, read in the settings and delete the file
-        with open(user_path, "r") as f:
-            existing_settings = f.read()
-        os.remove(user_path)
-
-        yield
-
-        # After the test, restore the file
-        with open(user_path, "w") as f:
-            f.write(existing_settings)
-    else:
-        yield
-
-        # After the test, remove the file
-        if os.path.exists(user_path):
-            os.remove(user_path)
+    napari_imagej.settings.load(False)
 
 
 @pytest.fixture(scope="session")
@@ -108,7 +82,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce active layer selection
-    napari_imagej.settings["use_active_layer"] = True
+    napari_imagej.settings.use_active_layer = True
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -133,7 +107,7 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce user layer selection via Dialog
-    napari_imagej.settings["use_active_layer"] = False
+    napari_imagej.settings.use_active_layer = False
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)

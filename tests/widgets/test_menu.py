@@ -7,7 +7,6 @@ from typing import Callable
 
 import numpy
 import pytest
-import yaml
 from napari import Viewer
 from napari.layers import Image, Layer
 from napari.viewer import current_viewer
@@ -31,11 +30,11 @@ from tests.utils import DummySearchResult, jc
 
 # Determine whether we are testing headlessly
 def running_headless():
-    return settings["jvm_mode"].get(str) == "headless"
+    return settings.jvm_mode == "headless"
 
 
 def running_legacy():
-    return settings["include_imagej_legacy"].get(bool)
+    return settings.include_imagej_legacy
 
 
 @pytest.fixture(autouse=True)
@@ -329,14 +328,14 @@ def test_settings_no_change(gui_widget: NapariImageJMenu):
     button: SettingsButton = gui_widget.settings_button
 
     # First record the old settings
-    old_yaml = [(k, v.get()) for k, v in settings.items()]
+    old_settings = settings.asdict()
 
     # Then update the settings, but select all defaults
     # NB settings handling is done by napari_mocker above
     button._update_settings()
     # Then record the new settings and compare
-    new_yaml = [(k, v.get()) for k, v in settings.items()]
-    assert new_yaml == old_yaml
+    new_settings = settings.asdict()
+    assert new_settings == old_settings
 
 
 def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
@@ -346,8 +345,7 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    key = "imagej_directory_or_endpoint"
-    old_value = settings[key]
+    old_value = settings.imagej_directory_or_endpoint
     new_value = "foo"
 
     assert old_value != new_value
@@ -371,16 +369,12 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
 
     # Handle the popup from button._update_settings
     expected_text = (
-        "Please restart napari for napari-imagej settings " "changes to take effect!"
+        "Please restart napari for napari-imagej settings changes to take effect!"
     )
     popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
+    assert settings.imagej_directory_or_endpoint == new_value
 
     menu.request_values = oldfunc
-
-    # Assert a change in the settings
-    assert settings[key].get() == new_value
-    with open(settings.user_config_path(), "r") as stream:
-        assert yaml.safe_load(stream)[key] == new_value
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="Only applies testing on MacOS")
@@ -391,7 +385,7 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    assert settings["jvm_mode"].get() == "headless"
+    assert settings.jvm_mode == "headless"
 
     def newfunc(values={}, title="", **kwargs):
         results = {}
@@ -424,7 +418,7 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
     menu.request_values = oldfunc
 
     # Assert no change in the settings
-    assert settings["jvm_mode"].get() == "headless"
+    assert settings.jvm_mode == "headless"
 
 
 def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
