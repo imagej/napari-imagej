@@ -166,26 +166,21 @@ def update(use_dv=True, **kwargs) -> bool:
     return _copy_settings(src_get=lambda k, dv: kwargs.get(k, dv if use_dv else None))
 
 
-def validate():
-    """
-    Validate settings.
-    """
-    # Validate jvm_mode.
-    global jvm_mode
-    if jvm_mode not in ("interactive", "headless"):
-        warn(f"Invalid JVM mode '{jvm_mode}'; defaulting to headless mode.")
-        jvm_mode = "headless"
-    if jvm_mode == "interactive" and sys.platform == "darwin":
-        raise ValueError(
-            "ImageJ2 must be run headlessly on MacOS. <p>Visit "
-            '<a href="https://pyimagej.readthedocs.io/en/latest/'
-            'Initialization.html#interactive-mode">this site</a> '
-            "for more information."
-        )
+# -- Validation --
 
-    # Ensure base directory is valid.
-    if not os.path.exists(os.path.abspath(imagej_base_directory)):
-        raise ValueError("ImageJ base directory must be a valid path.")
+
+def validate(name: str, new_value: Any) -> Any:
+    """
+    Validate a setting key-value pair.
+    """
+    return validators[name](new_value) if name in validators else new_value
+
+
+def validate_imagej_base_directory(new_value: Any) -> Any:
+    if not os.path.isdir(os.path.abspath(new_value)):
+        raise ValueError("ImageJ base directory must be a valid directory.")
+
+    return new_value
 
 
 # -- Helper functions --
@@ -248,11 +243,16 @@ def _copy_settings(
             new_value = vtype(new_value)
         old_value = dest_get(k)
         if old_value != new_value and new_value is not None:
-            dest_set(k, new_value)
+            validated = validate(k, new_value)
+            dest_set(k, validated)
             any_changed = True
     return any_changed
 
 
 # -- Initialization logic --
+
+validators = {
+    "imagej_base_directory": validate_imagej_base_directory,
+}
 
 load()
