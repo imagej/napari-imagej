@@ -1,13 +1,13 @@
 Puncta Segmentation with SciJava Scripts (headless)
 ===================================================
 
-Using `SciJava Scripts`_ we can automate the execution of sequential calls to ImageJ ecosystem functionality. Scripts written in any of SciJava's `supported scripting languages <https://imagej.net/scripting/#supported-languages>`_ will be automatically discovered and exposed by napari-imagej within the napari-imagej searching interface.
+Using `SciJava Scripts`_ we can automate the execution of sequential calls to ImageJ ecosystem functionality. Scripts written in any of SciJava's `supported scripting languages <https://imagej.net/scripting/#supported-languages>`_ will be automatically discovered and searchable within napari-imagej, just like other commands.
 
 *Notably*, all SciJava Scripts can be run headlessly; since SciJava Scripts can headlessly call classic ImageJ functionality, **SciJava Scripts allow running classic ImageJ functionality without the ImageJ GUI**.
 
-In this example, we will transform PyImageJ's `Puncta Segmentation`_ example into a SciJava Script. This SciJava Script can then be executed in napari-imagej **or** in ImageJ2, increasing portability!
+For this example, we translated PyImageJ's `Puncta Segmentation`_ into a SciJava Script. This SciJava Script can be executed in napari-imagej **or** in ImageJ2, increasing portability!
 
-For more information on the use case itself, please visit the PyImageJ Puncta Segmentation example.
+For more information on the use case itself, please see the original PyImageJ Puncta Segmentation example.
 
 The Code
 --------
@@ -73,7 +73,7 @@ The script for Puncta Segmentation is written below:
     Prefs.blackBackground = blackBackground
 
 
-Note that the code is entirely the same, with the following exceptions:
+Note that the code is mostly the same, with the following exceptions:
 
 #. Calls to ImageJ Services using the ImageJ Gateway (e.g. ``ij.convert``) are replaced with Scripting Parameters (e.g. ``#@ ConvertService convert``)
 #. Java Classes are imported using the ``from...import`` syntax, instead of using ``sj.jimport``.
@@ -83,29 +83,31 @@ Note that the code is entirely the same, with the following exceptions:
 Installing the script
 ---------------------
 
-The rules for `adding SciJava Scripts to ImageJ2 <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_ also apply when adding scripts to napari-imagej, **with one exception**:
+Copy the code block above and paste it into a new file called ``Puncta_Segmentation.py``. As for where to put that file, the rules for `adding SciJava Scripts to ImageJ2 <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_ also apply when adding scripts to napari-imagej if you are using a local ImageJ2 (e.g. a subdirectory of ``Fiji.app/scripts/``).
 
-When napari-imagej is not provided with a local ImageJ2 instance, it must `download one implicitly <../Configuration.html#imagej-directory-or-endpoint>`_. This ImageJ2 can be tucked away, so napari-imagej will *by default* look within **the current directory** for a ``scripts`` subdirectory. This behavior can be changed by altering the `imagej base directory <../Configuration.html#imagej-base-directory>`_ in napari-imagej's settings. 
+**However**, when napari-imagej is *not* provided with a local ImageJ2 instance, it must `download one <../Configuration.html#imagej-directory-or-endpoint>`_. This ImageJ2 can be tucked away, so napari-imagej will *by default* look within the **ImageJ base directory** for a ``scripts`` subdirectory, which must then have further subdirectories that contain your scripts. This behavior can be controlled via the `imagej base directory <../Configuration.html#imagej-base-directory>`_ in napari-imagej's settings. 
 
-*Without changing these settings*, placing ``Puncta_Segmentation.py`` in ``./scripts`` allows napari-imagej to discover the script.
+*Without changing this setting*, placing ``Puncta_Segmentation.py`` in a subdirectory of ``<path-to-napari-imagej-git-repo>/scripts`` allows napari-imagej to discover the script.
 
-*If* ``imagej base directory`` *has been changed*, instead place the script in ``<imagej base directory>/scripts``.
+*If the imagej base directory has been changed*, instead place the script in a subdirectory of ``<imagej base directory>/scripts``.
 
 
 Running the script
 ------------------
 
-With napari-imagej running, the first step is to open the input data. The sample images used in the original PyImageJ document are available on the PyImageJ GitHub repository `here <https://github.com/imagej/pyimagej/blob/main/doc/sample-data/test_still.tif>`_
+**Note**: this example was tested running with a `imagej directory or endpoint <../Configuration.html#imagej-directory-or-endpoint>`_ of ``sc.fiji:fiji:2.21.0``.
 
-The second step is to find our script within napari-imagej. Discovered SciJava Scripts can be found under *their* `filename <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_; we can find ``Puncta_Segmemtation.py`` by searching "puncta segmentation"
+With napari-imagej running, the first step is to open the input data. We'll download the same sample data as the original PyImageJ example, `available here <https://github.com/imagej/pyimagej/blob/main/doc/sample-data/test_still.tif>`_.
+
+The second step is to find our script within napari-imagej. Discovered SciJava Scripts can be found under their `filename <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_; so we search for "puncta segmentation"
 
 .. figure:: ../doc-images/napari-imagej_puncta_search.png
     
     ``Puncta_Segmentation.py`` exposed within the napari-imagej searchbar as ``PunctaSegmentation``.
 
-Double-clicking on ``PunctaSegmentation`` will bring a modal dialog, prompting the user for input data. The dialog also offers the user to spawn the resulting table in a new window, which may be preferred for large result tables.
+Double-clicking on ``PunctaSegmentation`` will bring a modal dialog, prompting the user for input data. The dialog also offers to display the resulting table in a new window, which may be preferred for large result tables.
 
-Once the "OK" button is clicked, the resuling table is displayed in a new napari widget:
+Once the "OK" button is clicked, the resuling table is displayed in a new window, or a new napari widget, based on the option you selected above:
 
 .. figure:: ../doc-images/napari-imagej_puncta_results.png
 
