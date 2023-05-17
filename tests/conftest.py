@@ -8,7 +8,6 @@ import pytest
 from napari import Viewer
 
 import napari_imagej
-from napari_imagej.java import init_ij
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -61,17 +60,12 @@ def preserve_user_settings():
             os.remove(user_path)
 
 
-@pytest.fixture(autouse=True)
-def launch_imagej(ij):
-    """Fixture ensuring that ImageJ is running before any tests run"""
-    init_ij()
-    yield
-
-
 @pytest.fixture(scope="session")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
-    from napari_imagej.java import ij
+    from napari_imagej.java import ij, init_ij
+
+    init_ij()
 
     yield ij()
 

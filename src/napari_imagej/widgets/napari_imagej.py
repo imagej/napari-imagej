@@ -14,7 +14,7 @@ from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
-from napari_imagej.java import ij, init_ij_async, java_signals, jc
+from napari_imagej.java import ij, init_ij, java_signals, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.events import subscribe
 from napari_imagej.utilities.logging import is_debug, log_debug
@@ -28,6 +28,16 @@ from napari_imagej.widgets.result_tree import (
     SearchResultTreeItem,
 )
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
+
+
+# Start constructing the ImageJ instance
+class IJInitializer(QThread):
+    def run(self):
+        init_ij()
+
+
+# NB: Instance needed here to prevent GC
+initializer = IJInitializer()
 
 
 class NapariImageJWidget(QWidget):
@@ -128,8 +138,9 @@ class NapariImageJWidget(QWidget):
         # Put the focus on the search bar
         self.search.bar.setFocus()
 
-        # Start constructing the ImageJ instance
-        init_ij_async()
+        initializer.start()
+
+        # init_ij_async()
 
     def wait_for_finalization(self):
         self.ij_post_init_setup.wait()
