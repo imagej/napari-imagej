@@ -10,7 +10,7 @@ TrackMate XML
 
 TrackMate can store generated models in XML. For information on obtaining an XML file from generated Tracks, please see the TrackMate `documentation <https://imagej.net/plugins/trackmate/index#online-tutorials>`_.
 
-Obtaining Sample data
+Obtaining sample data
 ---------------------
 
 For this example, we use data from the following publication: |zenodo badge|
