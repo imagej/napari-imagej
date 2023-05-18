@@ -13,12 +13,11 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-from threading import Lock
 from typing import Any, Callable, Dict
 
 import imagej
 from jpype import JClass
-from qtpy.QtCore import QObject, QThread, Signal
+from qtpy.QtCore import QObject, Signal
 from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
 from napari_imagej import settings
@@ -39,69 +38,25 @@ minimum_versions = {
 
 # -- ImageJ API -- #
 
-
-def init_ij() -> None:
-    """
-    Starts creating our ImageJ instance, and waits until it is ready.
-    """
-    init_ij_async()
-    initializer.wait()
-
-
-def init_ij_async():
-    """
-    Starts creating our ImageJ instance.
-    """
-    initializer.start()
+_ij = None
 
 
 def ij():
+    if _ij is None:
+        raise Exception(
+            "The ImageJ instance has not yet been initialized! Please run init_ij()"
+        )
+    return _ij
+
+
+def init_ij() -> "jc.ImageJ":
     """
-    Returns the ImageJ instance.
-    If it isn't ready yet, blocks until it is ready.
+    Creates the ImageJ instance
     """
-    init_ij()
-    return initializer.ij
-
-
-class ImageJInitializer(QThread):
-    """
-    A QThread responsible for initializing ImageJ
-    """
-
-    # Tools used to ensure this QThread only initializes ImageJ once.
-    started: bool = False
-    lock: Lock = Lock()
-    # Used as a placeholder for the ImageJ instance
-    ij = None
-
-    def run(self):
-        """
-        Main QThread loop.
-
-        Well, okay, it isn't really a loop.
-
-        Responsible for ensuring that initialize is only called once.
-        """
-        # Double-checked lock
-        if not self.started:
-            with self.lock:
-                if not self.started:
-                    self.started = True
-                    # Try to initialize ImageJ
-                    try:
-                        self.initialize()
-                        # Report completion
-                        java_signals._startup_complete.emit()
-                    # We failed!
-                    except Exception as exc:
-                        # Report failure
-                        java_signals._startup_error.emit(exc)
-
-    def initialize(self):
-        """
-        Creates the ImageJ instance
-        """
+    global _ij
+    if _ij:
+        return _ij
+    try:
         log_debug("Initializing ImageJ2")
 
         # determine whether imagej is already running
@@ -111,9 +66,9 @@ class ImageJInitializer(QThread):
 
         # Configure pyimagej
         if imagej_already_initialized:
-            self._update_imagej_settings()
+            _update_imagej_settings()
         else:
-            ij_settings = self._configure_imagej()
+            ij_settings = _configure_imagej()
 
         # Configure napari-imagej
         from napari_imagej.types.converters import install_converters
@@ -126,17 +81,17 @@ class ImageJInitializer(QThread):
 
         # Launch ImageJ
         if imagej_already_initialized:
-            self.ij = imagej.gateway
+            _ij = imagej.gateway
         else:
-            self.ij = imagej.init(**ij_settings)
+            _ij = imagej.init(**ij_settings)
 
         # Log initialization
-        log_debug(f"Initialized at version {self.ij.getVersion()}")
+        log_debug(f"Initialized at version {_ij.getVersion()}")
 
         # -- VALIDATION -- #
 
         # Validate PyImageJ
-        self._validate_imagej()
+        _validate_imagej()
 
         # HACK: Avoid FlatLaf with ImageJ2 Swing UI;
         # it doesn't work for reasons unknown.
@@ -145,13 +100,13 @@ class ImageJInitializer(QThread):
         # Swing components could be created by any Java functionality (e.g. Commands).
         # Therefore, we can't move it to e.g. the menu file
         try:
-            ui = self.ij.ui().getDefaultUI().getInfo().getName()
+            ui = _ij.ui().getDefaultUI().getInfo().getName()
             log_debug(f"Default SciJava UI is {ui}.")
             if ui == "swing":
                 SwingLookAndFeelService = jimport(
                     "org.scijava.ui.swing.laf.SwingLookAndFeelService"
                 )
-                laf = self.ij.prefs().get(SwingLookAndFeelService, "lookAndFeel")
+                laf = _ij.prefs().get(SwingLookAndFeelService, "lookAndFeel")
                 log_debug(f"Preferred Look+Feel is {laf}.")
                 if laf is None or laf.startsWith("FlatLaf"):
                     UIManager = jimport("javax.swing.UIManager")
@@ -160,7 +115,7 @@ class ImageJInitializer(QThread):
                         f"Detected FlatLaf. Falling back to {fallback_laf} "
                         "instead to avoid problems."
                     )
-                    self.ij.prefs().put(
+                    _ij.prefs().put(
                         SwingLookAndFeelService, "lookAndFeel", fallback_laf
                     )
         except Exception as exc:
@@ -169,107 +124,115 @@ class ImageJInitializer(QThread):
             # NB: The hack failed, but no worries, just try to keep going.
             print(jstacktrace(exc))
 
-    def _update_imagej_settings(self) -> None:
-        """
-        Updates napari-imagej's settings to reflect an active ImageJ instance.
-        """
-        # Scrape the JVM mode off of the active ImageJ instance
-        settings["jvm_mode"] = (
-            "headless" if imagej.gateway.ui().isHeadless() else "interactive"
-        )
-        # Determine if legacy is active on the active ImageJ instance
-        # NB bool is needed to coerce Nones into booleans.
-        settings["add_legacy"] = bool(
-            imagej.gateway.legacy and imagej.gateway.legacy.isActive()
-        )
+        java_signals._startup_complete.emit()
+    except Exception as e:
+        java_signals._startup_error.emit(e)
 
-    def _configure_imagej(self) -> Dict[str, Any]:
-        """
-        Configures scyjava and pyimagej.
-        This function returns the settings that must be passed in the
-        actual initialization call.
 
-        :return: kwargs that should be passed to imagej.init()
-        """
-        # ScyJava configuration
-        # TEMP: Avoid issues caused by
-        # https://github.com/imagej/pyimagej/issues/160
-        config.add_repositories(
-            {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-        )
-        config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+def _update_imagej_settings() -> None:
+    """
+    Updates napari-imagej's settings to reflect an active ImageJ instance.
+    """
+    # Scrape the JVM mode off of the active ImageJ instance
+    settings["jvm_mode"] = (
+        "headless" if imagej.gateway.ui().isHeadless() else "interactive"
+    )
+    # Determine if legacy is active on the active ImageJ instance
+    # NB bool is needed to coerce Nones into booleans.
+    settings["add_legacy"] = bool(
+        imagej.gateway.legacy and imagej.gateway.legacy.isActive()
+    )
 
-        # Append napari-imagej-specific cli arguments
-        cli_args = settings["jvm_command_line_arguments"].get(str)
-        if cli_args not in [None, ""]:
-            config.add_option(cli_args)
 
-        # PyImageJ configuration
-        init_settings = {}
-        init_settings["ij_dir_or_version_or_endpoint"] = settings[
-            "imagej_directory_or_endpoint"
-        ].get(str)
-        init_settings["mode"] = settings["jvm_mode"].get(str)
+def _configure_imagej() -> Dict[str, Any]:
+    """
+    Configures scyjava and pyimagej.
+    This function returns the settings that must be passed in the
+    actual initialization call.
 
-        add_legacy = settings["include_imagej_legacy"].get(bool)
-        init_settings["add_legacy"] = add_legacy
+    :return: kwargs that should be passed to imagej.init()
+    """
+    # ScyJava configuration
+    # TEMP: Avoid issues caused by
+    # https://github.com/imagej/pyimagej/issues/160
+    config.add_repositories(
+        {"scijava.public": "https://maven.scijava.org/content/groups/public"}
+    )
+    config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
 
-        # TEMP: Until imagej/napari-imagej#209 is solved.
-        if add_legacy:
-            config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
+    # Append napari-imagej-specific cli arguments
+    cli_args = settings["jvm_command_line_arguments"].get(str)
+    if cli_args not in [None, ""]:
+        config.add_option(cli_args)
 
-        return init_settings
+    # PyImageJ configuration
+    init_settings = {}
+    init_settings["ij_dir_or_version_or_endpoint"] = settings[
+        "imagej_directory_or_endpoint"
+    ].get(str)
+    init_settings["mode"] = settings["jvm_mode"].get(str)
 
-    def _validate_imagej(self):
-        """
-        Helper function to ensure minimum requirements on java component versions
-        """
-        # If we want to require a minimum version for a java component, we need to
-        # be able to find our current version. We do that by querying a Java class
-        # within that component.
-        RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
-        UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
-        component_requirements = {
-            "net.imagej:imagej-common": jc.Dataset,
-            "net.imagej:imagej-ops": jc.OpInfo,
-            "net.imglib2:imglib2-unsafe": UnsafeImg,
-            "net.imglib2:imglib2-imglyb": RGRAI,
-            "org.scijava:scijava-common": jc.Module,
-            "org.scijava:scijava-search": jc.Searcher,
-        }
-        component_requirements.update(self._optional_requirements())
-        # Find version that violate the minimum
-        violations = []
-        for component, cls in component_requirements.items():
-            min_version = minimum_versions[component]
-            component_version = get_version(cls)
-            if not is_version_at_least(component_version, min_version):
-                violations.append(
-                    f"{component} : {min_version} (Installed: {component_version})"
-                )
+    add_legacy = settings["include_imagej_legacy"].get(bool)
+    init_settings["add_legacy"] = add_legacy
 
-        # If there are version requirements, throw an error
-        if violations:
-            failure_str = "napari-imagej requires the following component versions:"
-            violations.insert(0, failure_str)
-            failure_str = "\n\t".join(violations)
-            failure_str += (
-                "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
+    # TEMP: Until imagej/napari-imagej#209 is solved.
+    if add_legacy:
+        config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
+
+    return init_settings
+
+
+def _validate_imagej():
+    """
+    Helper function to ensure minimum requirements on java component versions
+    """
+    # If we want to require a minimum version for a java component, we need to
+    # be able to find our current version. We do that by querying a Java class
+    # within that component.
+    RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
+    UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
+    component_requirements = {
+        "net.imagej:imagej-common": jc.Dataset,
+        "net.imagej:imagej-ops": jc.OpInfo,
+        "net.imglib2:imglib2-unsafe": UnsafeImg,
+        "net.imglib2:imglib2-imglyb": RGRAI,
+        "org.scijava:scijava-common": jc.Module,
+        "org.scijava:scijava-search": jc.Searcher,
+    }
+    component_requirements.update(_optional_requirements())
+    # Find version that violate the minimum
+    violations = []
+    for component, cls in component_requirements.items():
+        min_version = minimum_versions[component]
+        component_version = get_version(cls)
+        if not is_version_at_least(component_version, min_version):
+            violations.append(
+                f"{component} : {min_version} (Installed: {component_version})"
             )
-            raise RuntimeError(failure_str)
 
-    def _optional_requirements(self):
-        optionals = {}
-        # Add additional minimum versions for legacy components
-        if ij().legacy and ij().legacy.isActive():
-            optionals["net.imagej:imagej-legacy"] = ij().legacy.getClass()
-        # Add additional minimum versions for fiji components
-        try:
-            optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
-        except Exception:
-            pass
+    # If there are version requirements, throw an error
+    if violations:
+        failure_str = "napari-imagej requires the following component versions:"
+        violations.insert(0, failure_str)
+        failure_str = "\n\t".join(violations)
+        failure_str += (
+            "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
+        )
+        raise RuntimeError(failure_str)
 
-        return optionals
+
+def _optional_requirements():
+    optionals = {}
+    # Add additional minimum versions for legacy components
+    if _ij.legacy and _ij.legacy.isActive():
+        optionals["net.imagej:imagej-legacy"] = _ij.legacy.getClass()
+    # Add additional minimum versions for fiji components
+    try:
+        optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
+    except Exception:
+        pass
+
+    return optionals
 
 
 class ImageJ_Callbacks(QObject):
@@ -295,7 +258,7 @@ class ImageJ_Callbacks(QObject):
 
         :param func: The behavior to execute
         """
-        if not initializer.isFinished():
+        if not _ij:
             self._startup_complete.connect(func)
         else:
             func()
@@ -317,7 +280,6 @@ class ImageJ_Callbacks(QObject):
 
 # -- SINGLETON INSTANCES -- #
 
-initializer = ImageJInitializer()
 java_signals = ImageJ_Callbacks()
 
 
