@@ -30,16 +30,6 @@ from napari_imagej.widgets.result_tree import (
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 
 
-# Start constructing the ImageJ instance
-class IJInitializer(QThread):
-    def run(self):
-        init_ij()
-
-
-# NB: Instance needed here to prevent GC
-initializer = IJInitializer()
-
-
 class NapariImageJWidget(QWidget):
     """The top-level ImageJ widget for napari."""
 
@@ -126,8 +116,7 @@ class NapariImageJWidget(QWidget):
 
         # -- Final setup -- #
 
-        self.ij_post_init_setup: WidgetFinalizer = WidgetFinalizer(self)
-        java_signals.when_ij_ready(self.ij_post_init_setup.start)
+        self.ij_initializer: ImageJInitializer = ImageJInitializer(self)
 
         # Bind L key to search bar.
         # Note the requirement for an input parameter
@@ -138,12 +127,11 @@ class NapariImageJWidget(QWidget):
         # Put the focus on the search bar
         self.search.bar.setFocus()
 
-        initializer.start()
-
-        # init_ij_async()
+        # Start constructing the ImageJ instance
+        self.ij_initializer.start()
 
     def wait_for_finalization(self):
-        self.ij_post_init_setup.wait()
+        self.ij_initializer.wait()
 
     def _handle_error(self, exc: Exception):
         msg: QMessageBox = QMessageBox()
@@ -195,9 +183,10 @@ class NapariImageJWidget(QWidget):
             raise event.getException()
 
 
-class WidgetFinalizer(QThread):
+class ImageJInitializer(QThread):
     """
-    QThread responsible for modifying NapariImageJWidget AFTER ImageJ is ready.
+    QThread responsible for initializing ImageJ, and modifying NapariImageJWidget
+    afterwards.
     """
 
     def __init__(self, napari_imagej_widget: NapariImageJWidget):
@@ -206,10 +195,13 @@ class WidgetFinalizer(QThread):
 
     def run(self):
         """
-        Finalizes components of napari_imagej_widget.
+        Initializes ImageJ, and thenf inalizes components of napari_imagej_widget.
 
         Functionality partitioned into functions by subwidget.
         """
+        # Initialize ImageJ
+        init_ij()
+
         # Finalize the Results Tree
         self._finalize_results_tree()
         # Finalize the info bar
