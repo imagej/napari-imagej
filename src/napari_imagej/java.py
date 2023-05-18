@@ -32,7 +32,7 @@ minimum_versions = {
     "net.imagej:imagej-ops": "0.49.0",
     "net.imglib2:imglib2-unsafe": "1.0.0",
     "net.imglib2:imglib2-imglyb": "1.1.0",
-    "org.scijava:scijava-common": "2.93.0",
+    "org.scijava:scijava-common": "2.94.0",
     "org.scijava:scijava-search": "2.0.2",
     "sc.fiji:TrackMate": "7.11.0",
 }
