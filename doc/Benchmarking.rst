@@ -20,7 +20,8 @@ An important part of any benchmark is the data it is run upon.
 
 For this benchmarking procedure, we use the `EmbryoCE <https://samples.scif.io/EmbryoCE.zip>`_ sample from the `SCIFIO Samples Repository <https://samples.scif.io>`_.
 
-This particular data sample is nice, because it is
+This particular data sample is nice, because it is:
+
 * Available to all
 * Sufficiently large to minimize startup overhead
 
