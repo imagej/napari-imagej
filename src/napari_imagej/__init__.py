@@ -29,6 +29,7 @@ __version__ = "0.0.1.dev0"
 
 default_java_components = [
     "net.imagej:imagej:2.12.0",
+    "org.scijava:scijava-common:2.94.0",
 ]
 
 
