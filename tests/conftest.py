@@ -2,13 +2,13 @@
 A module containing pytest configuration and globally-used fixtures
 """
 import os
+import sys
 from typing import Callable, Generator
 
 import pytest
 from napari import Viewer
 
 import napari_imagej
-from napari_imagej.java import init_ij
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -61,17 +61,20 @@ def preserve_user_settings():
             os.remove(user_path)
 
 
-@pytest.fixture(autouse=True)
-def launch_imagej(ij):
-    """Fixture ensuring that ImageJ is running before any tests run"""
-    init_ij()
-    yield
-
-
 @pytest.fixture(scope="session")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
-    from napari_imagej.java import ij
+    from napari_imagej.java import ij, init_ij
+
+    # BIG HACK: We run into the issue described in
+    # https://github.com/imagej/pyimagej/issues/197
+    # if we don't add this.
+    if sys.platform == "darwin":
+        viewer = Viewer()
+        init_ij()
+        viewer.close()
+    else:
+        init_ij()
 
     yield ij()
 
@@ -89,9 +92,7 @@ def imagej_widget(viewer, asserter) -> Generator[NapariImageJWidget, None, None]
     """Fixture providing an ImageJWidget"""
     # Create widget
     ij_widget: NapariImageJWidget = NapariImageJWidget(viewer)
-    # Wait for
-    finalization = ij_widget.ij_post_init_setup
-    asserter(lambda: finalization.isRunning() or finalization.isFinished())
+    # Wait for imagej to be initialized
     ij_widget.wait_for_finalization()
 
     yield ij_widget

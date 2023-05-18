@@ -32,11 +32,11 @@ from tests.utils import DummySearchResult, jc
 
 
 # Determine whether we are testing headlessly
-def testing_headless():
+def running_headless():
     return settings["jvm_mode"].get(str) == "headless"
 
 
-def testing_legacy():
+def running_legacy():
     return settings["include_imagej_legacy"].get(bool)
 
 
@@ -185,7 +185,7 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
     """Tests headful-specific settings of GUIButton"""
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
 
     button: GUIButton = gui_widget.gui_button
@@ -208,7 +208,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
 
 def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
-    if not testing_headless():
+    if not running_headless():
         pytest.skip("Only applies when running headlessly")
     # Wait until the JVM starts to test settings
     button: GUIButton = gui_widget.gui_button
@@ -233,9 +233,9 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 
 
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
-    if testing_legacy():
+    if running_legacy():
         pytest.skip(
             """HACK: Disabled with ImageJ legacy.
     See https://github.com/imagej/napari-imagej/issues/181
@@ -267,9 +267,9 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 
 
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
-    if testing_legacy():
+    if running_legacy():
         pytest.skip(
             """HACK: Disabled with ImageJ legacy.
     See https://github.com/imagej/napari-imagej/issues/181
@@ -300,7 +300,7 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 
 
 def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
 
     button_to: ToIJButton = gui_widget_chooser.to_ij
@@ -430,9 +430,9 @@ def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu)
 
 
 def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
-    if not testing_legacy():
+    if not running_legacy():
         pytest.skip("Tests legacy behavior")
 
     to_button: ToIJButton = gui_widget.to_ij
@@ -470,9 +470,9 @@ def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMen
 
 
 def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
-    if not testing_legacy():
+    if not running_legacy():
         pytest.skip("Tests legacy behavior")
 
     from_button: FromIJButton = gui_widget.from_ij
@@ -495,7 +495,7 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 
 
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
 
     # Open the GUI
@@ -538,9 +538,9 @@ def legacy_module(ij):
 
 
 def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
-    if testing_headless():
+    if running_headless():
         pytest.skip("Only applies when not running headlessly")
-    if not testing_legacy():
+    if not running_legacy():
         pytest.skip("Tests legacy behavior")
     info = ij.module().getModuleById("legacy:ij.plugin.filter.GaussianBlur")
     actions = _run_actions_for(DummySearchResult(info), None, gui_widget)
