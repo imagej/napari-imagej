@@ -40,7 +40,7 @@ class NapariImageJMenu(QWidget):
         self.settings_button: SettingsButton = SettingsButton(viewer)
         self.layout().addWidget(self.settings_button)
 
-        if settings.jvm_mode == "headless":
+        if settings.headless():
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
             # NB We need to call ij().ui().showUI() on the GUI thread.
@@ -62,7 +62,7 @@ class NapariImageJMenu(QWidget):
 
     def finalize(self):
         # GUIButton initialization
-        if settings["jvm_mode"].get(str) != "headless":
+        if not settings.headless():
             self.gui_button._set_icon(resource_path("imagej2-16x16-flat"))
             self.gui_button.setEnabled(True)
             self.gui_button.setToolTip("Display ImageJ2 GUI")
@@ -221,7 +221,7 @@ class GUIButton(QPushButton):
         self.setEnabled(False)
 
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
-        if settings.jvm_mode == "headless":
+        if settings.headless():
             self.setToolTip("ImageJ2 GUI unavailable!")
         else:
             self.setToolTip("Display ImageJ2 GUI (loading)")
@@ -269,7 +269,9 @@ class SettingsButton(QPushButton):
             "annotation": Path,
             "options": {"label": "ImageJ base directory", "mode": "d"},
         }
-        args["jvm_mode"]["options"] = {"choices": ["headless", "interactive"]}
+        args["enable_imagej_gui"]["options"] = {
+            "label": "Enable ImageJ GUI if possible"
+        }
 
         # Use magicgui.request_values to allow user to configure settings
         choices = request_values(title="napari-imagej Settings", values=args)

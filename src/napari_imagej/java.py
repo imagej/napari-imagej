@@ -61,12 +61,6 @@ def init_ij() -> "jc.ImageJ":
 
     # -- CONFIGURATION -- #
 
-    # Configure pyimagej
-    if imagej_already_initialized:
-        _update_imagej_settings()
-    else:
-        ij_settings = _configure_imagej()
-
     # Configure napari-imagej
     from napari_imagej.types.converters import install_converters
 
@@ -80,7 +74,7 @@ def init_ij() -> "jc.ImageJ":
     if imagej_already_initialized:
         _ij = imagej.gateway
     else:
-        _ij = imagej.init(**ij_settings)
+        _ij = imagej.init(**_configure_imagej())
 
     # Log initialization
     log_debug(f"Initialized at version {_ij.getVersion()}")
@@ -91,21 +85,6 @@ def init_ij() -> "jc.ImageJ":
     _validate_imagej()
 
     return _ij
-
-
-def _update_imagej_settings() -> None:
-    """
-    Updates napari-imagej's settings to reflect an active ImageJ instance.
-    """
-    # Scrape the JVM mode off of the active ImageJ instance
-    settings.jvm_mode = (
-        "headless" if imagej.gateway.ui().isHeadless() else "interactive"
-    )
-    # Determine if legacy is active on the active ImageJ instance
-    # NB bool is needed to coerce Nones into booleans.
-    settings.add_legacy = bool(
-        imagej.gateway.legacy and imagej.gateway.legacy.isActive()
-    )
 
 
 def _configure_imagej() -> Dict[str, Any]:
@@ -127,7 +106,7 @@ def _configure_imagej() -> Dict[str, Any]:
     # PyImageJ configuration
     init_settings = {
         "ij_dir_or_version_or_endpoint": settings.endpoint(),
-        "mode": settings.jvm_mode,
+        "mode": settings.jvm_mode(),
         "add_legacy": settings.include_imagej_legacy,
     }
     return init_settings

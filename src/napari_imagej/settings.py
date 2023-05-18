@@ -22,14 +22,14 @@ include_imagej_legacy: bool = True
     If False, many ImageJ2 rewrites of original ImageJ functionality are available.
     Defaults to True, as the original ImageJ functionality can be very useful to have.
 
-jvm_mode: str = "headless"
-    Designates the mode of execution for ImageJ2.
-    Allowed options are 'headless' and 'interactive'.
-    NB 'interactive' mode is unavailable on MacOS. More details can be found at
-    https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode
-    If napari-imagej is launched on MacOS with this setting set to "interactive",
-    the setting will silently be reassigned to "headless".
-    Defaults to 'interactive'.
+enable_imagej_gui: str = True
+    Designates whether to make the ImageJ GUI available.
+    If True, napari-imagej will attempt to run in graphical mode.
+    If False, napari-imagej will run in headless mode.
+    Defaults to True. However, the ImageJ GUI is unavailable on macOS; therefore,
+    on macOS, napari-imagej will behave as though this setting is False regardless.
+    More details can be found at:
+    https://pyimagej.readthedocs.io/en/latest/Initialization.html#with-graphical-capabilities
 
 use_active_layer: bool = True
     This can be used to identify whether transferred data between ImageJ2 and napari
@@ -62,7 +62,7 @@ defaults = {
     "imagej_directory_or_endpoint": "",
     "imagej_base_directory": ".",
     "include_imagej_legacy": True,
-    "jvm_mode": "interactive",
+    "enable_imagej_gui": True,
     "use_active_layer": True,
     "jvm_command_line_arguments": "",
 }
@@ -72,7 +72,7 @@ defaults = {
 imagej_directory_or_endpoint: str = defaults["imagej_directory_or_endpoint"]
 imagej_base_directory: str = defaults["imagej_base_directory"]
 include_imagej_legacy: bool = defaults["include_imagej_legacy"]
-jvm_mode: str = defaults["jvm_mode"]
+enable_imagej_gui: str = defaults["enable_imagej_gui"]
 use_active_layer: bool = defaults["use_active_layer"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
@@ -112,6 +112,36 @@ def endpoint() -> str:
     Get the validated endpoint string to use for initializing PyImageJ.
     """
     return imagej_directory_or_endpoint or "+".join(default_java_components)
+
+
+def headless() -> bool:
+    """
+    Get whether ImageJ will be initialized in headless mode with no GUI.
+
+    Note that napari-imagej does not currently support GUI mode on macOS systems;
+    more details can be found at:
+    https://pyimagej.readthedocs.io/en/latest/Initialization.html#with-graphical-capabilities
+
+    :return:
+        False if the platform supports running with GUI and
+        the enable_imagej_gui flag is True; True otherwise.
+    """
+    return sys.platform == "darwin" or not enable_imagej_gui
+
+
+def jvm_mode() -> str:
+    """
+    Get the validated JVM mode to use for initializing PyImageJ.
+
+    Note that napari-imagej does not currently support GUI mode on macOS systems;
+    more details can be found at:
+    https://pyimagej.readthedocs.io/en/latest/Initialization.html#with-graphical-capabilities
+
+    :return:
+        'interactive' if the platform supports running with GUI and
+        the enable_imagej_gui flag is True; 'headless' otherwise.
+    """
+    return "headless" if headless() else "interactive"
 
 
 def load(read_config_file: bool = None) -> None:
