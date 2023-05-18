@@ -260,13 +260,14 @@ class SettingsButton(QPushButton):
         """
         Spawn a popup allowing the user to configure napari-imagej settings.
         """
-        # Build values map by iterating over all default settings.
+        # Build arguments list by iterating over all default settings.
         args = {k: dict(value=getattr(settings, k)) for k in settings.defaults}
-        # Setting specific additions
+
+        # Configure some details to improve graphical presentation and behavior.
         args["imagej_base_directory"] = {
             "value": Path(settings.imagej_base_directory),
             "annotation": Path,
-            "options": {"mode": "d"},
+            "options": {"label": "ImageJ base directory", "mode": "d"},
         }
         args["jvm_mode"]["options"] = {"choices": ["headless", "interactive"]}
 
