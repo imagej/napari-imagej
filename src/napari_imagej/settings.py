@@ -150,6 +150,7 @@ def save() -> None:
     Persist settings to a YAML configuration file on disk.
     """
     if _test_mode:
+        # Skip saving user config file when running tests.
         return
 
     # Populate confuse configuration values.
