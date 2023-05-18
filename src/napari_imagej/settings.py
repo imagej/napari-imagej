@@ -79,11 +79,17 @@ jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
 
 
-def endpoint() -> str:
+# -- Public API functions --
+
+
+def asdict() -> Dict[str, Any]:
     """
-    Get the validated endpoint string to use for initializing PyImageJ.
+    Gets the settings as a dictionary.
+    :return: Dictionary containing key/value pair for each setting.
     """
-    return imagej_directory_or_endpoint or "+".join(default_java_components)
+    settings = {}
+    _copy_settings(dest_set=settings.__setitem__)
+    return settings
 
 
 def basedir() -> str:
@@ -101,14 +107,11 @@ def basedir() -> str:
     return abs_basedir
 
 
-def asdict() -> Dict[str, Any]:
+def endpoint() -> str:
     """
-    Gets the settings as a dictionary.
-    :return: Dictionary containing key/value pair for each setting.
+    Get the validated endpoint string to use for initializing PyImageJ.
     """
-    settings = {}
-    _copy_settings(dest_set=settings.__setitem__)
-    return settings
+    return imagej_directory_or_endpoint or "+".join(default_java_components)
 
 
 def load(read_config_file: bool = None) -> None:
@@ -131,20 +134,6 @@ def load(read_config_file: bool = None) -> None:
     _copy_settings(src_get=lambda k, dv: _confuse_get(config, k, dv))
 
 
-def update(use_dv=True, **kwargs) -> bool:
-    """
-    Update settings to match the given argument key/value pairs.
-    :param use_dv:
-        Controls what happens when a needed key/value pair is not given.
-        If True, the setting is assigned its default value.
-        If False, the setting is left unchanged.
-    :param kwargs: Key/value pairs corresponding to settings names+values.
-    :return: True if any setting changed in value.
-    """
-    # Populate configuration values from the given arguments.
-    return _copy_settings(src_get=lambda k, dv: kwargs.get(k, dv if use_dv else None))
-
-
 def save() -> None:
     """
     Persist settings to a YAML configuration file on disk.
@@ -161,6 +150,20 @@ def save() -> None:
     output = config.dump()
     with open(config.user_config_path(), "w") as f:
         f.write(output)
+
+
+def update(use_dv=True, **kwargs) -> bool:
+    """
+    Update settings to match the given argument key/value pairs.
+    :param use_dv:
+        Controls what happens when a needed key/value pair is not given.
+        If True, the setting is assigned its default value.
+        If False, the setting is left unchanged.
+    :param kwargs: Key/value pairs corresponding to settings names+values.
+    :return: True if any setting changed in value.
+    """
+    # Populate configuration values from the given arguments.
+    return _copy_settings(src_get=lambda k, dv: kwargs.get(k, dv if use_dv else None))
 
 
 def validate():
@@ -183,6 +186,9 @@ def validate():
     # Ensure base directory is valid.
     if not os.path.exists(os.path.abspath(imagej_base_directory)):
         raise ValueError("ImageJ base directory must be a valid path.")
+
+
+# -- Helper functions --
 
 
 def _confuse_config() -> confuse.Configuration:
@@ -246,5 +252,7 @@ def _copy_settings(
             any_changed = True
     return any_changed
 
+
+# -- Initialization logic --
 
 load()
