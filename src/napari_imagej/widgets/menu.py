@@ -283,6 +283,18 @@ class SettingsButton(QPushButton):
         if settings.update(**choices):
             self.setting_change.emit()
 
+        # Present a warning dialog if any settings have validation issues.
+        try:
+            settings.validate()
+        except ValueError as e:
+            RichTextPopup(
+                rich_message=(
+                    "<b>Warning:</b> your settings have the following issues:<ul>"
+                    "".join(f"<li>{arg}</li>" for arg in e.args) + "</ul>"
+                ),
+                exec=True,
+            )
+
     def _notify_settings_change(self):
         """
         Notify (using a popup) that a restart is required for settings changes
