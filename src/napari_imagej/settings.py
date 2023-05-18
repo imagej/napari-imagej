@@ -18,9 +18,9 @@ imagej_base_directory: str = "."
 
 include_imagej_legacy: bool = True
     This can be used to include original ImageJ functionality.
-    If true, original ImageJ functionality (ij.* packages) will be available.
-    If false, many ImageJ2 rewrites of original ImageJ functionality are available.
-    Defaults to true as the ImageJ legacy UI is most popular and familiar.
+    If True, original ImageJ functionality (ij.* packages) will be available.
+    If False, many ImageJ2 rewrites of original ImageJ functionality are available.
+    Defaults to True, as the original ImageJ functionality can be very useful to have.
 
 jvm_mode: str = "headless"
     Designates the mode of execution for ImageJ2.
@@ -34,9 +34,9 @@ jvm_mode: str = "headless"
 use_active_layer: bool = True
     This can be used to identify whether transferred data between ImageJ2 and napari
     should be selected via activation or by user selection via a dialog.
-    If true, the active layer/window is always used for transfer between applications.
-    If false, a popup will be shown, prompting the user to select data for transfer.
-    Defaults to true.
+    If True, the active layer/window is always used for transfer between applications.
+    If False, a popup will be shown, prompting the user to select data for transfer.
+    Defaults to True.
 
 jvm_command_line_arguments: str = ""
     Additional command line arguments to pass to the Java Virtual Machine (JVM).
