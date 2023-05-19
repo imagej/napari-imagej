@@ -4,10 +4,8 @@ A module encapsulating access to Java functionality.
 Notable functions included in the module:
     * init_ij()
         - used to create the ImageJ instance.
-    * init_ij_async()
-        - used to asynchronously create the ImageJ instance.
     * ij()
-        - used to access the ImageJ instance. Calls init_ij() if necessary.
+        - used to access the ImageJ instance.
 
 Notable fields included in the module:
     * jc
@@ -39,8 +37,6 @@ minimum_versions = {
 # -- ImageJ API -- #
 
 _ij = None
-initialization_succeeded = None
-_callbacks_on_success = []
 
 
 def ij():
@@ -94,15 +90,7 @@ def init_ij() -> "jc.ImageJ":
     # Validate PyImageJ
     _validate_imagej()
 
-    for callback in _callbacks_on_success:
-        callback(_ij)
-
-
-def on_ij_init(callback: Callable[["jc.ImageJ"], None]):
-    if _ij:
-        callback(_ij)
-    else:
-        _callbacks_on_success.append(callback)
+    return _ij
 
 
 def _update_imagej_settings() -> None:

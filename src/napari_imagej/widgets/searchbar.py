@@ -8,8 +8,6 @@ are ready to accept queries.
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.java import on_ij_init
-
 
 class JVMEnabledSearchbar(QWidget):
     """
@@ -24,11 +22,12 @@ class JVMEnabledSearchbar(QWidget):
         # The main functionality is a search bar
         self.bar: JLineEdit = JLineEdit()
 
-        on_ij_init(self.bar.finalize)
-
         # Set GUI options
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(self.bar)
+
+    def finalize(self):
+        self.bar.finalize()
 
 
 class JLineEdit(QLineEdit):
@@ -52,7 +51,7 @@ class JLineEdit(QLineEdit):
         else:
             super().keyPressEvent(event)
 
-    def finalize(self, ij):
+    def finalize(self):
         # Once the JVM is ready, allow editing
         self.setText("")
         self.setEnabled(True)

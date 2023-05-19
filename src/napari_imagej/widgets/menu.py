@@ -16,8 +16,10 @@ from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 from scyjava import is_arraylike
 
 from napari_imagej import settings
-from napari_imagej.java import ij, jc, on_ij_init
+from napari_imagej.java import ij, jc
 from napari_imagej.resources import resource_path
+from napari_imagej.utilities.event_subscribers import UIShownListener
+from napari_imagej.utilities.events import subscribe
 
 
 class NapariImageJMenu(QWidget):
@@ -57,6 +59,15 @@ class NapariImageJMenu(QWidget):
                     ij().thread().queue(lambda: ij().ui().showUI())
 
             self.gui_button.clicked.connect(show_ui)
+
+    def finalize(self):
+        # GUIButton initialization
+        if settings["jvm_mode"].get(str) != "headless":
+            self.gui_button._set_icon(resource_path("imagej2-16x16-flat"))
+            self.gui_button.setEnabled(True)
+            self.gui_button.setToolTip("Display ImageJ2 GUI")
+        # Subscribe UIShown subscriber
+        subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
 
 
 class ToIJButton(QPushButton):
@@ -209,34 +220,15 @@ class GUIButton(QPushButton):
         super().__init__()
         self.setEnabled(False)
 
+        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         if settings["jvm_mode"].get(str) == "headless":
-            self._setup_headless()
+            self.setToolTip("ImageJ2 GUI unavailable!")
         else:
-            self._setup_headful()
+            self.setToolTip("Display ImageJ2 GUI (loading)")
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
         self.setIcon(icon)
-
-        def finalize(ij: "jc.ImageJ"):
-            self.setEnabled(True)
-
-        on_ij_init(finalize)
-
-    def _setup_headful(self):
-        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
-        self.setToolTip("Display ImageJ2 GUI (loading)")
-
-        def finalize(ij: "jc.ImageJ"):
-            self._set_icon(resource_path("imagej2-16x16-flat"))
-            self.setEnabled(True)
-            self.setToolTip("Display ImageJ2 GUI")
-
-        on_ij_init(finalize)
-
-    def _setup_headless(self):
-        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
-        self.setToolTip("ImageJ2 GUI unavailable!")
 
     def disable_popup(self):
         RichTextPopup(

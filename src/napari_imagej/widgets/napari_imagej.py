@@ -19,7 +19,6 @@ from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.event_subscribers import (
     NapariEventSubscriber,
     ProgressBarListener,
-    UIShownListener,
 )
 from napari_imagej.utilities.events import subscribe
 from napari_imagej.utilities.logging import is_debug
@@ -183,6 +182,15 @@ class NapariImageJWidget(QWidget):
 
     @Slot(object)
     def _handle_ij_error(self, exc: Exception):
+        """
+        Handles errors associated initializing ImageJ.
+        Initializing ImageJ can fail for all sorts of reasons,
+        so we give it special attention here.
+
+        NB: This MUST be done within this slot, as slot functions
+        are run on the GUI thread. napari-imagej runs ImageJ initialization
+        on a separate Qt thread, which isn't the GUI thread.
+        """
         # Disable the searchbar
         self.search.bar.finalize_on_error()
         # Print thet error
@@ -210,13 +218,18 @@ class ImageJInitializer(QThread):
         try:
             # Initialize ImageJ
             init_ij()
-            # Finalize the Results Tree
+            # Finalize the menu
+            self.widget.menu.finalize()
+            # Finalize the search bar
+            self.widget.search.finalize()
+            # Finalize the results tree
             self._finalize_results_tree()
             # Finalize the info bar
             self._finalize_info_bar()
             # Finalize EventSubscribers
             self._finalize_subscribers()
         except Exception as e:
+            # Handle the exception on the GUI thread
             self.widget.ij_error_handler.emit(e)
 
     def _finalize_results_tree(self):
@@ -271,6 +284,3 @@ class ImageJInitializer(QThread):
         if is_debug():
             subscriber = NapariEventSubscriber()
             subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
-        # UIShown subscriber
-        subscriber = UIShownListener()
-        subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())

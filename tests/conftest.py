@@ -9,6 +9,7 @@ import pytest
 from napari import Viewer
 
 import napari_imagej
+from napari_imagej.java import init_ij
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -64,21 +65,19 @@ def preserve_user_settings():
 @pytest.fixture(scope="session")
 def ij():
     """Fixture providing the ImageJ2 Gateway"""
-    from napari_imagej.java import ij, init_ij
-
     # BIG HACK: We run into the issue described in
     # https://github.com/imagej/pyimagej/issues/197
     # if we don't add this.
     if sys.platform == "darwin":
         viewer = Viewer()
-        init_ij()
+        ij = init_ij()
         viewer.close()
     else:
-        init_ij()
+        ij = init_ij()
 
-    yield ij()
+    yield ij
 
-    ij().context().dispose()
+    ij.context().dispose()
 
 
 @pytest.fixture()
@@ -114,6 +113,12 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
 
+    # Wait for ImageJ initialization
+    init_ij()
+
+    # Finalize widget
+    widget.finalize()
+
     yield widget
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
@@ -132,6 +137,12 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
+
+    # Wait for ImageJ initialization
+    init_ij()
+
+    # Finalize widget
+    widget.finalize()
 
     yield widget
 
