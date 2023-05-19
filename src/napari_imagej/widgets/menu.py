@@ -5,7 +5,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-from jpype import JImplements, JOverride
 from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
@@ -17,9 +16,8 @@ from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 from scyjava import is_arraylike
 
 from napari_imagej import settings
-from napari_imagej.java import ij, java_signals, jc
+from napari_imagej.java import ij, jc, on_ij_init
 from napari_imagej.resources import resource_path
-from napari_imagej.utilities.events import subscribe
 
 
 class NapariImageJMenu(QWidget):
@@ -59,11 +57,6 @@ class NapariImageJMenu(QWidget):
                     ij().thread().queue(lambda: ij().ui().showUI())
 
             self.gui_button.clicked.connect(show_ui)
-
-        def post_init_setup():
-            subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
-
-        java_signals.when_ij_ready(post_init_setup)
 
 
 class ToIJButton(QPushButton):
@@ -188,7 +181,8 @@ class FromIJButton(QPushButton):
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
-            # Check the metadata for additonal layers, like Shapes/Tracks/Points
+            # Check the metadata for additonal layers, like
+            # Shapes/Tracks/Points
             for _, v in py_image.metadata.items():
                 if isinstance(v, Layer):
                     self.viewer.add_layer(v)
@@ -224,21 +218,21 @@ class GUIButton(QPushButton):
         icon: QIcon = QIcon(QPixmap(path))
         self.setIcon(icon)
 
-        def post_setup():
+        def finalize(ij: "jc.ImageJ"):
             self.setEnabled(True)
 
-        java_signals.when_ij_ready(post_setup)
+        on_ij_init(finalize)
 
     def _setup_headful(self):
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
         self.setToolTip("Display ImageJ2 GUI (loading)")
 
-        def post_setup():
+        def finalize(ij: "jc.ImageJ"):
             self._set_icon(resource_path("imagej2-16x16-flat"))
             self.setEnabled(True)
             self.setToolTip("Display ImageJ2 GUI")
 
-        java_signals.when_ij_ready(post_setup)
+        on_ij_init(finalize)
 
     def _setup_headless(self):
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
@@ -372,84 +366,3 @@ class RichTextPopup(QMessageBox):
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
         if exec:
             self.exec()
-
-
-@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class UIShownListener(object):
-    def __init__(self):
-        self.initialized = False
-
-    @JOverride
-    def onEvent(self, event):
-        if not self.initialized:
-            # add our custom settings to the User Interface
-            if ij().legacy and ij().legacy.isActive():
-                self._ij1_UI_setup()
-            self._ij2_UI_setup(event.getUI())
-            self.initialized = True
-
-    @JOverride
-    def getEventClass(self):
-        return jc.UIShownEvent.class_
-
-    @JOverride
-    def equals(self, other):
-        return isinstance(other, UIShownListener)
-
-    def _ij1_UI_setup(self):
-        """Configures the ImageJ Legacy GUI"""
-        ij().IJ.getInstance().exitWhenQuitting(False)
-
-    def _ij2_UI_setup(self, ui: "jc.UserInterface"):
-        """Configures the ImageJ2 Swing GUI behavior"""
-        # Overwrite the WindowListeners so we control closing behavior
-        self._kill_window_listeners(self._get_AWT_frame(ui))
-
-    def _get_AWT_frame(self, ui: "jc.UserInterface"):
-        appFrame = ui.getApplicationFrame()
-        if isinstance(appFrame, jc.Window):
-            return appFrame
-        elif isinstance(appFrame, jc.UIComponent):
-            return appFrame.getComponent()
-
-    def _kill_window_listeners(self, window):
-        """Replaces the WindowListeners present on window with our own"""
-        # Remove all preset WindowListeners
-        for listener in window.getWindowListeners():
-            window.removeWindowListener(listener)
-
-        # Add our own behavior for WindowEvents
-        @JImplements("java.awt.event.WindowListener")
-        class NapariAdapter(object):
-            @JOverride
-            def windowOpened(self, event):
-                pass
-
-            @JOverride
-            def windowClosing(self, event):
-                # We don't want to shut down anything, we just want to hide the window.
-                window.setVisible(False)
-
-            @JOverride
-            def windowClosed(self, event):
-                pass
-
-            @JOverride
-            def windowIconified(self, event):
-                pass
-
-            @JOverride
-            def windowDeiconified(self, event):
-                pass
-
-            @JOverride
-            def windowActivated(self, event):
-                pass
-
-            @JOverride
-            def windowDeactivated(self, event):
-                pass
-
-        listener = NapariAdapter()
-        ij().object().addObject(listener)
-        window.addWindowListener(listener)

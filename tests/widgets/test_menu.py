@@ -17,7 +17,6 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
 from napari_imagej.resources import resource_path
-from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
     FromIJButton,
@@ -25,7 +24,6 @@ from napari_imagej.widgets.menu import (
     NapariImageJMenu,
     SettingsButton,
     ToIJButton,
-    UIShownListener,
 )
 from napari_imagej.widgets.widget_utils import _run_actions_for
 from tests.utils import DummySearchResult, jc
@@ -519,14 +517,6 @@ def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMe
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
     # Wait for the Frame to be visible again
     asserter(lambda: ui_visible(ij))
-
-
-def test_UIShownEvent_listener_registered(ij):
-    """
-    Ensure that a UI is registered to capture SciJavaEvents.
-    """
-    subs = subscribers(ij, jc.UIShownEvent.class_)
-    assert any(isinstance(sub, UIShownListener) for sub in subs)
 
 
 @pytest.fixture

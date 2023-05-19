@@ -17,7 +17,6 @@ from typing import Any, Callable, Dict
 
 import imagej
 from jpype import JClass
-from qtpy.QtCore import QObject, Signal
 from scyjava import config, get_version, is_version_at_least, jimport, jvm_started
 
 from napari_imagej import settings
@@ -40,6 +39,8 @@ minimum_versions = {
 # -- ImageJ API -- #
 
 _ij = None
+initialization_succeeded = None
+_callbacks_on_success = []
 
 
 def ij():
@@ -57,46 +58,51 @@ def init_ij() -> "jc.ImageJ":
     global _ij
     if _ij:
         return _ij
-    try:
-        log_debug("Initializing ImageJ2")
+    log_debug("Initializing ImageJ2")
 
-        # determine whether imagej is already running
-        imagej_already_initialized: bool = hasattr(imagej, "gateway") and imagej.gateway
+    # determine whether imagej is already running
+    imagej_already_initialized: bool = hasattr(imagej, "gateway") and imagej.gateway
 
-        # -- CONFIGURATION -- #
+    # -- CONFIGURATION -- #
 
-        # Configure pyimagej
-        if imagej_already_initialized:
-            _update_imagej_settings()
-        else:
-            ij_settings = _configure_imagej()
+    # Configure pyimagej
+    if imagej_already_initialized:
+        _update_imagej_settings()
+    else:
+        ij_settings = _configure_imagej()
 
-        # Configure napari-imagej
-        from napari_imagej.types.converters import install_converters
+    # Configure napari-imagej
+    from napari_imagej.types.converters import install_converters
 
-        install_converters()
+    install_converters()
 
-        log_debug("Completed JVM Configuration")
+    log_debug("Completed JVM Configuration")
 
-        # -- INITIALIZATION -- #
+    # -- INITIALIZATION -- #
 
-        # Launch ImageJ
-        if imagej_already_initialized:
-            _ij = imagej.gateway
-        else:
-            _ij = imagej.init(**ij_settings)
+    # Launch ImageJ
+    if imagej_already_initialized:
+        _ij = imagej.gateway
+    else:
+        _ij = imagej.init(**ij_settings)
 
-        # Log initialization
-        log_debug(f"Initialized at version {_ij.getVersion()}")
+    # Log initialization
+    log_debug(f"Initialized at version {_ij.getVersion()}")
 
-        # -- VALIDATION -- #
+    # -- VALIDATION -- #
 
-        # Validate PyImageJ
-        _validate_imagej()
+    # Validate PyImageJ
+    _validate_imagej()
 
-        java_signals._startup_complete.emit()
-    except Exception as e:
-        java_signals._startup_error.emit(e)
+    for callback in _callbacks_on_success:
+        callback(_ij)
+
+
+def on_ij_init(callback: Callable[["jc.ImageJ"], None]):
+    if _ij:
+        callback(_ij)
+    else:
+        _callbacks_on_success.append(callback)
 
 
 def _update_imagej_settings() -> None:
@@ -194,54 +200,6 @@ def _optional_requirements():
         pass
 
     return optionals
-
-
-class ImageJ_Callbacks(QObject):
-    """
-    An access point for registering ImageJ-related callbacks.
-    """
-
-    # Qt Signals - should not be called directly!
-    _startup_error: Signal = Signal(Exception)
-    _startup_complete: Signal = Signal()
-
-    # -- CALLBACK-ACCEPTING FUNCTIONS -- #
-
-    def when_ij_ready(self, func: Callable[[], None]):
-        """
-        Registers behavior (encapsulated as a function) that should be called
-        when ImageJ is ready to be used.
-
-        If ImageJ has not yet been initialized, the passed function is registered
-        as a callback.
-
-        If ImageJ is ready, the passed function is executed immediately.
-
-        :param func: The behavior to execute
-        """
-        if not _ij:
-            self._startup_complete.connect(func)
-        else:
-            func()
-
-    def when_initialization_fails(self, func: Callable[[Exception], None]):
-        """
-        Registers behavior (encapsulated as a function) that should be called
-        when ImageJ fails to initialize.
-
-        If ImageJ has not yet been initialized, the passed function is registered
-        as a callback.
-
-        If ImageJ setup has already failed, the passed function will not be called.
-
-        :param func: The behavior to execute
-        """
-        self._startup_error.connect(func)
-
-
-# -- SINGLETON INSTANCES -- #
-
-java_signals = ImageJ_Callbacks()
 
 
 class JavaClasses(object):

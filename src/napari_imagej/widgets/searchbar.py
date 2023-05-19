@@ -8,7 +8,7 @@ are ready to accept queries.
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit, QWidget
 
-from napari_imagej.java import java_signals
+from napari_imagej.java import on_ij_init
 
 
 class JVMEnabledSearchbar(QWidget):
@@ -24,8 +24,7 @@ class JVMEnabledSearchbar(QWidget):
         # The main functionality is a search bar
         self.bar: JLineEdit = JLineEdit()
 
-        java_signals.when_ij_ready(self.bar.finalize)
-        java_signals.when_initialization_fails(self.bar.on_error)
+        on_ij_init(self.bar.finalize)
 
         # Set GUI options
         self.setLayout(QHBoxLayout())
@@ -53,12 +52,12 @@ class JLineEdit(QLineEdit):
         else:
             super().keyPressEvent(event)
 
-    def finalize(self):
+    def finalize(self, ij):
         # Once the JVM is ready, allow editing
         self.setText("")
         self.setEnabled(True)
 
-    def on_error(self):
+    def finalize_on_error(self):
         # If ImageJ errors
         self.setText("Error: Invalid ImageJ2")
         self.setEnabled(False)
