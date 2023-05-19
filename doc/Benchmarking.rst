@@ -36,7 +36,6 @@ Unfortunately, the data is stored within separate files for each focal plane and
    Then, we change the backing instance of napari-imagej to ``sc.fiji:fiji``; this gives us the Bio-Formats_ plugin, which will allow us to read in EmbryoCE.
 
     .. figure:: https://media.imagej.net/napari-imagej/benchmarking_settings.png
-        :scale: 50 %
         
         Recommended settings for napari-imagej benchmarking
 
@@ -54,7 +53,6 @@ Unfortunately, the data is stored within separate files for each focal plane and
     Once finished, Bio-Formats will import EmbryoCE into Fiji as a standard image. 
 
     .. figure:: https://media.imagej.net/napari-imagej/benchmarking_focal_in_fiji.png
-        :scale: 50 %
         
         EmbryoCE loaded as a single image in Fiji
     
@@ -120,7 +118,6 @@ We run the script using the following steps:
    * ``6.0`` to the ``sigma`` parameter.
 
 .. figure:: https://media.imagej.net/napari-imagej/benchmarking_setup_napari.png
-    :scale: 50 %
     
     The expected napari-imagej benchmarking setup
 

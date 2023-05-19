@@ -97,7 +97,6 @@ Used to define command line arguments that should be passed to the JVM at startu
 One common use case for this feature is to increase the maximum heap space available to the JVM, as shown below:
 
 .. figure:: https://media.imagej.net/napari-imagej/benchmarking_settings.png
-    :scale: 50 %
 
     Specifying 32GB of memory available to ImageJ ecosystem routines in the JVM.
 
