@@ -8,10 +8,12 @@ from typing import Callable, Generator
 import pytest
 from napari import Viewer
 
-import napari_imagej
+from napari_imagej import settings
 from napari_imagej.java import init_ij
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
+
+actual_settings_is_macos = settings._is_macos
 
 
 @pytest.fixture()
@@ -33,7 +35,8 @@ def asserter(qtbot) -> Callable[[Callable[[], bool]], None]:
 @pytest.fixture(autouse=True)
 def install_default_settings():
     """Fixture ensuring any changes made earlier to the settings are reversed"""
-    napari_imagej.settings.load(False)
+    settings._is_macos = actual_settings_is_macos
+    settings.load(False)
 
 
 @pytest.fixture(scope="session")
@@ -82,7 +85,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce active layer selection
-    napari_imagej.settings.use_active_layer = True
+    settings.use_active_layer = True
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
@@ -107,7 +110,7 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Define GUIWidget settings for this particular feature.
     # In particular, we want to enforce user layer selection via Dialog
-    napari_imagej.settings.use_active_layer = False
+    settings.use_active_layer = False
 
     # Create widget
     widget: NapariImageJMenu = NapariImageJMenu(viewer)

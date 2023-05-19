@@ -77,6 +77,7 @@ use_active_layer: bool = defaults["use_active_layer"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
+_is_macos = sys.platform == "Darwin"
 
 
 # -- Public API functions --
@@ -126,7 +127,7 @@ def headless() -> bool:
         False if the platform supports running with GUI and
         the enable_imagej_gui flag is True; True otherwise.
     """
-    return sys.platform == "darwin" or not enable_imagej_gui
+    return _is_macos or not enable_imagej_gui
 
 
 def jvm_mode() -> str:
@@ -218,7 +219,7 @@ def validate() -> None:
             "ImageJ base directory is not a valid directory. "
             "No scripts will be discovered."
         )
-    if enable_imagej_gui and sys.platform == "Darwin":
+    if enable_imagej_gui and _is_macos:
         errors.append(
             "The ImageJ GUI is not available on macOS systems. "
             "Headless mode will be used."
