@@ -26,6 +26,7 @@ from napari_imagej.utilities.logging import log_debug
 # -- Constants --
 
 minimum_versions = {
+    "io.scif:scifio": "0.45.0",
     "net.imagej:imagej-common": "2.0.2",
     "net.imagej:imagej-legacy": "1.1.0",
     "net.imagej:imagej-ops": "0.49.0",
@@ -93,37 +94,6 @@ def init_ij() -> "jc.ImageJ":
         # Validate PyImageJ
         _validate_imagej()
 
-        # HACK: Avoid FlatLaf with ImageJ2 Swing UI;
-        # it doesn't work for reasons unknown.
-        # NB this SHOULD NOT be moved.
-        # This code must be in place before ANY swing components get created.
-        # Swing components could be created by any Java functionality (e.g. Commands).
-        # Therefore, we can't move it to e.g. the menu file
-        try:
-            ui = _ij.ui().getDefaultUI().getInfo().getName()
-            log_debug(f"Default SciJava UI is {ui}.")
-            if ui == "swing":
-                SwingLookAndFeelService = jimport(
-                    "org.scijava.ui.swing.laf.SwingLookAndFeelService"
-                )
-                laf = _ij.prefs().get(SwingLookAndFeelService, "lookAndFeel")
-                log_debug(f"Preferred Look+Feel is {laf}.")
-                if laf is None or laf.startsWith("FlatLaf"):
-                    UIManager = jimport("javax.swing.UIManager")
-                    fallback_laf = UIManager.getSystemLookAndFeelClassName()
-                    log_debug(
-                        f"Detected FlatLaf. Falling back to {fallback_laf} "
-                        "instead to avoid problems."
-                    )
-                    _ij.prefs().put(
-                        SwingLookAndFeelService, "lookAndFeel", fallback_laf
-                    )
-        except Exception as exc:
-            from scyjava import jstacktrace
-
-            # NB: The hack failed, but no worries, just try to keep going.
-            print(jstacktrace(exc))
-
         java_signals._startup_complete.emit()
     except Exception as e:
         java_signals._startup_error.emit(e)
@@ -153,11 +123,6 @@ def _configure_imagej() -> Dict[str, Any]:
     :return: kwargs that should be passed to imagej.init()
     """
     # ScyJava configuration
-    # TEMP: Avoid issues caused by
-    # https://github.com/imagej/pyimagej/issues/160
-    config.add_repositories(
-        {"scijava.public": "https://maven.scijava.org/content/groups/public"}
-    )
     config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
 
     # Append napari-imagej-specific cli arguments
@@ -172,13 +137,7 @@ def _configure_imagej() -> Dict[str, Any]:
     ].get(str)
     init_settings["mode"] = settings["jvm_mode"].get(str)
 
-    add_legacy = settings["include_imagej_legacy"].get(bool)
-    init_settings["add_legacy"] = add_legacy
-
-    # TEMP: Until imagej/napari-imagej#209 is solved.
-    if add_legacy:
-        config.endpoints.append("net.imagej:imagej-legacy:1.1.0")
-
+    init_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
     return init_settings
 
 
@@ -190,8 +149,10 @@ def _validate_imagej():
     # be able to find our current version. We do that by querying a Java class
     # within that component.
     RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
+    SCIFIO = jimport("io.scif.SCIFIO")
     UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
     component_requirements = {
+        "io.scif:scifio": SCIFIO,
         "net.imagej:imagej-common": jc.Dataset,
         "net.imagej:imagej-ops": jc.OpInfo,
         "net.imglib2:imglib2-unsafe": UnsafeImg,
