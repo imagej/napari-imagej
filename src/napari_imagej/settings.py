@@ -199,18 +199,33 @@ def update(use_dv=True, **kwargs) -> bool:
 # -- Validation --
 
 
-def validate(name: str, new_value: Any) -> Any:
+def validate() -> None:
     """
-    Validate a setting key-value pair.
+    Perform validation checks on the settings.
+
+    imagej_base_directory
+        Check that it's a valid directory.
+
+    enable_imagej_gui
+        Check that the ImageJ GUI is available on this platform.
+        Specifically: the GUI is not available on macOS systems.
+
+    :raise ValueError: If any problems are noticed with the settings.
     """
-    return validators[name](new_value) if name in validators else new_value
+    errors = []
+    if not os.path.isdir(os.path.abspath(imagej_base_directory)):
+        errors.append(
+            "ImageJ base directory is not a valid directory. "
+            "No scripts will be discovered."
+        )
+    if enable_imagej_gui and sys.platform == "Darwin":
+        errors.append(
+            "The ImageJ GUI is not available on macOS systems. "
+            "Headless mode will be used."
+        )
 
-
-def validate_imagej_base_directory(new_value: Any) -> Any:
-    if not os.path.isdir(os.path.abspath(new_value)):
-        raise ValueError("ImageJ base directory must be a valid directory.")
-
-    return new_value
+    if len(errors) >= 1:
+        raise ValueError(*errors)
 
 
 # -- Helper functions --
@@ -260,29 +275,33 @@ def _copy_settings(
         # If no getter for destination is given, just use Nones.
         dest_get = lambda k: None  # noqa: E731
 
-    # For each item in defaults dict, copy the entry from source to destination.
+    # Calculate new value for each key.
     any_changed = False
     for k, dv in defaults.items():
+        # Retrieve the new value from the source.
         new_value = src_get(k, dv)
+
+        # Ensure there is actually a new value to assign.
         if new_value is None:
-            # No updated value to copy.
             continue
+
+        # Ensure that the new value is the proper type.
         vtype = type(dv)
         if not isinstance(new_value, vtype):
-            # Coerce non-conforming types.
             new_value = vtype(new_value)
+
+        # Verify that the value has actually changed.
         old_value = dest_get(k)
-        if old_value != new_value and new_value is not None:
-            validated = validate(k, new_value)
-            dest_set(k, validated)
-            any_changed = True
+        if old_value == new_value:
+            continue
+
+        # Assign the new value to the destination.
+        dest_set(k, new_value)
+        any_changed = True
+
     return any_changed
 
 
 # -- Initialization logic --
-
-validators = {
-    "imagej_base_directory": validate_imagej_base_directory,
-}
 
 load()
