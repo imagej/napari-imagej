@@ -14,10 +14,14 @@ from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import when_jvm_stops
 
-from napari_imagej.java import ij, init_ij, java_signals, jc
+from napari_imagej.java import ij, init_ij, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
+from napari_imagej.utilities.event_subscribers import (
+    NapariEventSubscriber,
+    ProgressBarListener,
+)
 from napari_imagej.utilities.events import subscribe
-from napari_imagej.utilities.logging import is_debug, log_debug
+from napari_imagej.utilities.logging import is_debug
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -35,14 +39,12 @@ class NapariImageJWidget(QWidget):
 
     output_handler = Signal(object)
     progress_handler = Signal(object)
+    ij_error_handler = Signal(object)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.napari_viewer = napari_viewer
         self.setLayout(QVBoxLayout())
-
-        # First things first, let's start up imagej (in the background)
-        java_signals.when_initialization_fails(self._handle_error)
 
         # -- NapariImageJWidget construction -- #
 
@@ -113,6 +115,7 @@ class NapariImageJWidget(QWidget):
 
         self.output_handler.connect(self._handle_output)
         self.progress_handler.connect(self._update_progress)
+        self.ij_error_handler.connect(self._handle_ij_error)
 
         # -- Final setup -- #
 
@@ -132,11 +135,6 @@ class NapariImageJWidget(QWidget):
 
     def wait_for_finalization(self):
         self.ij_initializer.wait()
-
-    def _handle_error(self, exc: Exception):
-        msg: QMessageBox = QMessageBox()
-        msg.setText(str(exc))
-        msg.exec()
 
     @Slot(object)
     def _handle_output(self, data):
@@ -182,6 +180,24 @@ class NapariImageJWidget(QWidget):
         if isinstance(event, jc.ModuleErroredEvent):
             raise event.getException()
 
+    @Slot(object)
+    def _handle_ij_error(self, exc: Exception):
+        """
+        Handles errors associated initializing ImageJ.
+        Initializing ImageJ can fail for all sorts of reasons,
+        so we give it special attention here.
+
+        NB: This MUST be done within this slot, as slot functions
+        are run on the GUI thread. napari-imagej runs ImageJ initialization
+        on a separate Qt thread, which isn't the GUI thread.
+        """
+        # Disable the searchbar
+        self.search.bar.finalize_on_error()
+        # Print thet error
+        msg: QMessageBox = QMessageBox()
+        msg.setText(str(exc))
+        msg.exec()
+
 
 class ImageJInitializer(QThread):
     """
@@ -199,15 +215,22 @@ class ImageJInitializer(QThread):
 
         Functionality partitioned into functions by subwidget.
         """
-        # Initialize ImageJ
-        init_ij()
-
-        # Finalize the Results Tree
-        self._finalize_results_tree()
-        # Finalize the info bar
-        self._finalize_info_bar()
-        # Finalize Exception printer
-        self._finalize_exception_printer()
+        try:
+            # Initialize ImageJ
+            init_ij()
+            # Finalize the menu
+            self.widget.menu.finalize()
+            # Finalize the search bar
+            self.widget.search.finalize()
+            # Finalize the results tree
+            self._finalize_results_tree()
+            # Finalize the info bar
+            self._finalize_info_bar()
+            # Finalize EventSubscribers
+            self._finalize_subscribers()
+        except Exception as e:
+            # Handle the exception on the GUI thread
+            self.widget.ij_error_handler.emit(e)
 
     def _finalize_results_tree(self):
         """
@@ -252,43 +275,12 @@ class ImageJInitializer(QThread):
 
     def _finalize_info_bar(self):
         self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")
+
+    def _finalize_subscribers(self):
+        # Progress bar subscriber
         progress_listener = ProgressBarListener(self.widget.progress_handler)
         subscribe(ij(), jc.ModuleEvent.class_, progress_listener)
-
-    def _finalize_exception_printer(self):
+        # Debug printer subscriber
         if is_debug():
             subscriber = NapariEventSubscriber()
             subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
-
-
-@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class NapariEventSubscriber(object):
-    @JOverride
-    def onEvent(self, event):
-        log_debug(str(event))
-
-    @JOverride
-    def getEventClass(self):
-        return jc.SciJavaEvent.class_
-
-    @JOverride
-    def equals(self, other):
-        return isinstance(other, NapariEventSubscriber)
-
-
-@JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class ProgressBarListener(object):
-    def __init__(self, progress_signal: Signal):
-        self.progress_signal = progress_signal
-
-    @JOverride
-    def onEvent(self, event):
-        self.progress_signal.emit(event)
-
-    @JOverride
-    def getEventClass(self):
-        return jc.ModuleEvent.class_
-
-    @JOverride
-    def equals(self, other):
-        return isinstance(other, ProgressBarListener)

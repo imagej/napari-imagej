@@ -9,14 +9,14 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
 from napari_imagej.java import ij, jc
+from napari_imagej.utilities.event_subscribers import (
+    ProgressBarListener,
+    UIShownListener,
+)
 from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
-from napari_imagej.widgets.napari_imagej import (
-    NapariImageJWidget,
-    ProgressBarListener,
-    ResultRunner,
-)
+from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from tests.widgets.widget_utils import _searcher_tree_named
@@ -186,7 +186,8 @@ def test_widget_finalization(ij, imagej_widget: NapariImageJWidget, asserter):
     # Ensure that we have the handle on a non-null SearchOperation
     assert imagej_widget.result_tree._searchOperation is not None
 
-    # Ensure that all Searchers are represented in the tree with a top level item
+    # Ensure that all Searchers are represented in the tree with a top level
+    # item
     numSearchers = len(ij.plugin().getPluginsOfType(jc.Searcher))
     asserter(lambda: imagej_widget.result_tree.topLevelItemCount() == numSearchers)
 
@@ -264,7 +265,10 @@ def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, asserter):
 
 def test_event_subscriber_registered(ij, imagej_widget: NapariImageJWidget, asserter):
     """
-    Ensure that a ProgressBarListener is registered to capture ModuleEvents.
+    Ensure that napari-imagej's required EventSubscribers are registered
     """
     subs = subscribers(ij, jc.ModuleEvent.class_)
     assert any(isinstance(sub, ProgressBarListener) for sub in subs)
+
+    subs = subscribers(ij, jc.UIShownEvent.class_)
+    assert any(isinstance(sub, UIShownListener) for sub in subs)
