@@ -52,12 +52,25 @@ def test_validate_multiple_problems():
     assert errors[1].startswith("The ImageJ GUI is not available on macOS systems.")
 
 
-def test_validate_default_settings():
+def test_validate_default_settings_not_macos():
     """
-    Assert that the validate function succeeds with default settings.
+    Assert that the validate function succeeds with default settings on non-Mac
     """
+    settings._is_macos = False
+
     errors = validation_errors()
     assert len(errors) == 0
+
+
+def test_validate_default_settings_macos():
+    """
+    Assert that the validate function yields a warnig with default settings on Mac
+    """
+    settings._is_macos = True
+
+    errors = validation_errors()
+    assert len(errors) == 1
+    assert errors[0].startswith("The ImageJ GUI is not available on macOS systems.")
 
 
 def validation_errors():
