@@ -269,11 +269,11 @@ class SettingsButton(QPushButton):
             "options": {"label": "ImageJ base directory", "mode": "d"},
         }
         args["enable_imagej_gui"]["options"] = {
-            "label": "Enable ImageJ GUI if possible"
+            "label": "enable ImageJ GUI if possible"
         }
 
         # Use magicgui.request_values to allow user to configure settings
-        choices = request_values(title="napari-imagej Settings", values=args)
+        choices = request_values(title="napari-imagej settings", values=args)
         if not choices:
             # Canceled
             return

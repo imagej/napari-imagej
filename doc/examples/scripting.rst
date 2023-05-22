@@ -9,6 +9,15 @@ For this example, we translated PyImageJ's `Puncta Segmentation`_ into a SciJava
 
 For more information on the use case itself, please see the original PyImageJ Puncta Segmentation example.
 
+Configuration
+-------------
+
+To run this use case, the following settings were used. For information on configuring napari-imagej, please see `here <../Configuration.html>`__.
+
+.. figure:: https://media.imagej.net/napari-imagej/puncta_config.png
+
+    Configuration for the Puncta Segmentation use case
+
 The Code
 --------
 

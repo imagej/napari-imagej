@@ -53,7 +53,7 @@ Below are a couple examples of ways to construct different ImageJ2 instances:
       - NO
 
 
-*imagej base directory*
+*ImageJ base directory*
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Path to the ImageJ base directory on your local machine. Defaults to the current working directory.
@@ -67,18 +67,16 @@ This button is used to declare whether original ImageJ functionality should be e
 
 If active, all original ImageJ functionality (ij.* packages) will be available, and the napari-imagej GUI button will launch the classic ImageJ user interface.
 
-If disabled, only ImageJ2 functionality will be availabe, and the napari-imagej GUI button will launch the ImageJ2 user interface.
+If disabled, only ImageJ2 functionality will be available, and the napari-imagej GUI button will launch the ImageJ2 user interface.
 
-*jvm mode*
-^^^^^^^^^^^^
+*enable imagej gui if possible*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Designates the mode of execution for ImageJ2.
+This checkbox tells napari-imagej whether to make the ImageJ GUI avaiable. If unchecked, ImageJ2 will be run headlessly, disabling the ImageJ UI and making original ImageJ functionality unavailable.
 
-Selecting ``headless`` prevents ImageJ ecosystem functionality from launching graphical components; the napari-imagej widget becomes the only way to interact with the ImageJ ecosystem.
+By default, the imagej gui will be available whenever possible, however the ImageJ GUI **is unavailable on MacOS**. Therefore, on MacOS, napari-imagej will behave as if this setting is always ``False``.
 
-Selecting ``interactive`` allows ImageJ ecosystem functionality to launch graphical components.
-
-``interactive`` **mode is unavailable on MacOS**. More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_. If napari-imagej is launched on MacOS with this setting set to ``interactive``, the setting will silently be reassigned to ``headless``.
+More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
 *use active layer*
 ^^^^^^^^^^^^^^^^^^^^
