@@ -48,7 +48,7 @@ def test_java_components(ij):
 
 
 def test_endpoint(ij):
-    endpoints: List[str] = settings["imagej_directory_or_endpoint"].get(str).split("+")
+    endpoints: List[str] = settings.endpoint().split("+")
     for endpoint in endpoints:
         gav = endpoint.split(":")
         if len(gav) > 2:

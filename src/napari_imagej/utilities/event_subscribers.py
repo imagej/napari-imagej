@@ -65,11 +65,11 @@ class UIShownListener(object):
         return isinstance(other, UIShownListener)
 
     def _ij1_UI_setup(self):
-        """Configures the ImageJ Legacy GUI"""
+        """Configure the ImageJ Legacy GUI"""
         ij().IJ.getInstance().exitWhenQuitting(False)
 
     def _ij2_UI_setup(self, ui: "jc.UserInterface"):
-        """Configures the ImageJ2 Swing GUI behavior"""
+        """Configure the ImageJ2 Swing GUI behavior"""
         # Overwrite the WindowListeners so we control closing behavior
         self._kill_window_listeners(self._get_AWT_frame(ui))
 
@@ -81,7 +81,7 @@ class UIShownListener(object):
             return appFrame.getComponent()
 
     def _kill_window_listeners(self, window):
-        """Replaces the WindowListeners present on window with our own"""
+        """Replace the WindowListeners present on window with our own"""
         # Remove all preset WindowListeners
         for listener in window.getWindowListeners():
             window.removeWindowListener(listener)

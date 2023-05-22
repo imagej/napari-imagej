@@ -35,3 +35,11 @@ def log_debug(msg: str):
 
 def is_debug():
     return _logger.isEnabledFor(logging.DEBUG)
+
+
+def warn(msg: str):
+    """
+    Provides a warning message to the logger, prefaced by 'napari-imagej: '
+    :param msg: The message to output
+    """
+    _logger.warning("napari-imagej: %s", msg)

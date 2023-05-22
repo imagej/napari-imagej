@@ -61,12 +61,6 @@ def init_ij() -> "jc.ImageJ":
 
     # -- CONFIGURATION -- #
 
-    # Configure pyimagej
-    if imagej_already_initialized:
-        _update_imagej_settings()
-    else:
-        ij_settings = _configure_imagej()
-
     # Configure napari-imagej
     from napari_imagej.types.converters import install_converters
 
@@ -80,7 +74,7 @@ def init_ij() -> "jc.ImageJ":
     if imagej_already_initialized:
         _ij = imagej.gateway
     else:
-        _ij = imagej.init(**ij_settings)
+        _ij = imagej.init(**_configure_imagej())
 
     # Log initialization
     log_debug(f"Initialized at version {_ij.getVersion()}")
@@ -93,21 +87,6 @@ def init_ij() -> "jc.ImageJ":
     return _ij
 
 
-def _update_imagej_settings() -> None:
-    """
-    Updates napari-imagej's settings to reflect an active ImageJ instance.
-    """
-    # Scrape the JVM mode off of the active ImageJ instance
-    settings["jvm_mode"] = (
-        "headless" if imagej.gateway.ui().isHeadless() else "interactive"
-    )
-    # Determine if legacy is active on the active ImageJ instance
-    # NB bool is needed to coerce Nones into booleans.
-    settings["add_legacy"] = bool(
-        imagej.gateway.legacy and imagej.gateway.legacy.isActive()
-    )
-
-
 def _configure_imagej() -> Dict[str, Any]:
     """
     Configures scyjava and pyimagej.
@@ -117,21 +96,19 @@ def _configure_imagej() -> Dict[str, Any]:
     :return: kwargs that should be passed to imagej.init()
     """
     # ScyJava configuration
-    config.add_option(f"-Dimagej2.dir={settings['imagej_base_directory'].get(str)}")
+    config.add_option(f"-Dimagej2.dir={settings.basedir()}")
 
     # Append napari-imagej-specific cli arguments
-    cli_args = settings["jvm_command_line_arguments"].get(str)
-    if cli_args not in [None, ""]:
+    cli_args = settings.jvm_command_line_arguments
+    if cli_args:
         config.add_option(cli_args)
 
     # PyImageJ configuration
-    init_settings = {}
-    init_settings["ij_dir_or_version_or_endpoint"] = settings[
-        "imagej_directory_or_endpoint"
-    ].get(str)
-    init_settings["mode"] = settings["jvm_mode"].get(str)
-
-    init_settings["add_legacy"] = settings["include_imagej_legacy"].get(bool)
+    init_settings = {
+        "ij_dir_or_version_or_endpoint": settings.endpoint(),
+        "mode": settings.jvm_mode(),
+        "add_legacy": settings.include_imagej_legacy,
+    }
     return init_settings
 
 

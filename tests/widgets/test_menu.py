@@ -2,12 +2,10 @@
 A module testing napari_imagej.widgets.menu
 """
 
-import sys
 from typing import Callable
 
 import numpy
 import pytest
-import yaml
 from napari import Viewer
 from napari.layers import Image, Layer
 from napari.viewer import current_viewer
@@ -27,15 +25,6 @@ from napari_imagej.widgets.menu import (
 )
 from napari_imagej.widgets.widget_utils import _run_actions_for
 from tests.utils import DummySearchResult, jc
-
-
-# Determine whether we are testing headlessly
-def running_headless():
-    return settings["jvm_mode"].get(str) == "headless"
-
-
-def running_legacy():
-    return settings["include_imagej_legacy"].get(bool)
 
 
 @pytest.fixture(autouse=True)
@@ -183,7 +172,7 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
     """Tests headful-specific settings of GUIButton"""
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
 
     button: GUIButton = gui_widget.gui_button
@@ -206,7 +195,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
 
 def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     """Tests headless-specific settings of GUIButton"""
-    if not running_headless():
+    if not settings.headless():
         pytest.skip("Only applies when running headlessly")
     # Wait until the JVM starts to test settings
     button: GUIButton = gui_widget.gui_button
@@ -231,9 +220,9 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
 
 
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
-    if running_legacy():
+    if settings.include_imagej_legacy:
         pytest.skip(
             """HACK: Disabled with ImageJ legacy.
     See https://github.com/imagej/napari-imagej/issues/181
@@ -265,9 +254,9 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 
 
 def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
-    if running_legacy():
+    if settings.include_imagej_legacy:
         pytest.skip(
             """HACK: Disabled with ImageJ legacy.
     See https://github.com/imagej/napari-imagej/issues/181
@@ -298,7 +287,7 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 
 
 def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
 
     button_to: ToIJButton = gui_widget_chooser.to_ij
@@ -329,25 +318,27 @@ def test_settings_no_change(gui_widget: NapariImageJMenu):
     button: SettingsButton = gui_widget.settings_button
 
     # First record the old settings
-    old_yaml = [(k, v.get()) for k, v in settings.items()]
+    old_settings = settings.asdict()
 
     # Then update the settings, but select all defaults
     # NB settings handling is done by napari_mocker above
     button._update_settings()
     # Then record the new settings and compare
-    new_yaml = [(k, v.get()) for k, v in settings.items()]
-    assert new_yaml == old_yaml
+    new_settings = settings.asdict()
+    assert new_settings == old_settings
 
 
 def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     """Change imagej_directory_or_endpoint and ensure that the settings change"""
     button: SettingsButton = gui_widget.settings_button
 
+    # HACK - pretend we aren't on Mac - to avoid extra modal dialogs
+    settings._is_macos = False
+
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    key = "imagej_directory_or_endpoint"
-    old_value = settings[key]
+    old_value = settings.imagej_directory_or_endpoint
     new_value = "foo"
 
     assert old_value != new_value
@@ -371,66 +362,18 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
 
     # Handle the popup from button._update_settings
     expected_text = (
-        "Please restart napari for napari-imagej settings " "changes to take effect!"
+        "Please restart napari for napari-imagej settings changes to take effect!"
     )
     popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
+    assert settings.imagej_directory_or_endpoint == new_value
 
     menu.request_values = oldfunc
-
-    # Assert a change in the settings
-    assert settings[key].get() == new_value
-    with open(settings.user_config_path(), "r") as stream:
-        assert yaml.safe_load(stream)[key] == new_value
-
-
-@pytest.mark.skipif(sys.platform != "darwin", reason="Only applies testing on MacOS")
-def test_jvm_mode_change_prevention(popup_handler, gui_widget: NapariImageJMenu):
-    """Change jvm_mode on mac from headless to interactive, ensure that is prevented"""
-    button: SettingsButton = gui_widget.settings_button
-
-    # REQUEST_VALUES MOCK
-    oldfunc = menu.request_values
-
-    assert settings["jvm_mode"].get() == "headless"
-
-    def newfunc(values={}, title="", **kwargs):
-        results = {}
-        # Solve each parameter
-        for name, options in values.items():
-            if name == "jvm_mode":
-                results[name] = "interactive"
-                continue
-            elif "value" in options:
-                results[name] = options["value"]
-                continue
-
-            # Otherwise, we don't know how to solve that parameter
-            raise NotImplementedError()
-        return results
-
-    menu.request_values = newfunc
-
-    # Handle the popup from button._update_settings
-    expected_text = (
-        "<b>Ignoring selection for setting "
-        "<font face='courier'>jvm_mode</font>:</b><p>"
-        "ImageJ2 must be run headlessly on MacOS. <p>Visit "
-        '<a href="https://pyimagej.readthedocs.io/en/latest/'
-        'Initialization.html#interactive-mode">this site</a> '
-        "for more information."
-    )
-    popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
-
-    menu.request_values = oldfunc
-
-    # Assert no change in the settings
-    assert settings["jvm_mode"].get() == "headless"
 
 
 def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
-    if not running_legacy():
+    if not settings.include_imagej_legacy:
         pytest.skip("Tests legacy behavior")
 
     to_button: ToIJButton = gui_widget.to_ij
@@ -468,9 +411,9 @@ def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMen
 
 
 def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
-    if not running_legacy():
+    if not settings.include_imagej_legacy:
         pytest.skip("Tests legacy behavior")
 
     from_button: FromIJButton = gui_widget.from_ij
@@ -493,7 +436,7 @@ def test_image_plus_to_napari(asserter, qtbot, ij, gui_widget: NapariImageJMenu)
 
 
 def test_opening_and_closing_gui(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
 
     # Open the GUI
@@ -528,9 +471,9 @@ def legacy_module(ij):
 
 
 def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
-    if running_headless():
+    if settings.headless():
         pytest.skip("Only applies when not running headlessly")
-    if not running_legacy():
+    if not settings.include_imagej_legacy:
         pytest.skip("Tests legacy behavior")
     info = ij.module().getModuleById("legacy:ij.plugin.filter.GaussianBlur")
     actions = _run_actions_for(DummySearchResult(info), None, gui_widget)

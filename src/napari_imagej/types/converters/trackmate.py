@@ -16,7 +16,7 @@ def trackmate_present():
     Returns True iff TrackMate is on the classpath
     """
     # Check the endpoint - this way, we can check before the JVM is running
-    endpoint = settings["imagej_directory_or_endpoint"].get(str).lower()
+    endpoint = settings.endpoint().lower()
     # Step 1 - check the endpoint string
     if "sc.fiji:trackmate" in endpoint or "sc.fiji:fiji" in endpoint:
         return True
