@@ -243,7 +243,7 @@ class GUIButton(QPushButton):
 
 class SettingsButton(QPushButton):
     # Signal used to identify changes to user settings
-    setting_change = Signal()
+    setting_change = Signal(bool)
 
     def __init__(self, viewer: Viewer):
         super().__init__()
@@ -253,8 +253,7 @@ class SettingsButton(QPushButton):
         self.setIcon(icon.colored(theme=viewer.theme))
 
         self.clicked.connect(self._update_settings)
-        self.setting_change.connect(self._notify_settings_change)
-        self.setting_change.connect(self._write_settings)
+        self.setting_change.connect(self._handle_settings_change)
 
     def _update_settings(self):
         """
@@ -280,9 +279,10 @@ class SettingsButton(QPushButton):
             return
 
         # Update settings with user selections
-        if settings.update(**choices):
-            self.setting_change.emit()
+        any_changed: bool = settings.update(**choices)
+        self.setting_change.emit(any_changed)
 
+    def _handle_settings_change(self, any_changed: bool):
         # Present a warning dialog if any settings have validation issues.
         try:
             settings.validate()
@@ -290,24 +290,20 @@ class SettingsButton(QPushButton):
             RichTextPopup(
                 rich_message=(
                     "<b>Warning:</b> your settings have the following issues:<ul>"
-                    "".join(f"<li>{arg}</li>" for arg in e.args) + "</ul>"
+                    + "".join(f"<li>{arg}</li>" for arg in e.args)
+                    + "</ul>"
                 ),
                 exec=True,
             )
-
-    def _notify_settings_change(self):
-        """
-        Notify (using a popup) that a restart is required for settings changes
-        to take effect.
-        """
-        RichTextPopup(
-            rich_message="Please restart napari for napari-imagej settings "
-            "changes to take effect!",
-            exec=True,
-        )
-
-    def _write_settings(self):
-        """Write settings to local configuration file."""
+        if any_changed:
+            # Notify (using a popup) that a restart is required for settings changes
+            # to take effect.
+            RichTextPopup(
+                rich_message="Please restart napari for napari-imagej settings "
+                "changes to take effect!",
+                exec=True,
+            )
+        # Save the settings specified by the user
         settings.save()
 
 
