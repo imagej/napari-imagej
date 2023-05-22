@@ -22,7 +22,7 @@ include_imagej_legacy: bool = True
     If False, many ImageJ2 rewrites of original ImageJ functionality are available.
     Defaults to True, as the original ImageJ functionality can be very useful to have.
 
-enable_imagej_gui: str = True
+enable_imagej_gui: bool = True
     Designates whether to make the ImageJ GUI available.
     If True, napari-imagej will attempt to run in graphical mode.
     If False, napari-imagej will run in headless mode.
@@ -72,7 +72,7 @@ defaults = {
 imagej_directory_or_endpoint: str = defaults["imagej_directory_or_endpoint"]
 imagej_base_directory: str = defaults["imagej_base_directory"]
 include_imagej_legacy: bool = defaults["include_imagej_legacy"]
-enable_imagej_gui: str = defaults["enable_imagej_gui"]
+enable_imagej_gui: bool = defaults["enable_imagej_gui"]
 use_active_layer: bool = defaults["use_active_layer"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
