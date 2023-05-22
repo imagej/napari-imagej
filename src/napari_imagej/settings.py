@@ -77,7 +77,7 @@ use_active_layer: bool = defaults["use_active_layer"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
-_is_macos = sys.platform == "Darwin"
+_is_macos = sys.platform == "darwin"
 
 
 # -- Public API functions --
