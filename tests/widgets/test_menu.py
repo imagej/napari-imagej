@@ -332,6 +332,9 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     """Change imagej_directory_or_endpoint and ensure that the settings change"""
     button: SettingsButton = gui_widget.settings_button
 
+    # HACK - pretend we aren't on Mac - to avoid extra modal dialogs
+    settings._is_macos = False
+
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
