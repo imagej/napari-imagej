@@ -16,14 +16,14 @@ As soon as you launch napari-imagej, you can access napari-imagej's configuratio
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
 Configuring settings
----------------------
+--------------------
 
 Within this modal dialog are many different settings, many pertaining to the underlying ImageJ2 instance.
 
 Note that many of these settings **pertain to the underlying ImageJ2 instance**, requiring a restart of napari to take effect.
 
-*imagej directory or endpoint*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*ImageJ directory or endpoint*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This setting allows users to provide a string identifying *which Java components* should be used to form the ImageJ2 instance. This line is passed directly to PyImageJ.
 
@@ -37,7 +37,7 @@ Below are a couple examples of ways to construct different ImageJ2 instances:
     :header-rows: 1
 
     * - To use:
-      - ``imagej directory or endpoint``
+      - ``ImageJ directory or endpoint``
       - Reproducible?
     * - Newest available ImageJ2
       - ``net.imagej:imagej``
@@ -54,14 +54,14 @@ Below are a couple examples of ways to construct different ImageJ2 instances:
 
 
 *ImageJ base directory*
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Path to the ImageJ base directory on your local machine. Defaults to the current working directory.
 
 This directory is most commonly used for discovering SciJava scripts; ImageJ2 will search the provided directory for a `scripts` folder, automatically exposing any scripts within.
 
-*include imagej legacy*
-^^^^^^^^^^^^^^^^^^^^^^^^^
+*include original ImageJ features*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This button is used to declare whether original ImageJ functionality should be exposed.
 
@@ -69,17 +69,17 @@ If active, all original ImageJ functionality (ij.* packages) will be available, 
 
 If disabled, only ImageJ2 functionality will be available, and the napari-imagej GUI button will launch the ImageJ2 user interface.
 
-*enable imagej gui if possible*
+*enable ImageJ GUI if possible*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This checkbox tells napari-imagej whether to make the ImageJ GUI avaiable. If unchecked, ImageJ2 will be run headlessly, disabling the ImageJ UI and making original ImageJ functionality unavailable.
+This checkbox tells napari-imagej whether to make the ImageJ GUI available. If unchecked, ImageJ2 will be run headlessly, disabling the ImageJ UI and making original ImageJ functionality unavailable.
 
 By default, the imagej gui will be available whenever possible, however the ImageJ GUI **is unavailable on MacOS**. Therefore, on MacOS, napari-imagej will behave as if this setting is always ``False``.
 
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
 *use active layer*
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 Defines which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
 
@@ -87,8 +87,8 @@ If active, napari-imagej will transfer highlighted napari layers to ImageJ, and 
 
 If inactive, napari-imagej will prompt the user with a modal dialog, asking for the name of the layer to transfer.
 
-*jvm command line arguments*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*JVM command line arguments*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Used to define command line arguments that should be passed to the JVM at startup.
 

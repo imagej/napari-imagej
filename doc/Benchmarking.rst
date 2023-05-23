@@ -209,7 +209,7 @@ This Python script can then be run on the command line, from within the ``napari
     python gauss.py
 
 Results
-----------
+-------
 
 To obtain suitable benchmarking results, we average each execution over 5 different runs. Each script is designed to be easily rerun:
 * The SciJava scripts must be manually rerun, to give the JVM time to warm up.
