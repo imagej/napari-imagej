@@ -46,6 +46,8 @@ dependencies = [
     "pandas",
     "pyimagej >= 1.4.1",
     "scyjava >= 1.8.1",
+    # HACK: see https://github.com/pydantic/pydantic/issues/5821
+    "typing_extensions != 4.6.0",
 ]
 
 [project.optional-dependencies]
