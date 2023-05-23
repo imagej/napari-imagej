@@ -36,7 +36,7 @@ dependencies:
   - scyjava >= 1.8.1
   # Version rules to avoid problems
   - qtconsole != 5.4.2
-  - typing-extensions != 4.6.0
+  - typing_extensions != 4.6.0
   # Developer tools
   - autopep8
   - black >= 23.1.0
