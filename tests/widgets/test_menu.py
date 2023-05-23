@@ -336,29 +336,22 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     settings._is_macos = False
 
     # REQUEST_VALUES MOCK
-    oldfunc = menu.request_values
+    original_request_values = menu.request_values
 
     old_value = settings.imagej_directory_or_endpoint
     new_value = "foo"
 
     assert old_value != new_value
 
-    def newfunc(values={}, title="", **kwargs):
-        results = {}
-        # Solve each parameter
-        for name, options in values.items():
-            if name == "imagej_directory_or_endpoint":
-                results[name] = new_value
-                continue
-            elif "value" in options:
-                results[name] = options["value"]
-                continue
+    def provide_updated_values(values={}, title="", **kwargs):
+        return {
+            name: new_value
+            if name == "imagej_directory_or_endpoint"
+            else settings.defaults[name]
+            for name in values
+        }
 
-            # Otherwise, we don't know how to solve that parameter
-            raise NotImplementedError()
-        return results
-
-    menu.request_values = newfunc
+    menu.request_values = provide_updated_values
 
     # Handle the popup from button._update_settings
     expected_text = (
@@ -367,7 +360,7 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
     assert settings.imagej_directory_or_endpoint == new_value
 
-    menu.request_values = oldfunc
+    menu.request_values = original_request_values
 
 
 def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
