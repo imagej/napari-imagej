@@ -46,8 +46,9 @@ dependencies = [
     "pandas",
     "pyimagej >= 1.4.1",
     "scyjava >= 1.8.1",
-    # HACK: see https://github.com/pydantic/pydantic/issues/5821
-    "typing_extensions != 4.6.0",
+    # Version rules to avoid problems
+    "qtconsole != 5.4.2", # https://github.com/napari/napari/issues/5700
+    "typing_extensions != 4.6.0", # https://github.com/pydantic/pydantic/issues/5821
 ]
 
 [project.optional-dependencies]

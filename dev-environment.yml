@@ -34,6 +34,9 @@ dependencies:
   - pandas
   - pyimagej >= 1.4.1
   - scyjava >= 1.8.1
+  # Version rules to avoid problems
+  - qtconsole != 5.4.2
+  - typing-extensions != 4.6.0
   # Developer tools
   - autopep8
   - black >= 23.1.0
