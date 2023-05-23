@@ -11,7 +11,7 @@ license = {text = "BSD-2-Clause"}
 authors = [{name = "ImageJ2 developers", email = "ctrueden@wisc.edu"}]
 keywords = ["java", "imagej", "imagej2", "fiji", "napari"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Framework :: napari",
