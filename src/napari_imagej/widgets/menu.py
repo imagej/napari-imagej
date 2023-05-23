@@ -263,22 +263,22 @@ class SettingsButton(QPushButton):
         args = {k: dict(value=getattr(settings, k)) for k in settings.defaults}
 
         # Configure some details to improve graphical presentation and behavior.
-        args["imagej_directory_or_endpoint"] = {
-            "options": {"label": "ImageJ directory or endpoint"},
+        args["imagej_directory_or_endpoint"]["options"] = {
+            "label": "ImageJ directory or endpoint",
         }
         args["imagej_base_directory"] = {
             "value": Path(settings.imagej_base_directory),
             "annotation": Path,
             "options": {"label": "ImageJ base directory", "mode": "d"},
         }
-        args["include_imagej_legacy"] = {
-            "options": {"label": "include original ImageJ features"},
+        args["include_imagej_legacy"]["options"] = {
+            "label": "include original ImageJ features",
         }
-        args["enable_imagej_gui"] = {
-            "options": {"label": "enable ImageJ GUI if possible"},
+        args["enable_imagej_gui"]["options"] = {
+            "label": "enable ImageJ GUI if possible",
         }
-        args["jvm_command_line_arguments"] = {
-            "options": {"label": "JVM command line arguments"},
+        args["jvm_command_line_arguments"]["options"] = {
+            "label": "JVM command line arguments",
         }
 
         # Use magicgui.request_values to allow user to configure settings
