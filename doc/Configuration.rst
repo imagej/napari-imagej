@@ -16,7 +16,7 @@ As soon as you launch napari-imagej, you can access napari-imagej's configuratio
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
 Configuring settings
----------------------
+--------------------
 
 Within this modal dialog are many different settings, many pertaining to the underlying ImageJ2 instance.
 
@@ -79,7 +79,7 @@ By default, the imagej gui will be available whenever possible, however the Imag
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
 *use active layer*
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 Defines which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
 
