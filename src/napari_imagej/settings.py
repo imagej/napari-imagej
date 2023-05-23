@@ -78,6 +78,7 @@ jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
 _is_macos = sys.platform == "darwin"
+_gui_mode = "interactive"
 
 
 # -- Public API functions --
@@ -142,7 +143,7 @@ def jvm_mode() -> str:
         'interactive' if the platform supports running with GUI and
         the enable_imagej_gui flag is True; 'headless' otherwise.
     """
-    return "headless" if headless() else "interactive"
+    return "headless" if headless() else _gui_mode
 
 
 def load(read_config_file: bool = None) -> None:
