@@ -5,10 +5,10 @@ The following fields are supported:
 
 imagej_directory_or_endpoint: str = ""
     Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
-    OR version of net.imagej:imagej artifact to launch (e.g. 2.12.0),
+    OR version of net.imagej:imagej artifact to launch (e.g. 2.13.0),
     OR another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
     OR list of artifacts to include contatenated with plus signs
-      (e.g. 'net.imagej:imagej:2.12.0+net.preibisch:BigStitcher').
+      (e.g. 'net.imagej:imagej:2.13.0+net.preibisch:BigStitcher').
     Defaults to the empty string, which tells napari-imagej
     to use the currently supported reproducible version of ImageJ2.
 
@@ -55,8 +55,7 @@ from napari_imagej.utilities.logging import log_debug, warn
 # -- Constants --
 
 default_java_components = [
-    "net.imagej:imagej:2.12.0",
-    "org.scijava:scijava-common:2.94.0",
+    "net.imagej:imagej:2.13.0",
 ]
 defaults = {
     "imagej_directory_or_endpoint": "",
