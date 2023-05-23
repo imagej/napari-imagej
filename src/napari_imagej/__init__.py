@@ -18,4 +18,7 @@ napari-imagej is built upon the PyImageJ project:
 https://pyimagej.readthedocs.io/en/latest/
 """
 
-__version__ = "0.0.1.dev0"
+import scyjava as sj
+
+__author__ = "ImageJ2 developers"
+__version__ = sj.get_version("napari-imagej")
