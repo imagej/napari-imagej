@@ -190,7 +190,10 @@ class MutableOutputWidget(Container):
             shape=dict(
                 annotation=List[int],
                 value=self._default_new_shape(),
-                options=dict(tooltip="By default, the shape of the first Layer input"),
+                options=dict(
+                    tooltip="By default, the shape of the first Layer input",
+                    options=dict(min=0, max=2**31 - 10),
+                ),
             ),
             array_type=dict(
                 annotation=str,
