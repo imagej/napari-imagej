@@ -104,7 +104,7 @@ Copy the code block above and paste it into a new file called ``Puncta_Segmentat
 Running the script
 ------------------
 
-**Note**: this example was tested running with a `imagej directory or endpoint <../Configuration.html#imagej-directory-or-endpoint>`_ of ``sc.fiji:fiji:2.21.0``.
+**Note**: this example was tested running with a `ImageJ directory or endpoint <../Configuration.html#imagej-directory-or-endpoint>`_ of ``sc.fiji:fiji:2.21.0``.
 
 With napari-imagej running, the first step is to open the input data. We'll download the same sample data as the original PyImageJ example, `available here <https://github.com/imagej/pyimagej/blob/main/doc/sample-data/test_still.tif>`_.
 
