@@ -29,7 +29,7 @@ Unfortunately, the data is stored within separate files for each focal plane and
 
 1. Configure napari-imagej settings
    
-   To process EmbryoCE, we need to alter two different napari-imagej settings. 
+   To process EmbryoCE, we need to alter two different napari-imagej settings. For information on configuring napari-imagej, please see `here <../Configuration.html>`__.
    
    First, we must increase the maximum amount of RAM available to napari-imagej. This procedure provides 32GB of RAM, but the procedure can be repeated with less RAM by using fewer focal planes of EmbryoCE.
 
