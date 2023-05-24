@@ -4,6 +4,7 @@ from qtpy.QtGui import QFontMetrics
 from qtpy.QtWidgets import (
     QApplication,
     QDialog,
+    QDialogButtonBox,
     QGridLayout,
     QLabel,
     QMessageBox,
@@ -101,25 +102,31 @@ class JavaErrorMessageBox(QDialog):
     def __init__(self, title: str, error_message: str, *args, **kwargs):
         QDialog.__init__(self, *args, **kwargs)
         self.setLayout(QGridLayout())
+        # Write the title to a Label
         self.layout().addWidget(
             QLabel(title, self), 0, 0, 1, self.layout().columnCount()
         )
 
+        # Write the error message to a TextEdit
         msg_edit = QTextEdit(self)
         msg_edit.setReadOnly(True)
         msg_edit.setText(error_message)
         self.layout().addWidget(msg_edit, 1, 0, 1, self.layout().columnCount())
         msg_edit.setLineWrapMode(0)
 
-        # Fix a nice width for the modal - otherwise QMessageBox will squish it
+        # Default size - size of the error message
         font = msg_edit.document().defaultFont()
         fontMetrics = QFontMetrics(font)
         textSize = fontMetrics.size(0, error_message)
         textWidth = textSize.width() + 100
         textHeight = textSize.height() + 100
+        self.resize(textWidth, textHeight)
+        # Maximum size - ~80% of the user's screen
         screen_size = QApplication.desktop().screenGeometry()
-        self.setMinimumSize(textWidth, textHeight)
         self.setMaximumSize(
             int(screen_size.width() * 0.8), int(screen_size.height() * 0.8)
         )
-        msg_edit.resize(textWidth, textHeight)
+
+        btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        btn_box.accepted.connect(self.accept)
+        self.layout().addWidget(btn_box, 2, 0, 1, self.layout().columnCount())
