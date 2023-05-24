@@ -11,7 +11,14 @@ from magicgui.widgets import FunctionGui, Widget
 from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
-from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QLabel,
+    QMessageBox,
+    QScrollArea,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 from scyjava import jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
@@ -178,11 +185,14 @@ class NapariImageJWidget(QWidget):
         ):
             pm.close(module)
         if isinstance(event, jc.ModuleErroredEvent):
-            # TODO Use napari's error handler once it works better
-            # see https://github.com/imagej/napari-imagej/issues/234
-            msg: QMessageBox = QMessageBox()
-            msg.setText(jstacktrace(event.getException()))
-            msg.exec()
+            if not ij().ui().isVisible():
+                # TODO Use napari's error handler once it works better
+                # see https://github.com/imagej/napari-imagej/issues/234
+                module_title = str(module.getInfo().getTitle())
+                title = f"An error occurred in Java while executing {module_title}:"
+                exception_str = jstacktrace(event.getException())
+                msg = JavaErrorMessageBox(title, exception_str)
+                msg.exec()
 
     @Slot(object)
     def _handle_ij_error(self, exc: Exception):
@@ -198,8 +208,9 @@ class NapariImageJWidget(QWidget):
         # Disable the searchbar
         self.search.bar.finalize_on_error()
         # Print thet error
-        msg: QMessageBox = QMessageBox()
-        msg.setText(str(exc))
+        title = "ImageJ could not be initialized, due to the following error:"
+        exception_str = jstacktrace(exc)
+        msg: JavaErrorMessageBox = JavaErrorMessageBox(title, exception_str)
         msg.exec()
 
 
@@ -288,3 +299,27 @@ class ImageJInitializer(QThread):
         if is_debug():
             subscriber = NapariEventSubscriber()
             subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
+
+
+class JavaErrorMessageBox(QMessageBox):
+    """A helper widget for creating (and immediately displaying) popups"""
+
+    def __init__(self, title: str, error_message: str, *args, **kwargs):
+        QMessageBox.__init__(self, *args, **kwargs)
+        self.layout().addWidget(
+            QLabel(title, self), 0, 0, 1, self.layout().columnCount()
+        )
+
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        self.content = QWidget()
+        scroll.setWidget(self.content)
+        lay = QVBoxLayout(self.content)
+        for item in error_message.split("\n"):
+            lay.addWidget(QLabel(item, self))
+        self.layout().addWidget(scroll, 1, 0, 1, self.layout().columnCount())
+        width = max(
+            (lay.itemAt(i).minimumSize().width() for i in range(lay.count())),
+            default=300,
+        )
+        self.setStyleSheet(f"QScrollArea{{min-width:{width} px; min-height: 400px}}")
