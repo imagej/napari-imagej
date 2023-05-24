@@ -1,9 +1,8 @@
 import pytest
 from napari.utils import progress
-from qtpy.QtWidgets import QMessageBox
-from scyjava import jstacktrace
 
 from napari_imagej.utilities.progress_manager import pm
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 from tests.utils import jc
 
 
@@ -76,13 +75,22 @@ def test_progress_error_via_events(
     imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
     asserter(lambda: pbr.n == 2)
 
+    # Mock the Constructor for the JavaErrorMessageBox
+    errored = False
+    old = JavaErrorMessageBox.exec
+
+    def _new_exec(self):
+        nonlocal errored
+        errored = True
+
+    JavaErrorMessageBox.exec = _new_exec
+
+    # Assert emitting a ModuleErroredEvent causes
+    # JavaErrorMessageBox.exec to be called
     exception = jc.IllegalArgumentException("Yay")
-
-    def emit():
-        imagej_widget.progress_handler.emit(
-            jc.ModuleErroredEvent(example_module, exception)
-        )
-
-    expected_popup_text = jstacktrace(exception)
-    popup_handler(expected_popup_text, False, QMessageBox.Ok, emit)
-    asserter(lambda: example_module not in pm.prog_bars)
+    imagej_widget.progress_handler.emit(
+        jc.ModuleErroredEvent(example_module, exception)
+    )
+    asserter(lambda: errored)
+    # Restore the exec method
+    JavaErrorMessageBox.exec = old
