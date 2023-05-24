@@ -21,7 +21,10 @@ def _mesh_to_surface(mesh: "jc.Mesh") -> Surface:
     position = JArray(JDouble)(3)
     for i, vertex in enumerate(vertices):
         vertex.localize(position)
-        py_vertices[i, :] = position
+        # Note that the dimensions are reversed across the language barrier
+        py_vertices[i, 2] = position[0]
+        py_vertices[i, 1] = position[1]
+        py_vertices[i, 0] = position[2]
     # Triangles
     triangles = mesh.triangles()
     py_triangles = np.zeros((triangles.size(), 3), dtype=np.int64)
@@ -45,7 +48,8 @@ def _surface_to_mesh(surface: Surface) -> "jc.Mesh":
     mesh: "jc.Mesh" = jc.NaiveDoubleMesh()
     # TODO: Determine the normals
     for py_vertex in py_vertices:
-        mesh.vertices().add(*py_vertex)
+        # Note that the dimensions are reversed across the language barrier
+        mesh.vertices().add(py_vertex[2], py_vertex[1], py_vertex[0])
     for py_triangle in py_triangles:
         mesh.triangles().add(*py_triangle)
     return mesh
