@@ -23,16 +23,16 @@ See the [project roadmap](https://github.com/orgs/imagej/projects/2) for future 
 
 ## Getting Started
 
-Learn more about the project [here](https://napari-imagej.readthedocs.io/en/0.1.0/), or jump straight to [installation](https://napari-imagej.readthedocs.io/en/0.1.0/Install.html)!
+Learn more about the project [here](https://napari-imagej.readthedocs.io/en/latest/), or jump straight to [installation](https://napari-imagej.readthedocs.io/en/latest/Install.html)!
 
 ## Usage
 
-* [Image Processing with ImageJ Ops](https://napari-imagej.readthedocs.io/en/0.1.0/examples/ops.html)
-* [Puncta Segmentation with SciJava Scripts](https://napari-imagej.readthedocs.io/en/0.1.0/examples/scripting.html)
+* [Image Processing with ImageJ Ops](https://napari-imagej.readthedocs.io/en/latest/examples/ops.html)
+* [Puncta Segmentation with SciJava Scripts](https://napari-imagej.readthedocs.io/en/latest/examples/scripting.html)
 
 ## Troubleshooting
 
-The [FAQ](https://napari-imagej.readthedocs.io/en/0.1.0/Troubleshooting.html) outlines solutions to many common issues.
+The [FAQ](https://napari-imagej.readthedocs.io/en/latest/Troubleshooting.html) outlines solutions to many common issues.
 
 For more obscure issues, feel free to reach out on [forum.image.sc](https://forum.image.sc).
 
@@ -44,7 +44,7 @@ We welcome any and all contributions made onto the napari-imagej repository.
 
 Development discussion occurs on the [Image.sc Zulip chat](https://imagesc.zulipchat.com/#narrow/stream/328100-scyjava).
 
-For technical details involved with contributing, please see [here](https://napari-imagej.readthedocs.io/en/0.1.0/Development.html)
+For technical details involved with contributing, please see [here](https://napari-imagej.readthedocs.io/en/latest/Development.html)
 
 ## License
 
