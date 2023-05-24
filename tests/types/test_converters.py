@@ -626,7 +626,8 @@ def test_surface_to_mesh(ij, surface: Surface):
     position = JArray(JDouble)(3)
     for j_vertex, p_vertex in zip(mesh.vertices(), p_vertices):
         j_vertex.localize(position)
-        assert np.array_equal(p_vertex, position)
+        # Note that the dimensions are reversed across the language barrier
+        assert np.array_equal(p_vertex, position[::-1])
     for j_triangle, p_triangle in zip(mesh.triangles(), p_triangles):
         assert p_triangle[0] == j_triangle.vertex0()
         assert p_triangle[1] == j_triangle.vertex1()
@@ -640,7 +641,8 @@ def test_mesh_to_surface(ij, mesh: "jc.Mesh"):
     position = JArray(JDouble)(3)
     for j_vertex, p_vertex in zip(mesh.vertices(), p_vertices):
         j_vertex.localize(position)
-        assert np.array_equal(p_vertex, position)
+        # Note that the dimensions are reversed across the language barrier
+        assert np.array_equal(p_vertex, position[::-1])
     for j_triangle, p_triangle in zip(mesh.triangles(), p_triangles):
         assert p_triangle[0] == j_triangle.vertex0()
         assert p_triangle[1] == j_triangle.vertex1()
