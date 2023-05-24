@@ -5,10 +5,10 @@ The following fields are supported:
 
 imagej_directory_or_endpoint: str = ""
     Path to a local ImageJ2 installation (e.g. /Applications/Fiji.app),
-    OR version of net.imagej:imagej artifact to launch (e.g. 2.13.0),
+    OR version of net.imagej:imagej artifact to launch (e.g. 2.13.1),
     OR another artifact built on ImageJ2 (e.g. sc.fiji:fiji),
     OR list of artifacts to include contatenated with plus signs
-      (e.g. 'net.imagej:imagej:2.13.0+net.preibisch:BigStitcher').
+      (e.g. 'net.imagej:imagej:2.13.1+net.preibisch:BigStitcher').
     Defaults to the empty string, which tells napari-imagej
     to use the currently supported reproducible version of ImageJ2.
 
@@ -40,7 +40,7 @@ use_active_layer: bool = True
 
 jvm_command_line_arguments: str = ""
     Additional command line arguments to pass to the Java Virtual Machine (JVM).
-    For example, "-Xmx4g" to allow Java to use  4 GB of memory.
+    For example, "-Xmx4g" to allow Java to use up to 4 GB of memory.
     By default, no arguments are passed.
 """
 
@@ -55,7 +55,7 @@ from napari_imagej.utilities.logging import log_debug, warn
 # -- Constants --
 
 default_java_components = [
-    "net.imagej:imagej:2.13.0",
+    "net.imagej:imagej:2.13.1",
 ]
 defaults = {
     "imagej_directory_or_endpoint": "",
