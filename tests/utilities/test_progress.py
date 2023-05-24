@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 from napari.utils import progress
 from qtpy.QtWidgets import QMessageBox
@@ -31,10 +29,6 @@ def test_progress(ij, example_module):
     assert example_module not in pm.prog_bars
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
 def test_progress_update_via_events(imagej_widget, ij, example_module, asserter):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
@@ -52,10 +46,6 @@ def test_progress_update_via_events(imagej_widget, ij, example_module, asserter)
     asserter(lambda: example_module not in pm.prog_bars)
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
 def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
@@ -72,10 +62,6 @@ def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter)
     asserter(lambda: example_module not in pm.prog_bars)
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
 def test_progress_error_via_events(
     imagej_widget, ij, example_module, asserter, qtbot, popup_handler
 ):
