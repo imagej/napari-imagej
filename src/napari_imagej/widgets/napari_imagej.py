@@ -11,14 +11,7 @@ from magicgui.widgets import FunctionGui, Widget
 from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
-from qtpy.QtWidgets import (
-    QLabel,
-    QMessageBox,
-    QScrollArea,
-    QTreeWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
@@ -39,6 +32,7 @@ from napari_imagej.widgets.result_tree import (
     SearchResultTreeItem,
 )
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 
 
 class NapariImageJWidget(QWidget):
@@ -299,27 +293,3 @@ class ImageJInitializer(QThread):
         if is_debug():
             subscriber = NapariEventSubscriber()
             subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
-
-
-class JavaErrorMessageBox(QMessageBox):
-    """A helper widget for creating (and immediately displaying) popups"""
-
-    def __init__(self, title: str, error_message: str, *args, **kwargs):
-        QMessageBox.__init__(self, *args, **kwargs)
-        self.layout().addWidget(
-            QLabel(title, self), 0, 0, 1, self.layout().columnCount()
-        )
-
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        self.content = QWidget()
-        scroll.setWidget(self.content)
-        lay = QVBoxLayout(self.content)
-        for item in error_message.split("\n"):
-            lay.addWidget(QLabel(item, self))
-        self.layout().addWidget(scroll, 1, 0, 1, self.layout().columnCount())
-        width = max(
-            (lay.itemAt(i).minimumSize().width() for i in range(lay.count())),
-            default=300,
-        )
-        self.setStyleSheet(f"QScrollArea{{min-width:{width} px; min-height: 400px}}")

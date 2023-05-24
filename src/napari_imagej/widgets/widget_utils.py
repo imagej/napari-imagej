@@ -1,6 +1,7 @@
 from magicgui import magicgui
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QMessageBox, QWidget
+from qtpy.QtGui import QFontMetrics
+from qtpy.QtWidgets import QDialog, QGridLayout, QLabel, QMessageBox, QTextEdit, QWidget
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities._module_utils import (
@@ -84,3 +85,29 @@ def _run_actions_for(
     ]
 
     return run_actions
+
+
+class JavaErrorMessageBox(QDialog):
+    """A helper widget for creating (and immediately displaying) popups"""
+
+    def __init__(self, title: str, error_message: str, *args, **kwargs):
+        QDialog.__init__(self, *args, **kwargs)
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(
+            QLabel(title, self), 0, 0, 1, self.layout().columnCount()
+        )
+
+        msg_edit = QTextEdit(self)
+        msg_edit.setReadOnly(True)
+        msg_edit.setText(error_message)
+        self.layout().addWidget(msg_edit, 1, 0, 1, self.layout().columnCount())
+        msg_edit.setLineWrapMode(0)
+
+        # Fix a nice width for the modal - otherwise QMessageBox will squish it
+        font = msg_edit.document().defaultFont()
+        fontMetrics = QFontMetrics(font)
+        textSize = fontMetrics.size(0, error_message)
+        textWidth = textSize.width() + 100
+        textHeight = textSize.height() + 100
+        msg_edit.setMinimumSize(textWidth, textHeight)
+        msg_edit.resize(textWidth, textHeight)
