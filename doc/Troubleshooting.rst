@@ -35,7 +35,7 @@ There are two common cases for a disabled ImageJ2 GUI button:
 .. _npe2: https://github.com/napari/npe2
 
 The image dimension labels are wrong in ImageJ after transferring from napari
-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 Internally, napari does not utilize image dimension labels (*i.e.* ``X``, ``Y``, ``Channel``, *etc...*) and instead assumes that the *n*-dimensional arrays (*i.e* images) conform to the `scikit-image dimension order`_ convention. ImageJ2 however *does* care about dimension labels and uses them to define certain operations. 
 
