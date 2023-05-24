@@ -1,9 +1,8 @@
-import sys
-
 import pytest
 from napari.utils import progress
 
 from napari_imagej.utilities.progress_manager import pm
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 from tests.utils import jc
 
 
@@ -29,69 +28,67 @@ def test_progress(ij, example_module):
     assert example_module not in pm.prog_bars
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
 def test_progress_update_via_events(imagej_widget, ij, example_module, asserter):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
     pbr = pm.prog_bars[example_module]
     asserter(lambda: pbr.n == 0)
 
-    ij.event().publish(jc.ModuleExecutingEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
     asserter(lambda: pbr.n == 1)
 
-    ij.event().publish(jc.ModuleExecutedEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
     asserter(lambda: pbr.n == 2)
 
-    ij.event().publish(jc.ModuleFinishedEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleFinishedEvent(example_module))
     asserter(lambda: pbr.n == 3)
     asserter(lambda: example_module not in pm.prog_bars)
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
 def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
     pbr = pm.prog_bars[example_module]
     asserter(lambda: pbr.n == 0)
 
-    ij.event().publish(jc.ModuleExecutingEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
     asserter(lambda: pbr.n == 1)
 
-    ij.event().publish(jc.ModuleExecutedEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
     asserter(lambda: pbr.n == 2)
 
-    ij.event().publish(jc.ModuleCanceledEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleCanceledEvent(example_module))
     asserter(lambda: example_module not in pm.prog_bars)
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-)
-@pytest.mark.qt_no_exception_capture
 def test_progress_error_via_events(imagej_widget, ij, example_module, asserter, qtbot):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
     pbr = pm.prog_bars[example_module]
     asserter(lambda: pbr.n == 0)
 
-    ij.event().publish(jc.ModuleExecutingEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
     asserter(lambda: pbr.n == 1)
 
-    ij.event().publish(jc.ModuleExecutedEvent(example_module))
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
     asserter(lambda: pbr.n == 2)
 
-    with qtbot.capture_exceptions() as exceptions:
-        ij.event().publish(
-            jc.ModuleErroredEvent(example_module, jc.IllegalArgumentException("Yay"))
-        )
-        asserter(lambda: example_module not in pm.prog_bars)
-    assert len(exceptions) == 1
-    assert exceptions[0][0] == jc.IllegalArgumentException
-    assert exceptions[0][1].getMessage() == "Yay"
+    # Mock the Constructor for the JavaErrorMessageBox
+    errored = False
+    old = JavaErrorMessageBox.exec
+
+    def _new_exec(self):
+        nonlocal errored
+        errored = True
+
+    JavaErrorMessageBox.exec = _new_exec
+
+    # Assert emitting a ModuleErroredEvent causes
+    # JavaErrorMessageBox.exec to be called
+    exception = jc.IllegalArgumentException("Yay")
+    imagej_widget.progress_handler.emit(
+        jc.ModuleErroredEvent(example_module, exception)
+    )
+    asserter(lambda: errored)
+    # Restore the exec method
+    JavaErrorMessageBox.exec = old

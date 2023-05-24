@@ -11,8 +11,8 @@ from magicgui.widgets import FunctionGui, Widget
 from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
-from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
-from scyjava import when_jvm_stops
+from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
+from scyjava import jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
@@ -32,6 +32,7 @@ from napari_imagej.widgets.result_tree import (
     SearchResultTreeItem,
 )
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 
 
 class NapariImageJWidget(QWidget):
@@ -178,7 +179,14 @@ class NapariImageJWidget(QWidget):
         ):
             pm.close(module)
         if isinstance(event, jc.ModuleErroredEvent):
-            raise event.getException()
+            if not ij().ui().isVisible():
+                # TODO Use napari's error handler once it works better
+                # see https://github.com/imagej/napari-imagej/issues/234
+                module_title = str(module.getInfo().getTitle())
+                title = f"An error occurred in Java while executing {module_title}:"
+                exception_str = jstacktrace(event.getException())
+                msg = JavaErrorMessageBox(title, exception_str)
+                msg.exec()
 
     @Slot(object)
     def _handle_ij_error(self, exc: Exception):
@@ -194,8 +202,9 @@ class NapariImageJWidget(QWidget):
         # Disable the searchbar
         self.search.bar.finalize_on_error()
         # Print thet error
-        msg: QMessageBox = QMessageBox()
-        msg.setText(str(exc))
+        title = "ImageJ could not be initialized, due to the following error:"
+        exception_str = jstacktrace(exc)
+        msg: JavaErrorMessageBox = JavaErrorMessageBox(title, exception_str)
         msg.exec()
 
 
