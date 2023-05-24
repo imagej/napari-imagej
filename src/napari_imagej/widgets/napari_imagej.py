@@ -12,7 +12,7 @@ from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QMessageBox, QTreeWidgetItem, QVBoxLayout, QWidget
-from scyjava import when_jvm_stops
+from scyjava import jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
@@ -178,7 +178,11 @@ class NapariImageJWidget(QWidget):
         ):
             pm.close(module)
         if isinstance(event, jc.ModuleErroredEvent):
-            raise event.getException()
+            # TODO Use napari's error handler once it works better
+            # see https://github.com/imagej/napari-imagej/issues/234
+            msg: QMessageBox = QMessageBox()
+            msg.setText(jstacktrace(event.getException()))
+            msg.exec()
 
     @Slot(object)
     def _handle_ij_error(self, exc: Exception):

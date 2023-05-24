@@ -7,6 +7,8 @@ from typing import Callable, Generator
 
 import pytest
 from napari import Viewer
+from qtpy.QtCore import QRunnable, Qt, QThreadPool
+from qtpy.QtWidgets import QApplication, QMessageBox
 
 from napari_imagej import settings
 from napari_imagej.java import init_ij
@@ -125,3 +127,51 @@ def gui_widget_chooser(viewer) -> Generator[NapariImageJMenu, None, None]:
 
     # Cleanup -> Close the widget, trigger ImageJ shutdown
     widget.close()
+
+
+@pytest.fixture()
+def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
+    """Fixture used to handle RichTextPopups"""
+
+    def handle_popup(
+        text: str, is_rich: bool, button, popup_generator: Callable[[], None]
+    ):
+        # # Start the handler in a new thread
+        class Handler(QRunnable):
+            # Test popup when running headlessly
+            def run(self) -> None:
+                asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
+                msg = QApplication.activeWindow()
+                if text != msg.text():
+                    print("Text differed")
+                    print(text)
+                    print(msg.text())
+                    self._passed = False
+                    return
+                if is_rich and Qt.RichText != msg.textFormat():
+                    print("Not rich text")
+                    self._passed = False
+                    return
+                if is_rich and Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                    print("No browser interaction")
+                    self._passed = False
+                    return
+
+                ok_button = msg.button(button)
+                ok_button.clicked.emit()
+                asserter(lambda: QApplication.activeModalWidget() is not msg)
+                self._passed = True
+
+            def passed(self) -> bool:
+                return self._passed
+
+        runnable = Handler()
+        QThreadPool.globalInstance().start(runnable)
+
+        # Click the button
+        popup_generator()
+        # Wait for the popup to be handled
+        asserter(QThreadPool.globalInstance().waitForDone)
+        assert runnable.passed()
+
+    return handle_popup
