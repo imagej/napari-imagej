@@ -2,15 +2,16 @@
 A module testing napari_imagej.widgets.menu
 """
 
+from typing import Callable
 
 import numpy
 import pytest
 from napari import Viewer
 from napari.layers import Image, Layer
 from napari.viewer import current_viewer
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QHBoxLayout, QMessageBox
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
 
 from napari_imagej import settings
 from napari_imagej.resources import resource_path
@@ -59,6 +60,54 @@ def napari_mocker(viewer: Viewer):
     yield
 
     menu.request_values = oldfunc
+
+
+@pytest.fixture()
+def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
+    """Fixture used to handle RichTextPopups"""
+
+    def handle_popup(
+        text: str, is_rich: bool, button, popup_generator: Callable[[], None]
+    ):
+        # # Start the handler in a new thread
+        class Handler(QRunnable):
+            # Test popup when running headlessly
+            def run(self) -> None:
+                asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
+                msg = QApplication.activeWindow()
+                if text != msg.text():
+                    print("Text differed")
+                    print(text)
+                    print(msg.text())
+                    self._passed = False
+                    return
+                if is_rich and Qt.RichText != msg.textFormat():
+                    print("Not rich text")
+                    self._passed = False
+                    return
+                if is_rich and Qt.TextBrowserInteraction != msg.textInteractionFlags():
+                    print("No browser interaction")
+                    self._passed = False
+                    return
+
+                ok_button = msg.button(button)
+                ok_button.clicked.emit()
+                asserter(lambda: QApplication.activeModalWidget() is not msg)
+                self._passed = True
+
+            def passed(self) -> bool:
+                return self._passed
+
+        runnable = Handler()
+        QThreadPool.globalInstance().start(runnable)
+
+        # Click the button
+        popup_generator()
+        # Wait for the popup to be handled
+        asserter(QThreadPool.globalInstance().waitForDone)
+        assert runnable.passed()
+
+    return handle_popup
 
 
 def ui_visible(ij):

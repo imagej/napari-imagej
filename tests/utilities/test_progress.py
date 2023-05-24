@@ -61,9 +61,7 @@ def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter)
     asserter(lambda: example_module not in pm.prog_bars)
 
 
-def test_progress_error_via_events(
-    imagej_widget, ij, example_module, asserter, qtbot, popup_handler
-):
+def test_progress_error_via_events(imagej_widget, ij, example_module, asserter, qtbot):
     pm.init_progress(example_module)
     asserter(lambda: example_module in pm.prog_bars)
     pbr = pm.prog_bars[example_module]
