@@ -1,7 +1,15 @@
 from magicgui import magicgui
 from qtpy.QtCore import Signal
 from qtpy.QtGui import QFontMetrics
-from qtpy.QtWidgets import QDialog, QGridLayout, QLabel, QMessageBox, QTextEdit, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QDialog,
+    QGridLayout,
+    QLabel,
+    QMessageBox,
+    QTextEdit,
+    QWidget,
+)
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities._module_utils import (
@@ -109,5 +117,9 @@ class JavaErrorMessageBox(QDialog):
         textSize = fontMetrics.size(0, error_message)
         textWidth = textSize.width() + 100
         textHeight = textSize.height() + 100
-        msg_edit.setMinimumSize(textWidth, textHeight)
+        screen_size = QApplication.desktop().screenGeometry()
+        self.setMinimumSize(textWidth, textHeight)
+        self.setMaximumSize(
+            int(screen_size.width() * 0.8), int(screen_size.height() * 0.8)
+        )
         msg_edit.resize(textWidth, textHeight)
