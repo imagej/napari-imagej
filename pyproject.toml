@@ -78,9 +78,9 @@ dev = [
 
 [project.urls]
 homepage = "https://github.com/imagej/napari-imagej"
-documentation = "https://github.com/imagej/napari-imagej#README.md"
+documentation = "https://napari-imagej.readthedocs.io"
 source = "https://github.com/imagej/napari-imagej"
-download = "https://pypi.org/project/napari-imagej/"
+download = "https://pypi.org/project/napari-imagej/#files"
 tracker = "https://github.com/imagej/napari-imagej/issues"
 
 [project.entry-points."napari.manifest"]
