@@ -82,7 +82,7 @@ def init_ij() -> "jc.ImageJ":
     # -- VALIDATION -- #
 
     # Validate PyImageJ
-    _validate_imagej()
+    _validate_imagej(_ij)
 
     return _ij
 
@@ -112,7 +112,7 @@ def _configure_imagej() -> Dict[str, Any]:
     return init_settings
 
 
-def _validate_imagej():
+def _validate_imagej(ij):
     """
     Helper function to ensure minimum requirements on java component versions
     """
@@ -131,7 +131,7 @@ def _validate_imagej():
         "org.scijava:scijava-common": jc.Module,
         "org.scijava:scijava-search": jc.Searcher,
     }
-    component_requirements.update(_optional_requirements())
+    component_requirements.update(_optional_requirements(ij))
     # Find version that violate the minimum
     violations = []
     for component, cls in component_requirements.items():
@@ -153,11 +153,11 @@ def _validate_imagej():
         raise RuntimeError(failure_str)
 
 
-def _optional_requirements():
+def _optional_requirements(ij):
     optionals = {}
     # Add additional minimum versions for legacy components
-    if _ij.legacy and _ij.legacy.isActive():
-        optionals["net.imagej:imagej-legacy"] = _ij.legacy.getClass()
+    if ij.legacy and ij.legacy.isActive():
+        optionals["net.imagej:imagej-legacy"] = ij.legacy.getClass()
     # Add additional minimum versions for fiji components
     try:
         optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
