@@ -236,7 +236,7 @@ def _confuse_config() -> confuse.Configuration:
     Construct a confuse configuration object.
     https://confuse.readthedocs.io/
     """
-    return confuse.Configuration("napari-imagej")
+    return confuse.Configuration("napari-imagej", read=False)
 
 
 def _confuse_get(config: confuse.Configuration, name, default_value) -> Any:
