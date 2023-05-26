@@ -110,7 +110,7 @@ We run the script using the following steps:
 
 #. Launch napari-imagej
 #. Load in *two copies* of ``focal.tif``, the pre-processed image created above.
-#. Once napari-imagej is ready, search napari-imagej for ``gaussian napari imagej``. Launch this Module as a napari Widget with the "Widget" button.
+#. Once napari-imagej is ready, search napari-imagej for ``gaussian napari imagej``. Launch this Module as a napari Widget with the ``Widget`` button.
 #. In the ``gaussian napari imagej`` widget, provide
 
    * One copy of ``focal`` to the ``input`` parameter
@@ -121,7 +121,7 @@ We run the script using the following steps:
     
     The expected napari-imagej benchmarking setup
 
-Click "Run", and wait for the computation to complete. Once completed, look for the following lines in the debug log:
+Click ``Run``, and wait for the computation to complete. Once completed, look for the following lines in the debug log:
 
 .. code-block:: bash
 
@@ -164,7 +164,7 @@ We run this script using the following steps:
    * The other copy of ``focal`` to the ``output`` parameter
    * ``6.0`` to the ``sigma`` parameter.
 
-Click "Run", and wait for the computation to complete. Once completed, look for the following lines in the debug log:
+Click ``Run``, and wait for the computation to complete. Once completed, look for the following lines in the debug log:
 
 .. code-block:: bash
 
