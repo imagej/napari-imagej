@@ -9,11 +9,11 @@ Installing within napari
 
 If you have napari installed already, you can install napari-imagej directly within napari, by following these steps:
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 
@@ -56,11 +56,11 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
    mamba create -n napari-imagej python pip
    mamba activate napari-imagej
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 
@@ -111,11 +111,11 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
    mamba create -n napari-imagej python pip
    mamba activate napari-imagej
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 
