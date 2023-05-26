@@ -4,9 +4,9 @@ Configuration
 
 This document explains how to augment napari-imagej to configure available functionality.
 
-We assume familiarity in launching napari-imagej. Please see `this page <./Initialization.html>`_ for more information on launching napari-imagej
+We assume familiarity in launching napari-imagej. Please see `this page <./Initialization.html>`_ for more information on launching napari-imagej.
 
-Accessing napari-imagej settings
+Accessing napari-imagej Settings
 --------------------------------
 
 As soon as you launch napari-imagej, you can access napari-imagej's configuration dialog by clicking on the gear in the napari-imagej menu:
@@ -15,7 +15,7 @@ As soon as you launch napari-imagej, you can access napari-imagej's configuratio
     
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
-Configuring settings
+Configuring Settings
 --------------------
 
 Within this modal dialog are many different settings, many pertaining to the underlying ImageJ2 instance.
@@ -31,7 +31,7 @@ If you pass a **directory**, PyImageJ will look in that directory for *an existi
 
 If you pass one or more **components** in `Maven coordinate <https://maven.apache.org/pom.html#Maven_Coordinates>`_ form, PyImageJ will launch an ImageJ2 instance from those components, *downloading them if necessary*.
 
-Below are a couple examples of ways to construct different ImageJ2 instances:
+Here are some example endpoint constructions:
 
 .. list-table:: endpoint options
     :header-rows: 1
@@ -48,7 +48,7 @@ Below are a couple examples of ways to construct different ImageJ2 instances:
     * - Newest available Fiji
       - ``sc.fiji:fiji``
       - NO
-    * - Newest available ImageJ2 PLUS Specific Plugins
+    * - Newest available ImageJ2 PLUS specific plugins
       - ``net.imagej:imagej+net.preibisch:BigStitcher``
       - NO
 
@@ -74,7 +74,7 @@ If disabled, only ImageJ2 functionality will be available, and the napari-imagej
 
 This checkbox tells napari-imagej whether to make the ImageJ GUI available. If unchecked, ImageJ2 will be run headlessly, disabling the ImageJ UI and making original ImageJ functionality unavailable.
 
-By default, the imagej gui will be available whenever possible, however the ImageJ GUI **is unavailable on MacOS**. Therefore, on MacOS, napari-imagej will behave as if this setting is always ``False``.
+By default, the ImageJ GUI will be available whenever possible; however, the ImageJ GUI **is unavailable on macOS**. Therefore, on macOS, napari-imagej will behave as if this setting is always ``False``.
 
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 

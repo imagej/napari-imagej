@@ -69,7 +69,7 @@ napari-imagej will only allow ImageJ routines to be called if it can map **each*
 #. Each routine output is passed to its corresponding output converter :math:`J_i`
 #. The returns of the output converters are provided back to the user
 
-The backing PyImageJ instance
+The Backing PyImageJ Instance
 -----------------------------
     
 Without access to a backing `ImageJ2 <https://imagej.net/software/imagej2/>`_ instance, napari-imagej could not execute ImageJ ecosystem functionality. The `PyImageJ <https://pyimagej.readthedocs.io/en/latest/>`_, able to provide ImageJ2 access in Python, is napari-imagej's gateway to this functionality.

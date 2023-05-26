@@ -26,11 +26,11 @@ The script for Puncta Segmentation is written below:
 .. code-block:: python
     :caption: Puncta_Segmentation.py
 
-    #@Img ds_src
-    #@ConvertService convert
-    #@DatasetService ds
-    #@OpService ops
-    #@OUTPUT org.scijava.table.Table sci_table
+    #@ Img ds_src
+    #@ ConvertService convert
+    #@ DatasetService ds
+    #@ OpService ops
+    #@output org.scijava.table.Table sci_table
 
     from ij import IJ, ImagePlus, Prefs
     from ij.measure import ResultsTable
@@ -94,11 +94,11 @@ Installing the script
 
 Copy the code block above and paste it into a new file called ``Puncta_Segmentation.py``. As for where to put that file, the rules for `adding SciJava Scripts to ImageJ2 <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_ also apply when adding scripts to napari-imagej if you are using a local ImageJ2 (e.g. a subdirectory of ``Fiji.app/scripts/``).
 
-**However**, when napari-imagej is *not* provided with a local ImageJ2 instance, it must `download one <../Configuration.html#imagej-directory-or-endpoint>`_. This ImageJ2 can be tucked away, so napari-imagej will *by default* look within the **ImageJ base directory** for a ``scripts`` subdirectory, which must then have further subdirectories that contain your scripts. This behavior can be controlled via the `imagej base directory <../Configuration.html#imagej-base-directory>`_ in napari-imagej's settings. 
+**However**, when napari-imagej is *not* provided with a local ImageJ2 instance, it must `download one <../Configuration.html#imagej-directory-or-endpoint>`_. This ImageJ2 can be tucked away, so napari-imagej will *by default* look within the **ImageJ base directory** for a ``scripts`` subdirectory, which must then have further subdirectories that contain your scripts. This behavior can be controlled via the `ImageJ base directory <../Configuration.html#imagej-base-directory>`_ in napari-imagej's settings. 
 
 *Without changing this setting*, placing ``Puncta_Segmentation.py`` in a subdirectory of ``<path-to-napari-imagej-git-repo>/scripts`` allows napari-imagej to discover the script.
 
-*If the imagej base directory has been changed*, instead place the script in a subdirectory of ``<imagej base directory>/scripts``.
+*If the ImageJ base directory has been changed*, instead place the script in a subdirectory of ``<path-to-imagej-base-directory>/scripts``.
 
 
 Running the script

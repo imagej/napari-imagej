@@ -4,16 +4,16 @@ Installation
 
 If you're looking to use napari-imagej, there are a few ways to get it running.
 
-Installing Within napari
+Installing within napari
 ========================
 
-If you have napari installed already, you can install napari-imagej directly within napari, by following these steps:
+If you have napari installed already, you can install napari-imagej by following these steps:
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 
@@ -23,7 +23,7 @@ If you have napari installed already, you can install napari-imagej directly wit
 
 Once the installation is complete, napari-imagej is ready to use!
 
-Installing From Mamba (Recommended)
+Installing from Mamba (Recommended)
 ===================================
 
 Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the instructions `here <https://mamba.readthedocs.io/en/latest/installation.html>`_.
@@ -44,10 +44,10 @@ Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the
 
       mamba activate napari-imagej
 
-Installing From pip
+Installing from pip
 ===================
 
-napari-imagej can also be installed using ``pip``, however it requires more steps. You'll need Python3_ if you don't have it already.
+napari-imagej can also be installed using ``pip``; however, it requires more steps. You'll need Python3_ if you don't have it already.
 
 We recommend using virtualenv_ to isolate napari-imagej from your system-wide or user-wide Python environments. Alternatively, you can use Mamba_ purely for its virtual environment capabilities, and then ``pip install`` everything into that environment:
 
@@ -56,11 +56,11 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
    mamba create -n napari-imagej python pip
    mamba activate napari-imagej
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 
@@ -73,10 +73,10 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
       pip install napari-imagej
 
 
-Installing From Source
+Installing from Source
 ======================
 
-If you're looking to develop napari-imagej, you'll likely want to install from source. There are a couple of ways to get napari-imagej installed; as above, we recommend using Mamba_ to install napari-imagej:
+If you're looking to develop napari-imagej, you'll likely want to install from source.
 
 Using Mamba
 -----------
@@ -102,7 +102,7 @@ Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the
 
 Using pip
 ---------
-napari-imagej can also be installed using ``pip``, however it requires more steps. You'll need Python3_ if you don't have it already.
+napari-imagej can also be installed using ``pip``; however, it requires more steps. You'll need Python3_ if you don't have it already.
 
 We recommend using virtualenv_ to isolate napari-imagej from your system-wide or user-wide Python environments. Alternatively, you can use Mamba_ purely for its virtual environment capabilities, and then ``pip install`` everything into that environment:
 
@@ -111,11 +111,11 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
    mamba create -n napari-imagej python pip
    mamba activate napari-imagej
 
-#. Install OpenJDK 8 or OpenJDK 11. 
+#. Install OpenJDK 8 or OpenJDK 11
 
    napari-imagej should work with whichever distribution of OpenJDK you prefer; we recommend `zulu jdk+fx 8 <https://www.azul.com/downloads/zulu-community/?version=java-8-lts&package=jdk-fx>`_. You can also install OpenJDK from your platform's package manager.
 
-#. Install Maven. 
+#. Install Maven
 
    You can either `download it manually <https://maven.apache.org/>`_ or install it via your platform's package manager. The ``mvn --version`` command can be used to verify installation.
 

@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-napari-imagej: ImageJ ecosystem access within napari
+napari-imagej: ImageJ Ecosystem Access within napari
 ====================================================
 
 The `napari <https://napari.org/>`_ application has brought n-dimensional image browsing and analysis to the Python ecosystem. At the same time, the ImageJ software ecosystem, including `ImageJ <https://imagej.net/ij/index.html>`_, `ImageJ2 <https://imagej.net/software/imagej2>`_, `Fiji <https://fiji.sc/>`_ and `thousands of community plugins <https://imagej.net/list-of-extensions>`_, have been curated over decades, and are utilized by a highly active community of their own.

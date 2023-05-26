@@ -1,4 +1,4 @@
-Use cases
+Use Cases
 =========
 
 Below we document use cases for the napari-imagej plugin.
