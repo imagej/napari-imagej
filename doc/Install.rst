@@ -47,7 +47,7 @@ Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the
 Installing from pip
 ===================
 
-napari-imagej can also be installed using ``pip``, however it requires more steps. You'll need Python3_ if you don't have it already.
+napari-imagej can also be installed using ``pip``; however, it requires more steps. You'll need Python3_ if you don't have it already.
 
 We recommend using virtualenv_ to isolate napari-imagej from your system-wide or user-wide Python environments. Alternatively, you can use Mamba_ purely for its virtual environment capabilities, and then ``pip install`` everything into that environment:
 
@@ -102,7 +102,7 @@ Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the
 
 Using pip
 ---------
-napari-imagej can also be installed using ``pip``, however it requires more steps. You'll need Python3_ if you don't have it already.
+napari-imagej can also be installed using ``pip``; however, it requires more steps. You'll need Python3_ if you don't have it already.
 
 We recommend using virtualenv_ to isolate napari-imagej from your system-wide or user-wide Python environments. Alternatively, you can use Mamba_ purely for its virtual environment capabilities, and then ``pip install`` everything into that environment:
 

@@ -74,7 +74,7 @@ If disabled, only ImageJ2 functionality will be available, and the napari-imagej
 
 This checkbox tells napari-imagej whether to make the ImageJ GUI available. If unchecked, ImageJ2 will be run headlessly, disabling the ImageJ UI and making original ImageJ functionality unavailable.
 
-By default, the ImageJ GUI will be available whenever possible, however the ImageJ GUI **is unavailable on macOS**. Therefore, on macOS, napari-imagej will behave as if this setting is always ``False``.
+By default, the ImageJ GUI will be available whenever possible; however, the ImageJ GUI **is unavailable on macOS**. Therefore, on macOS, napari-imagej will behave as if this setting is always ``False``.
 
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
