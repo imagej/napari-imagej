@@ -6,7 +6,7 @@ This document explains how to augment napari-imagej to configure available funct
 
 We assume familiarity in launching napari-imagej. Please see `this page <./Initialization.html>`_ for more information on launching napari-imagej.
 
-Accessing napari-imagej settings
+Accessing napari-imagej Settings
 --------------------------------
 
 As soon as you launch napari-imagej, you can access napari-imagej's configuration dialog by clicking on the gear in the napari-imagej menu:
@@ -15,7 +15,7 @@ As soon as you launch napari-imagej, you can access napari-imagej's configuratio
     
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
-Configuring settings
+Configuring Settings
 --------------------
 
 Within this modal dialog are many different settings, many pertaining to the underlying ImageJ2 instance.
@@ -48,7 +48,7 @@ Here are some example endpoint constructions:
     * - Newest available Fiji
       - ``sc.fiji:fiji``
       - NO
-    * - Newest available ImageJ2 PLUS Specific Plugins
+    * - Newest available ImageJ2 PLUS specific plugins
       - ``net.imagej:imagej+net.preibisch:BigStitcher``
       - NO
 

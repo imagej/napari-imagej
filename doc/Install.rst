@@ -4,7 +4,7 @@ Installation
 
 If you're looking to use napari-imagej, there are a few ways to get it running.
 
-Installing Within napari
+Installing within napari
 ========================
 
 If you have napari installed already, you can install napari-imagej directly within napari, by following these steps:
@@ -23,7 +23,7 @@ If you have napari installed already, you can install napari-imagej directly wit
 
 Once the installation is complete, napari-imagej is ready to use!
 
-Installing From Mamba (Recommended)
+Installing from Mamba (Recommended)
 ===================================
 
 Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the instructions `here <https://mamba.readthedocs.io/en/latest/installation.html>`_.
@@ -44,7 +44,7 @@ Mamba_ is the easiest way to install napari-imagej. To install Mamba, follow the
 
       mamba activate napari-imagej
 
-Installing From pip
+Installing from pip
 ===================
 
 napari-imagej can also be installed using ``pip``, however it requires more steps. You'll need Python3_ if you don't have it already.
@@ -73,7 +73,7 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
       pip install napari-imagej
 
 
-Installing From Source
+Installing from Source
 ======================
 
 If you're looking to develop napari-imagej, you'll likely want to install from source.

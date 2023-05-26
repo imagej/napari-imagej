@@ -128,7 +128,7 @@ Click ``Run``, and wait for the computation to complete. Once completed, look fo
     11:10:37 DEBUG napari-imagej: Execution complete
     11:10:37 DEBUG napari-imagej: Computation completed in 50.0014 seconds
 
-Pure Java comparisons
+Pure Java Comparisons
 ---------------------
 
 Unfortunately, Fiji does not provide us with execution times, so the SciJava script must be modified slightly to print out its own execution time:

@@ -2,7 +2,7 @@ Troubleshooting
 ===============
 
 
-napari-imagej does not appear in the Plugins menu of napari!
+napari-imagej Does Not Appear in the Plugins Menu of napari!
 ------------------------------------------------------------
 
 npe2_ is a useful tool for validating a napari plugin's setup. When running napari-imagej within Mamba_, use:
@@ -15,14 +15,14 @@ npe2_ is a useful tool for validating a napari plugin's setup. When running napa
 
 If ``npe2 validate`` returns an error, this indicates that napari-imagej was not installed correctly. In this case, please ensure that you have followed `Installation <./Install.html>`_ instructions.
 
-The search bar is disabled with the message "Initializing ImageJ..."
+The Search Bar Is Disabled with the Message "Initializing ImageJ..."
 --------------------------------------------------------------------
 
 Since napari-imagej is calling Java code under the hood, it must launch a Java Virtual Machine (JVM). The JVM is not launched until the user starts napari-imagej. As we cannot search Java functionality *until the JVM is running*, the search bar is not enabled until the JVM is ready.
 
 The first launch of napari-imagej can take significantly longer than subsequent launches while the underlying framework downloads the Java artifacts needed to run ImageJ2. **Downloading these libraries can take minutes**. These libraries are cached, however, so subsequent launches should not take more than a few seconds.
 
-The ImageJ2 GUI button is greyed out!
+The ImageJ2 GUI Button Is Greyed Out!
 -------------------------------------
 
 There are two common cases for a disabled ImageJ2 GUI button:
@@ -34,7 +34,7 @@ There are two common cases for a disabled ImageJ2 GUI button:
 .. _Mamba: https://mamba.readthedocs.io/en/latest/
 .. _npe2: https://github.com/napari/npe2
 
-The image dimension labels are wrong in ImageJ after transferring from napari
+The Image Dimension Labels Are Wrong in ImageJ after Transferring from napari
 -----------------------------------------------------------------------------
 
 Internally, napari does not utilize image dimension labels (*i.e.* ``X``, ``Y``, ``Channel``, *etc...*) and instead assumes that the *n*-dimensional arrays (*i.e* images) conform to the `scikit-image dimension order`_ convention. ImageJ2 however *does* care about dimension labels and uses them to define certain operations. 

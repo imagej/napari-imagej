@@ -68,7 +68,7 @@ napari-imagej also includes pre-commit_ configuration for those who want it. By 
 
     pre-commit install
 
-Building distribution bundles
+Building Distribution Bundles
 -----------------------------
 
 You can run the following to bundle napari-imagej (macOS/Linux):
