@@ -204,9 +204,12 @@ class NapariImageJWidget(QWidget):
         self.search.bar.finalize_on_error()
         # Print thet error
         title = "ImageJ could not be initialized, due to the following error:"
-        exception_str = (
-            jstacktrace(exc) if isjava(exc) else "".join(format_exception(exc))
-        )
+        if isjava(exc):
+            exception_str = jstacktrace(exc)
+        else:
+            # NB 3-arg function needed in Python < 3.10
+            exception_list = format_exception(type(exc), exc, exc.__traceback__)
+            exception_str = "".join(exception_list)
         msg: JavaErrorMessageBox = JavaErrorMessageBox(title, exception_str)
         msg.exec()
 
