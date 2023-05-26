@@ -6,9 +6,9 @@ from napari import Viewer
 from napari.layers import Image
 from numpy import ones
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
+from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QTextEdit, QVBoxLayout
 
-from napari_imagej.java import ij, jc
+from napari_imagej.java import ij
 from napari_imagej.utilities.event_subscribers import (
     ProgressBarListener,
     UIShownListener,
@@ -19,6 +19,8 @@ from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
 from napari_imagej.widgets.result_tree import SearchResultTree
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
+from tests.utils import jc
 from tests.widgets.widget_utils import _searcher_tree_named
 
 
@@ -272,3 +274,33 @@ def test_event_subscriber_registered(ij, imagej_widget: NapariImageJWidget, asse
 
     subs = subscribers(ij, jc.UIShownEvent.class_)
     assert any(isinstance(sub, UIShownListener) for sub in subs)
+
+
+def test_handle_ij_init_error(imagej_widget: NapariImageJWidget):
+    """
+    Ensure that napari-imagej's ij init errors are displayed correctly
+    """
+    title = ""
+    contents = ""
+
+    # first, mock JavaErrorMessageBox
+    old_exec = JavaErrorMessageBox.exec
+
+    def new_exec(self):
+        nonlocal title, contents
+        title = self.findChild(QLabel).text()
+        contents = self.findChild(QTextEdit).toPlainText()
+
+    JavaErrorMessageBox.exec = new_exec
+
+    j_exc = jc.IllegalArgumentException("This is a Java Exception")
+    imagej_widget._handle_ij_init_error(j_exc)
+    assert title == "ImageJ could not be initialized, due to the following error:"
+    assert contents == "java.lang.IllegalArgumentException: This is a Java Exception\n"
+
+    p_exc = TypeError("This is a Python Exception")
+    imagej_widget._handle_ij_init_error(p_exc)
+    assert title == "ImageJ could not be initialized, due to the following error:"
+    assert contents == "TypeError: This is a Python Exception\n"
+
+    JavaErrorMessageBox.exec = old_exec
