@@ -4,6 +4,7 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
+from traceback import format_exception
 from typing import Callable
 
 from jpype import JArray, JImplements, JOverride
@@ -12,7 +13,7 @@ from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
-from scyjava import jstacktrace, when_jvm_stops
+from scyjava import isjava, jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
@@ -116,7 +117,7 @@ class NapariImageJWidget(QWidget):
 
         self.output_handler.connect(self._handle_output)
         self.progress_handler.connect(self._update_progress)
-        self.ij_error_handler.connect(self._handle_ij_error)
+        self.ij_error_handler.connect(self._handle_ij_init_error)
 
         # -- Final setup -- #
 
@@ -189,7 +190,7 @@ class NapariImageJWidget(QWidget):
                 msg.exec()
 
     @Slot(object)
-    def _handle_ij_error(self, exc: Exception):
+    def _handle_ij_init_error(self, exc: Exception):
         """
         Handles errors associated initializing ImageJ.
         Initializing ImageJ can fail for all sorts of reasons,
@@ -203,7 +204,12 @@ class NapariImageJWidget(QWidget):
         self.search.bar.finalize_on_error()
         # Print thet error
         title = "ImageJ could not be initialized, due to the following error:"
-        exception_str = jstacktrace(exc)
+        if isjava(exc):
+            exception_str = jstacktrace(exc)
+        else:
+            # NB 3-arg function needed in Python < 3.10
+            exception_list = format_exception(type(exc), exc, exc.__traceback__)
+            exception_str = "".join(exception_list)
         msg: JavaErrorMessageBox = JavaErrorMessageBox(title, exception_str)
         msg.exec()
 
