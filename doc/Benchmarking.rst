@@ -221,7 +221,7 @@ In the table below, we obtain the following data, running all programs on a mach
    :header-rows: 1
 
    * - Trial
-     - Scikit-Image
+     - scikit-image
      - Fiji
      - napari-imagej
    * - **1**
