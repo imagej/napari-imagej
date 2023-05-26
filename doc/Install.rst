@@ -7,7 +7,7 @@ If you're looking to use napari-imagej, there are a few ways to get it running.
 Installing within napari
 ========================
 
-If you have napari installed already, you can install napari-imagej directly within napari, by following these steps:
+If you have napari installed already, you can install napari-imagej by following these steps:
 
 #. Install OpenJDK 8 or OpenJDK 11
 
