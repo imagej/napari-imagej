@@ -26,11 +26,11 @@ The script for Puncta Segmentation is written below:
 .. code-block:: python
     :caption: Puncta_Segmentation.py
 
-    #@Img ds_src
-    #@ConvertService convert
-    #@DatasetService ds
-    #@OpService ops
-    #@OUTPUT org.scijava.table.Table sci_table
+    #@ Img ds_src
+    #@ ConvertService convert
+    #@ DatasetService ds
+    #@ OpService ops
+    #@output org.scijava.table.Table sci_table
 
     from ij import IJ, ImagePlus, Prefs
     from ij.measure import ResultsTable
