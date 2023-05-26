@@ -283,7 +283,7 @@ def test_handle_ij_init_error(imagej_widget: NapariImageJWidget):
     title = ""
     contents = ""
 
-    # first, mock JavaErrorMessageBox
+    # first, mock JavaErrorMessageBox.exec
     old_exec = JavaErrorMessageBox.exec
 
     def new_exec(self):
@@ -293,14 +293,17 @@ def test_handle_ij_init_error(imagej_widget: NapariImageJWidget):
 
     JavaErrorMessageBox.exec = new_exec
 
+    # Then, test a Java exception is correctly configured
     j_exc = jc.IllegalArgumentException("This is a Java Exception")
     imagej_widget._handle_ij_init_error(j_exc)
     assert title == "ImageJ could not be initialized, due to the following error:"
     assert contents == "java.lang.IllegalArgumentException: This is a Java Exception\n"
 
+    # Next, test a Python excpetion is correctly configured
     p_exc = TypeError("This is a Python Exception")
     imagej_widget._handle_ij_init_error(p_exc)
     assert title == "ImageJ could not be initialized, due to the following error:"
     assert contents == "TypeError: This is a Python Exception\n"
 
+    # Finally, restore JavaErrorMessageBox.exec
     JavaErrorMessageBox.exec = old_exec
