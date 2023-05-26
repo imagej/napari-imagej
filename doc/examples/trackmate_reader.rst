@@ -29,7 +29,7 @@ Opening the data
 
 Once napari is running, you can open the data within napari through ``File>Open File(s)...``, and selecting both the ``.tif`` and ``.xml`` sample files that were downloaded.
 
-There might be a slight delay while the files open. This process can be an expensive operation as we require a running JVM and conversion of the TrackMate ``Model`` into napari ``Layers``; however, the reader plugin displayes a progress bar in the ``Activity`` pane.
+There might be a slight delay while the files open. This process can be an expensive operation as we require a running JVM and conversion of the TrackMate ``Model`` into napari ``Layers``; however, the reader plugin displays a progress bar in the ``Activity`` pane.
 
 When complete, you should see the image, track and label layers in napari:
 
