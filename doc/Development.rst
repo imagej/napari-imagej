@@ -56,7 +56,7 @@ Formatting
 
 black_, flake8_, and isort_ are used to lint and standardize the napari-imagej source.
 
-To manually format the source, run (MacOS/Linux):
+To manually format the source, run (macOS/Linux):
 
 .. code-block:: bash
 
@@ -71,7 +71,7 @@ napari-imagej also includes pre-commit_ configuration for those who want it. By 
 Building distribution bundles
 -----------------------------
 
-You can run the following to bundle napari-imagej (MacOS/Linux):
+You can run the following to bundle napari-imagej (macOS/Linux):
 
 .. code-block:: bash
 

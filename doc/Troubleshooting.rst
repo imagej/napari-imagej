@@ -29,7 +29,7 @@ There are two common cases for a disabled ImageJ2 GUI button:
 
 #. When napari-imagej is first launched, the button will be disabled until the ImageJ2 Gateway is ready to process data. Please see `here <#The-search-bar-is-disabled-with-the-message-"Initializing-ImageJ...">`_
 
-#. On some systems (namely **MacOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see `this page <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_ for more information.
+#. On some systems (namely **macOS**), PyImageJ can **only** be run headlessly. In headless PyImageJ environments, the ImageJ2 GUI cannot be launched. Please see `this page <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_ for more information.
 
 .. _Mamba: https://mamba.readthedocs.io/en/latest/
 .. _npe2: https://github.com/napari/npe2
