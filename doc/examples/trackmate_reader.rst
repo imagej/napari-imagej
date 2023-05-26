@@ -1,7 +1,7 @@
 Viewing TrackMate Data in the napari Viewer
 ===========================================
 
-The `TrackMate <https://imagej.net/plugins/trackmate/>`_ plugin for ImageJ2 provides a streamlined interface for object tracking. This example shows napari-imagej's capability to view TrackMate tracks in napari, including segmentation labels, *without opening the ImageJ UI*
+The `TrackMate <https://imagej.net/plugins/trackmate/>`_ plugin for ImageJ2 provides a streamlined interface for object tracking. This example shows napari-imagej's capability to view TrackMate tracks in napari, including segmentation labels, *without opening the ImageJ UI*.
 
 **Note:** TrackMate is not included by default with ImageJ. To set up napari-imagej with TrackMate, see `these instructions <./trackmate.html#trackmate-plugin-setup>`_.
 

@@ -4,7 +4,7 @@ Configuration
 
 This document explains how to augment napari-imagej to configure available functionality.
 
-We assume familiarity in launching napari-imagej. Please see `this page <./Initialization.html>`_ for more information on launching napari-imagej
+We assume familiarity in launching napari-imagej. Please see `this page <./Initialization.html>`_ for more information on launching napari-imagej.
 
 Accessing napari-imagej settings
 --------------------------------
