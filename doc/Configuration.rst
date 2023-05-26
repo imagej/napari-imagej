@@ -31,7 +31,7 @@ If you pass a **directory**, PyImageJ will look in that directory for *an existi
 
 If you pass one or more **components** in `Maven coordinate <https://maven.apache.org/pom.html#Maven_Coordinates>`_ form, PyImageJ will launch an ImageJ2 instance from those components, *downloading them if necessary*.
 
-Below are a couple examples of ways to construct different ImageJ2 instances:
+Here are some example endpoint constructions:
 
 .. list-table:: endpoint options
     :header-rows: 1

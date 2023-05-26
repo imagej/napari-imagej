@@ -76,7 +76,7 @@ We recommend using virtualenv_ to isolate napari-imagej from your system-wide or
 Installing From Source
 ======================
 
-If you're looking to develop napari-imagej, you'll likely want to install from source. There are a couple of ways to get napari-imagej installed; as above, we recommend using Mamba_ to install napari-imagej:
+If you're looking to develop napari-imagej, you'll likely want to install from source.
 
 Using Mamba
 -----------
