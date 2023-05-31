@@ -744,6 +744,7 @@ def test_dataset(ij) -> "jc.Dataset":
     name = "test.foo"
     dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((10, 10))))
     dataset.setName(name)
+    dataset.getProperties().put("foo", 4)
     return dataset
 
 
@@ -813,6 +814,7 @@ def test_dataset_to_image_layer(ij, test_dataset):
     assert isinstance(p_img, Image)
     assert test_dataset.getName() == p_img.name
     assert "gray" == p_img.colormap.name
+    assert p_img.metadata.get("foo", None) == 4
 
 
 def test_binary_dataset_to_image_layer(ij, test_binary_dataset):

@@ -36,14 +36,10 @@ def _java_image_to_image_layer(image: Any) -> Image:
     view = ij().convert().convert(image, jc.DatasetView)
     # Construct an xarray from the DatasetView
     xarr: DataArray = java_to_xarray(ij(), view.getData())
-    # Construct metadata
-    metadata = getattr(xarr, "attrs", {}).copy()
-    metadata["dims"] = xarr.dims
-    metadata["coords"] = xarr.coords
     # Construct a map of Image layer parameters
     kwargs = dict(
         data=xarr,
-        metadata=metadata,
+        metadata=getattr(xarr, "attrs", {}),
         name=view.getData().getName(),
     )
     if view.getColorTables() and view.getColorTables().size() > 0:
