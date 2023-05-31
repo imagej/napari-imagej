@@ -6,7 +6,6 @@ scyjava Converters for converting between ImageJ ecosystem image types
 from typing import Any
 
 from imagej.convert import java_to_xarray
-from imagej.dims import _has_axis
 from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
@@ -50,25 +49,6 @@ def _java_image_to_image_layer(image: Any) -> Image:
     if view.getColorTables() and view.getColorTables().size() > 0:
         if not jc.ColorTables.isGrayColorTable(view.getColorTables().get(0)):
             kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
-    return Image(**kwargs)
-
-
-def _can_convert_img_plus(obj: Any):
-    can_convert = isjava(obj) and ij().convert().supports(obj, jc.ImgPlus)
-    has_axis = _has_axis(obj)
-    return can_convert and has_axis
-
-
-@java_to_py_converter(predicate=_can_convert_img_plus, priority=Priority.VERY_HIGH)
-def _dataset_to_image(image: Any) -> Image:
-    imgplus = ij().convert().convert(image, jc.ImgPlus)
-    # Construct a dataset from the data
-    kwargs = dict(
-        data=ij().py.from_java(imgplus.getImg()),
-        name=imgplus.getName(),
-    )
-    if imgplus.getColorTableCount() > 0 and imgplus.getColorTable(0):
-        kwargs["colormap"] = _color_table_to_colormap(imgplus.getColorTable(0))
     return Image(**kwargs)
 
 
