@@ -744,6 +744,7 @@ def test_dataset(ij) -> "jc.Dataset":
     name = "test.foo"
     dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((10, 10))))
     dataset.setName(name)
+    dataset.getProperties().put("foo", 4)
     return dataset
 
 
@@ -770,7 +771,7 @@ def _assert_equal_color_maps(j_map: "jc.ColorTable", p_map):
 def test_image_layer_to_dataset(ij):
     """Test conversion of an Image layer with a default colormap"""
     name = "test_foo"
-    image = Image(data=np.ones((10, 10)), name=name)
+    image = Image(data=np.ones((10, 10)), name=name, metadata={"foo": 4})
     j_img = ij.py.to_java(image)
     assert isinstance(j_img, jc.Dataset)
     assert name == j_img.getName()
@@ -778,6 +779,8 @@ def test_image_layer_to_dataset(ij):
 
     assert 0 == j_img.dimensionIndex(jc.Axes.X)
     assert 1 == j_img.dimensionIndex(jc.Axes.Y)
+    assert "foo" in j_img.getProperties()
+    assert j_img.getProperties().get("foo") == 4
 
 
 def test_binary_image_layer_to_dataset(ij):
@@ -811,6 +814,7 @@ def test_dataset_to_image_layer(ij, test_dataset):
     assert isinstance(p_img, Image)
     assert test_dataset.getName() == p_img.name
     assert "gray" == p_img.colormap.name
+    assert p_img.metadata.get("foo", None) == 4
 
 
 def test_binary_dataset_to_image_layer(ij, test_binary_dataset):

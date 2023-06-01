@@ -1,64 +1,63 @@
 """
-scyjava Converters for converting between ImgLib2 Imgs
-and napari Images
+scyjava Converters for converting between ImageJ ecosystem image types
+(referred to collectively as "java image"s) and napari Image layers
 """
 
 from typing import Any
 
 from imagej.convert import java_to_xarray
-from imagej.dims import _has_axis
 from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
 from numpy import ones
 from scyjava import Priority, isjava
+from xarray import DataArray
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
+from napari_imagej.utilities.logging import log_debug
 
 
 @java_to_py_converter(
     predicate=lambda obj: isjava(obj) and ij().convert().supports(obj, jc.DatasetView),
     priority=Priority.VERY_HIGH + 1,
 )
-def _dataset_view_to_image(image: Any) -> Image:
+def _java_image_to_image_layer(image: Any) -> Image:
+    """
+    Converts a java image (i.e. something that can be converted into a DatasetView)
+    into a napari Image layer.
+
+    TODO: Pass xarray axis labels, coordinates to the Layer, once the Layer
+    can understand them. See https://github.com/imagej/napari-imagej/issues/253.
+    :param image: a java image
+    :return: a napari Image layer
+    """
+    # Construct a DatasetView from the Java image
     view = ij().convert().convert(image, jc.DatasetView)
-    # Construct a dataset from the data
+    # Construct an xarray from the DatasetView
+    xarr: DataArray = java_to_xarray(ij(), view.getData())
+    # Construct a map of Image layer parameters
     kwargs = dict(
-        data=java_to_xarray(ij(), view.getData()),
+        data=xarr,
+        metadata=getattr(xarr, "attrs", {}),
         name=view.getData().getName(),
     )
-    if hasattr(kwargs["data"], "attrs"):
-        kwargs["metadata"] = kwargs["data"].attrs
     if view.getColorTables() and view.getColorTables().size() > 0:
         if not jc.ColorTables.isGrayColorTable(view.getColorTables().get(0)):
             kwargs["colormap"] = _color_table_to_colormap(view.getColorTables().get(0))
     return Image(**kwargs)
 
 
-def _can_convert_img_plus(obj: Any):
-    can_convert = isjava(obj) and ij().convert().supports(obj, jc.ImgPlus)
-    has_axis = _has_axis(obj)
-    return can_convert and has_axis
-
-
-@java_to_py_converter(predicate=_can_convert_img_plus, priority=Priority.VERY_HIGH)
-def _dataset_to_image(image: Any) -> Image:
-    imgplus = ij().convert().convert(image, jc.ImgPlus)
-    # Construct a dataset from the data
-    kwargs = dict(
-        data=ij().py.from_java(imgplus.getImg()),
-        name=imgplus.getName(),
-    )
-    if imgplus.getColorTableCount() > 0 and imgplus.getColorTable(0):
-        kwargs["colormap"] = _color_table_to_colormap(imgplus.getColorTable(0))
-    return Image(**kwargs)
-
-
 @py_to_java_converter(
     predicate=lambda obj: isinstance(obj, Image), priority=Priority.VERY_HIGH
 )
-def _image_to_dataset(image: Image) -> "jc.Dataset":
+def _image_layer_to_dataset(image: Image) -> "jc.Dataset":
+    """
+    Converts a napari Image layer into a Dataset.
+
+    :param image: a napari Image layer
+    :return: a Dataset
+    """
     # Construct a dataset from the data
     dataset: "jc.Dataset" = ij().py.to_dataset(image.data)
     # We need an "X" axis, or ImageJ2 doesn't know how to display the dataset
@@ -87,6 +86,13 @@ def _image_to_dataset(image: Image) -> "jc.Dataset":
         color_table = _colormap_to_color_table(image.colormap)
         dataset.initializeColorTables(1)
         dataset.setColorTable(color_table, 0)
+    # Add properties
+    properties = dataset.getProperties()
+    for k, v in image.metadata.items():
+        try:
+            properties.put(ij().py.to_java(k), ij().py.to_java(v))
+        except Exception:
+            log_debug(f"Could not add property ({k}, {v}) to dataset {dataset}:")
     return dataset
 
 
