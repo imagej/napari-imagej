@@ -4,6 +4,8 @@ napari viewer, with GUI support, even on macOS.
 """
 
 import sys
+# BIG HACK: For some reason, PyObjC cannot import this later, but we CAN import it now.
+from AppKit import NSApplicationDidFinishLaunchingNotification
 
 import napari.__main__
 from imagej import init, when_imagej_starts
@@ -17,6 +19,7 @@ def main():
     print("==> Initializing ImageJ2...")
     settings.enable_imagej_gui = True
     settings._gui_mode = "gui"
+    settings._is_macos = False
     when_imagej_starts(configure_imagej)
     # NB this must be the LAST callback to run, as it blocks
     when_imagej_starts(_init_napari)
