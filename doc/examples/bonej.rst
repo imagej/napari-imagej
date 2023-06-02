@@ -61,4 +61,15 @@ Now let's calculate the degree of anisotropy.
 
 Select the `inputImage` that corresponds to the theshold layer created previously.
 
-Check the `Recommended minimums` box
+Check the `Recommended minimums` box.
+Enter `1.73` as the samplingInterval.
+
+This will output the degree of anisotropy measurement for the image.
+
+TODO
+^^^^^^^^^^^^^^^^^^^^^^
+
+Fix bugs and finish corresponding sections for:
+
+- Area/Volume Fraction
+- Ellipsoid Factor
