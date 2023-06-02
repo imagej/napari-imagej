@@ -485,5 +485,5 @@ def test_legacy_directed_to_ij_ui(
     asserter(lambda: ui_visible(ij))
 
     frame = ij.ui().getDefaultUI().getApplicationFrame().getComponent()
-    assert 1 == len(frame.getWindowListeners())
-    assert "NapariAdapter" in str(type(frame.getWindowListeners()[0]))
+    asserter(lambda: 1 == len(frame.getWindowListeners()))
+    asserter(lambda: "NapariAdapter" in str(type(frame.getWindowListeners()[0])))
