@@ -66,7 +66,7 @@ def _run_actions_for(
                 QMessageBox.Yes | QMessageBox.No,
             )
             if reply == QMessageBox.Yes:
-                ij().ui().showUI()
+                ij().thread().queue(lambda: ij().ui().showUI())
             return
 
         module = ij().module().createModule(moduleInfo)

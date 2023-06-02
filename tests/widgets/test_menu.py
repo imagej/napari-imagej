@@ -463,7 +463,9 @@ def legacy_module(ij):
     return ij.module().createModule(info)
 
 
-def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMenu):
+def test_legacy_directed_to_ij_ui(
+    ij, popup_handler, gui_widget: NapariImageJMenu, asserter
+):
     if settings.headless():
         pytest.skip("Only applies when not running headlessly")
     if not settings.include_imagej_legacy:
@@ -480,4 +482,8 @@ def test_legacy_directed_to_ij_ui(ij, popup_handler, gui_widget: NapariImageJMen
     assert not ui_visible(ij)
 
     popup_handler(expected_popup_text, False, QMessageBox.Yes, actions[0][1])
-    assert ui_visible(ij)
+    asserter(lambda: ui_visible(ij))
+
+    frame = ij.ui().getDefaultUI().getApplicationFrame().getComponent()
+    assert 1 == len(frame.getWindowListeners())
+    assert "NapariAdapter" in str(type(frame.getWindowListeners()[0]))
