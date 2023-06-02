@@ -1,21 +1,7 @@
 Using BoneJ2
 ========================================
 
-https://figshare.com/ndownloader/files/13369043
-
-The `TrackMate`_ plugin for ImageJ2 provides a streamlined interface for object tracking. 
-This use case demonstrates how you can use napari-imagej to run the TrackMate plugin on 3D data **(X, Y, Time)** view the results with napari and
-also process them with the `napari-stracking`_ plugin.
-
 Here we adapt a workflow from the BoneJ2 paper (https://wellcomeopenresearch.org/articles/6-37) for use with napari-imagej.
-
-For this use case we will analyze live cell wide-field microscopy data of HeLa cell nuclei (Hoechst stain), imaged every 30 minutes for 40 frames.
-The data used in this use case is available in the `napari-imagej repository`_ on GitHub.
-
-.. image:: https://media.imagej.net/napari-imagej/trackmate_0.gif
-    :align: center
-
-|
 
 napari Setup
 ----------------------
@@ -34,7 +20,7 @@ We can configure napari-imagej to use a Fiji installation by opening the setting
 Preparing and Opening the Data
 ------------------
 
-We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179
+We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179. Direct link: https://figshare.com/ndownloader/files/13369043
 
 .. |ImageJ2| image:: ../../src/napari_imagej/resources/imagej2-16x16-flat.png
 
