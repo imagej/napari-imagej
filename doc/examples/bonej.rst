@@ -20,9 +20,7 @@ We can configure napari-imagej to use a Fiji installation by opening the setting
 Preparing and Opening the Data
 ------------------
 
-We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179. Direct link: https://figshare.com/ndownloader/files/13369043
-
-.. |ImageJ2| image:: ../../src/napari_imagej/resources/imagej2-16x16-flat.png
+We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179. Here is a direct link to the specific image: https://figshare.com/ndownloader/files/13369043
 
 Opening Data in napari
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -69,7 +67,7 @@ This will output the degree of anisotropy measurement for the image.
 TODO
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Fix bugs and finish corresponding sections for:
+Fix bugs (see https://github.com/imagej/napari-imagej/issues/261) and finish corresponding sections for:
 
 - Area/Volume Fraction
 - Ellipsoid Factor
