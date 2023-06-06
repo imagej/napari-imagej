@@ -16,7 +16,7 @@ import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
-from napari_imagej.utilities.logging import log_debug
+from napari_imagej.utilities.logging import log_debug, warn
 
 # -- Constants -- #
 
@@ -31,9 +31,9 @@ minimum_versions = {
     "org.scijava:scijava-search": "2.0.2",
     "sc.fiji:TrackMate": "7.11.0",
 }
+recommended_versions = {}
 
 # -- Public functions -- #
-
 
 def init_ij() -> "jc.ImageJ":
     """
@@ -135,6 +135,29 @@ def _validate_imagej(ij: "jc.ImageJ"):
             "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
         )
         raise RuntimeError(failure_str)
+
+    # Find versions below recommended
+    violations = []
+    for component, cls in component_requirements.items():
+        if component not in recommended_versions:
+            continue
+        recommended_version = recommended_versions[component]
+        component_version = get_version(cls)
+        if not is_version_at_least(component_version, recommended_version):
+            violations.append(
+                f"{component} : {recommended_version} (Installed: {component_version})"
+            )
+
+    # If there are older versions, warn the user
+    if violations:
+        # FIXME: napari_imagej.__version__ causes package cycles
+        failure_str = (
+            f"napari-imagej v{get_version("napari-imagej")} recommends using "
+            "the following component versions:"
+        )
+        violations.insert(0, failure_str)
+        failure_str = "\n\t".join(violations)
+        warn(failure_str)
 
 
 def _optional_requirements(ij: "jc.ImageJ"):
