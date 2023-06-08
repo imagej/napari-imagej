@@ -284,7 +284,7 @@ class REPLButton(IJMenuButton):
 
         self._widget = REPLWidget(self.repl)
         self._widget.visible = False
-        self.viewer.window.add_dock_widget(self._widget)
+        self.viewer.window.add_dock_widget(self._widget, name="napari-imagej REPL")
 
     def _toggle_repl(self):
         """
