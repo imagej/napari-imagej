@@ -21,6 +21,8 @@ from napari_imagej.utilities.event_subscribers import UIShownListener
 from napari_imagej.utilities.events import subscribe, unsubscribe
 from napari_imagej.widgets.widget_utils import _IMAGE_LAYER_TYPES, DetailExportDialog
 
+from napari_imagej.widgets.repl import REPLWidget
+
 
 class NapariImageJMenu(QWidget):
     """Container widget comprising the napari-imagej menu bar."""
@@ -41,6 +43,9 @@ class NapariImageJMenu(QWidget):
 
         self.gui_button: GUIButton = GUIButton(viewer)
         self.layout().addWidget(self.gui_button)
+
+        self.repl_button: REPLButton = REPLButton(viewer)
+        self.layout().addWidget(self.repl_button)
 
         self.settings_button: SettingsButton = SettingsButton(viewer)
         self.layout().addWidget(self.settings_button)
@@ -254,6 +259,43 @@ class GUIButton(IJMenuButton):
             "for more information.",
             exec=True,
         )
+
+
+class REPLButton(IJMenuButton):
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.viewer = viewer
+
+        icon = QColoredSVGIcon(resource_path("repl"))
+        self.setIcon(icon.colored(theme=viewer.theme))
+
+        self.clicked.connect(self._toggle_repl)
+        self._widget = None
+
+    def _add_repl_to_dock(self):
+        from scyjava import jimport
+
+        ByteArrayOutputStream = jimport("java.io.ByteArrayOutputStream")
+        ScriptREPL = jimport("org.scijava.script.ScriptREPL")
+
+        output_stream = ByteArrayOutputStream()
+        self.repl = ScriptREPL(ij().context(), "jython", output_stream)
+        self.repl.lang("jython")
+
+        self._widget = REPLWidget(self.repl)
+        self._widget.visible = False
+        self.viewer.window.add_dock_widget(self._widget)
+
+    def _toggle_repl(self):
+        """
+        Spawn a popup allowing the user to configure napari-imagej settings.
+        """
+        if not self._widget:
+            self._add_repl_to_dock()
+        else:
+            self.viewer.window.remove_dock_widget(self._widget)
+            self._widget.close()
+            self._widget = None
 
 
 class SettingsButton(IJMenuButton):

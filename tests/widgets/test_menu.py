@@ -27,6 +27,7 @@ from napari_imagej.widgets.menu import (
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
+    REPLButton,
     SettingsButton,
     ToIJButton,
     ToIJDetailedButton,
@@ -175,14 +176,15 @@ def clean_gui_elements(asserter, ij, viewer: Viewer):
 def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
-    assert len(subwidgets) == 6
+    assert len(subwidgets) == 7
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
     assert isinstance(subwidgets[3], ToIJDetailedButton)
     assert isinstance(subwidgets[4], GUIButton)
-    assert isinstance(subwidgets[5], SettingsButton)
+    assert isinstance(subwidgets[5], REPLButton)
+    assert isinstance(subwidgets[6], SettingsButton)
 
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
