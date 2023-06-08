@@ -29,19 +29,18 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-4.1093503,-5.8935793)">
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:'Mukta Mahee';-inkscape-font-specification:'Mukta Mahee, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke-width:0.264583"
-       x="3.7819726"
-       y="8.6762905"
+    <g
+       aria-label="&gt;_"
        id="text1010"
-       inkscape:export-filename="repl.svg"
-       inkscape:export-xdpi="91.139351"
-       inkscape:export-ydpi="91.139351"><tspan
-         sodipodi:role="line"
-         id="tspan1008"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:'Mukta Mahee';-inkscape-font-specification:'Mukta Mahee, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke-width:0.264583"
-         x="3.7819726"
-         y="8.6762905">&gt;_</tspan></text>
+       style="font-weight:bold;font-size:5.64444px;font-family:'Mukta Mahee';-inkscape-font-specification:'Mukta Mahee, Bold';stroke-width:0.264583">
+      <path
+         d="M 4.1093504,8.5916238 V 8.0158905 L 5.5881949,7.2426016 4.1093504,6.4693127 V 5.8935794 l 2.0545778,1.1458222 v 0.4120445 z"
+         style="font-size:5.64444px"
+         id="path2760" />
+      <path
+         d="M 8.5684558,9.6640683 V 10.087402 H 6.5308113 V 9.6640683 Z"
+         style="font-size:5.64444px"
+         id="path2762" />
+    </g>
   </g>
 </svg>
