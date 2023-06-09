@@ -46,12 +46,12 @@ When the widget comes up, ensure that the layer that is selected is the result o
 
 3. The result of thresholding is a Label layer, but we will convert it to an Image layer to work with BoneJ2.
 
-Right click on the layer that was created by step 2 and select `Convert to Image`.   
+Right click on the layer that was created by step 2 and select `Convert to Image`.
 
 Processing Data in napari with BoneJ2 and napari-imagej
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Now let's calculate the degree of anisotropy.
+Calculating the degree of anisotropy:
 
 1. In the napari-imagej search bar type `Anisotropy`
 
@@ -64,10 +64,26 @@ Enter `1.73` as the samplingInterval.
 
 This will output the degree of anisotropy measurement for the image.
 
-TODO
-^^^^^^^^^^^^^^^^^^^^^^
 
-Fix bugs (see https://github.com/imagej/napari-imagej/issues/261) and finish corresponding sections for:
+Calculating the Area/Volume Fraction:
 
-- Area/Volume Fraction
-- Ellipsoid Factor
+1. In the napari-imagej search bar type `Volume Fraction`
+
+2. Click `Run`
+
+Select the `inputImage` that corresponds to the theshold layer created previously.
+
+This will output the Bone Volume Fraction (BV/TV) measurement for the image.
+
+
+Calculating the Connectivity:
+
+1. In the napari-imagej search bar type `Connectivity`
+
+2. Click `Run`
+
+Select the `inputImage` that corresponds to the theshold layer created previously.
+
+This will output the Euler characteristic and Conn.D for the image.
+
+
