@@ -681,6 +681,7 @@ def test_info_for(ij):
 def test_devise_layer_name():
     info = DummyModuleInfo()
 
+    # Test "uninformative" names are given Module context
     overwritten_names = [
         "out",
         "output",
@@ -692,9 +693,12 @@ def test_devise_layer_name():
         "Surface",
         "Tracks",
     ]
-
     for name in overwritten_names:
         assert (
             _module_utils._devise_layer_name(info, name)
             == f"{name} [Dummy Module Info]"
         )
+
+    # Test "informative" names are left alone
+    informative_name = "foo"
+    assert informative_name == _module_utils._devise_layer_name(info, informative_name)
