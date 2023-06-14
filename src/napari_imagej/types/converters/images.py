@@ -60,24 +60,28 @@ def _image_layer_to_dataset(image: Image) -> "jc.Dataset":
     """
     # Construct a dataset from the data
     dataset: "jc.Dataset" = ij().py.to_dataset(image.data)
-    # We need an "X" axis, or ImageJ2 doesn't know how to display the dataset
-    if dataset.dimensionIndex(jc.Axes.X) == -1:
-        # find the first "unknown" dimension
-        for i in range(dataset.numDimensions()):
-            axis = dataset.axis(i)
-            if "dim" in axis.type().getLabel():
-                # and set it to "X"
-                axis.setType(jc.Axes.X)
-                break
-    # We need an "Y" axis, or ImageJ2 doesn't know how to display the dataset
-    if dataset.dimensionIndex(jc.Axes.Y) == -1:
-        # find the first "unknown" dimension
-        for i in range(dataset.numDimensions()):
-            axis = dataset.axis(i)
-            if "dim" in axis.type().getLabel():
-                # and set it to "Y"
-                axis.setType(jc.Axes.Y)
-                break
+
+    # Clean up the axes
+    axes = [
+        x for x in [jc.Axes.X, jc.Axes.Y, jc.Axes.Z] if dataset.dimensionIndex(x) == -1
+    ]
+    for i in range(dataset.numDimensions()):
+        axis = dataset.axis(i)
+        # Overwrite EnumeratedAxes with LinearAxes
+        if isinstance(axis, jc.EnumeratedAxis):
+            # Copy the dim name, unless it's unnamed
+            # in that case, assign it with X/Y/Z, if they aren't used already
+            if any(x in axis.type().getLabel() for x in ["dim", "Unknown"]) and len(
+                axes
+            ):
+                type = axes.pop(0)
+            else:
+                type = axis.type()
+            # Use 1 for scale, and 0 for origin
+            axis = jc.DefaultLinearAxis(type, 1, 0)
+            dataset.setAxis(axis, i)
+        # Set pixels as the unit, for lack of a better option
+        axis.setUnit("pixels")
 
     # Add name
     dataset.setName(image.name)
