@@ -17,7 +17,7 @@ from pandas import DataFrame
 from napari_imagej.types.type_hints import type_hints
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
-from tests.utils import DummyModuleItem, jc
+from tests.utils import DummyModuleInfo, DummyModuleItem, jc
 
 
 @pytest.fixture
@@ -676,3 +676,29 @@ def test_info_for(ij):
     # Case 3: A ClassSearchResult (no info)
     result = jc.ClassSearchResult(jc.Double, "")
     assert _module_utils.info_for(result) is None
+
+
+def test_devise_layer_name():
+    info = DummyModuleInfo()
+
+    # Test "uninformative" names are given Module context
+    overwritten_names = [
+        "out",
+        "output",
+        "result",
+        "Image",
+        "Labels",
+        "Shapes",
+        "Points",
+        "Surface",
+        "Tracks",
+    ]
+    for name in overwritten_names:
+        assert (
+            _module_utils._devise_layer_name(info, name)
+            == f"{name} [Dummy Module Info]"
+        )
+
+    # Test "informative" names are left alone
+    informative_name = "foo"
+    assert informative_name == _module_utils._devise_layer_name(info, informative_name)

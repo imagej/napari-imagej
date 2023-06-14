@@ -232,6 +232,28 @@ def _modify_function_signature(
     function.__signature__ = sig.replace(parameters=all_params)
 
 
+def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
+    """Utility function to overwrite uninformative output names"""
+
+    # Common names should append module info for context.
+    if original_name.lower() in [
+        # Common ImageJ result names
+        "out",
+        "output",
+        "result",
+        # Baseline layer names
+        "image",
+        "labels",
+        "shapes",
+        "surface",
+        "points",
+        "tracks",
+    ]:
+        return f"{original_name} [{info.getTitle()}]"
+    # Otherwise, the name is probably sufficiently informative.
+    return original_name
+
+
 def _pure_module_outputs(
     module: "jc.Module",
     user_inputs: List["jc.ModuleItem"],
@@ -245,6 +267,7 @@ def _pure_module_outputs(
     widget_outputs = []
 
     # Partition outputs into layer and widget outputs
+    info = module.getInfo()
     outputs = module.getOutputs()
     for output_entry in outputs.entrySet():
         # Ignore None outputs
@@ -257,13 +280,18 @@ def _pure_module_outputs(
         if is_arraylike(output) or isinstance(output, Layer):
             # If the layer was also an input, it came from a napari layer. We
             # don't want duplicate layers, so skip this one.
-            if module.getInfo().getInput(name) in user_inputs and module.getInput(name):
+            if info.getInput(name) in user_inputs and module.getInput(name):
                 continue
-            # Convert layer data into a layer
+            # Convert arraylikes into a Layer
             if is_arraylike(output):
                 output = Layer.create(
-                    data=output, meta={"name": name}, layer_type="image"
+                    data=output,
+                    meta={"name": _devise_layer_name(info, name)},
+                    layer_type="image",
                 )
+            # Rename Layers
+            elif isinstance(output, Layer):
+                output.name = _devise_layer_name(info, output.name)
             # Add the layer to the layer output list
             layer_outputs.append(output)
         # Otherwise, this output needs to go in a widget

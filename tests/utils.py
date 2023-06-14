@@ -184,9 +184,13 @@ class DummyModuleInfo:
     Fields can and should be added as needed for tests.
     """
 
-    def __init__(self, inputs=[], outputs=[]):
+    def __init__(self, title="Dummy Module Info", inputs=[], outputs=[]):
+        self._title = title
         self._inputs = inputs
         self._outputs = outputs
+
+    def getTitle(self):
+        return self._title
 
     def outputs(self):
         return self._outputs
