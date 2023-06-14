@@ -76,7 +76,7 @@ The result of thresholding is a Labels layer, but we will convert it to an Image
 Processing Data in napari with BoneJ2 and napari-imagej
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Calculating the degree of anisotropy:
+**Calculating the degree of anisotropy:**
 
 1. In the napari-imagej search bar type ``anisotropy``
 
@@ -95,7 +95,7 @@ Calculating the degree of anisotropy:
 This will output the degree of anisotropy measurement for the image.
 
 
-Calculating the fractal dimension:
+**Calculating the fractal dimension:**
 
 1. In the napari-imagej search bar type ``fractal dimension``
 
@@ -112,7 +112,7 @@ Calculating the fractal dimension:
 This will output the fractal dimension of the image.
 
 
-Calculating the surface area:
+**Calculating the surface area:**
 
 1. In the napari-imagej search bar type ``surface area``
 
@@ -129,7 +129,7 @@ This command may take some time, because it runs a computationally costly algori
 This will output the surface area of the thresholded regions.
 
 
-Calculating the area/volume fraction:
+**Calculating the area/volume fraction:**
 
 1. In the napari-imagej search bar type ``volume fraction``
 
@@ -144,7 +144,7 @@ Calculating the area/volume fraction:
 This will output the Bone Volume Fraction (BV/TV) measurement for the image.
 
 
-Calculating the connectivity:
+**Calculating the connectivity:**
 
 1. In the napari-imagej search bar type ``connectivity``
 
