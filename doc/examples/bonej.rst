@@ -4,7 +4,7 @@ Using BoneJ2
 Here we adapt a workflow from the BoneJ2 paper (https://wellcomeopenresearch.org/articles/6-37) for use with napari-imagej.
 
 napari Setup
-----------------------
+------------
 
 We will install one additional plugin to support this use case. Instructions for finding and installing a napari plugin are here: https://napari.org/stable/plugins/find_and_install_plugin.html
 
@@ -12,7 +12,7 @@ Please follow these instructions to install the plugin ``napari-segment-blobs-an
 on this plugin can be found here: https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes.
 
 BoneJ2 Setup
-----------------------
+------------
 
 We need to first specify the endpoint that we will use to access BoneJ2.
 
@@ -21,7 +21,7 @@ We can configure napari-imagej to use a Fiji installation by opening the setting
 **Note that napari must be restarted for these changes to take effect!**
 
 Preparing and Opening the Data
-------------------
+------------------------------
 
 We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179. Here is a direct link to the specific image: https://figshare.com/ndownloader/files/13369043
 
@@ -35,7 +35,7 @@ If you haven't already unzipped the file, then unzip the file. Once that is comp
             A napari viewer showing the example image that we will be working with.
 
 Processing Data in napari with nsbatwm
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Now we need to process the image.
 
@@ -74,7 +74,7 @@ The result of thresholding is a Labels layer, but we will convert it to an Image
 1. Right click on the layer that was created by step 2 and select ``Convert to Image``.
 
 Processing Data in napari with BoneJ2 and napari-imagej
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Calculating the degree of anisotropy:**
 
