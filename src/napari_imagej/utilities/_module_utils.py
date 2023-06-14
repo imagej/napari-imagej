@@ -234,11 +234,14 @@ def _modify_function_signature(
 
 def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
     """Utility function to overwrite uninformative output names"""
-    # Common ImageJ result names
-    if original_name.lower() in ["out", "output", "result"]:
-        return f"{original_name} [{info.getTitle()}]"
-    # Baseline layer names
+
+    # Common names should append module info for context.
     if original_name.lower() in [
+        # Common ImageJ result names
+        "out",
+        "output",
+        "result",
+        # Baseline layer names
         "image",
         "labels",
         "shapes",
@@ -247,6 +250,7 @@ def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
         "tracks",
     ]:
         return f"{original_name} [{info.getTitle()}]"
+    # Otherwise, the name is probably sufficiently informative.
     return original_name
 
 
