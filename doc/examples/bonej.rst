@@ -1,15 +1,15 @@
 Using BoneJ2
 ========================================
 
-Here we adapt a workflow from the BoneJ2 paper (https://wellcomeopenresearch.org/articles/6-37) for use with napari-imagej.
+Here we adapt a workflow from `the BoneJ2 paper <https://wellcomeopenresearch.org/articles/6-37>`_ for use with napari-imagej.
 
 napari Setup
 ------------
 
-We will install one additional plugin to support this use case. Instructions for finding and installing a napari plugin are here: https://napari.org/stable/plugins/find_and_install_plugin.html
+We will install one additional plugin to support this use case. Instructions for finding and installing a napari plugin are `here <https://napari.org/stable/plugins/find_and_install_plugin.html>`_
 
 Please follow these instructions to install the plugin ``napari-segment-blobs-and-things-with-membranes``. More information
-on this plugin can be found here: https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes.
+on this plugin can be found `here <https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes>`_
 
 BoneJ2 Setup
 ------------
