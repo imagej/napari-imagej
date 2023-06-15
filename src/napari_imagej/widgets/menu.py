@@ -77,6 +77,10 @@ class NapariImageJMenu(QWidget):
             self.gui_button.setIcon(self.gui_button._icon())
             self.gui_button.setEnabled(True)
             self.gui_button.setToolTip("Display ImageJ2 UI")
+
+        # Now the REPL can be enabled
+        self.repl_button.setEnabled(True)
+
         # Subscribe UIShownListener
         self.subscriber = UIShownListener()
         subscribe(ij(), self.subscriber)
@@ -265,6 +269,8 @@ class REPLButton(IJMenuButton):
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
         self.viewer = viewer
+
+        self.setEnabled(False)
 
         icon = QColoredSVGIcon(resource_path("repl"))
         self.setIcon(icon.colored(theme=viewer.theme))
