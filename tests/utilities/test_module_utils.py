@@ -460,6 +460,19 @@ script_both_but_required: str = """
 from net.imglib2.img.array import ArrayImgs
 """
 
+script_list_of_outputs: str = """
+#@output java.util.List imgList
+#@output java.util.List varList
+
+from net.imglib2.img.array import ArrayImgs
+a = ArrayImgs.unsignedBytes(10, 10)
+b = ArrayImgs.unsignedBytes(10, 10)
+
+from java.util import Arrays
+imgList = Arrays.asList(a, b)
+varList = Arrays.asList(1.0, 2.0)
+"""
+
 widget_parameterizations = [
     (script_zero_layer_zero_widget, 0, 0, []),
     (script_one_layer_zero_widget, 1, 0, []),
@@ -474,6 +487,7 @@ widget_parameterizations = [
     (script_both_but_required, 0, 0, [numpy.zeros((10, 10), dtype=numpy.int8)]),
     # One layer returned as we create the optional input internally
     (script_both_but_optional, 1, 0, [None]),
+    (script_list_of_outputs, 2, 1, [None]),
 ]
 
 

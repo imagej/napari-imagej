@@ -19,7 +19,15 @@ from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
-from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
+from scyjava import (
+    JavaIterable,
+    JavaList,
+    JavaMap,
+    JavaSet,
+    is_arraylike,
+    isjava,
+    jstacktrace,
+)
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.type_conversions import type_hint_for
@@ -284,16 +292,30 @@ def _pure_module_outputs(
                 continue
             # Convert arraylikes into a Layer
             if is_arraylike(output):
+                meta = {}
+                if hasattr(output, "name"):
+                    output.name = _devise_layer_name(info, name)
+                else:
+                    meta["name"] = name
                 output = Layer.create(
                     data=output,
-                    meta={"name": _devise_layer_name(info, name)},
+                    meta=meta,
                     layer_type="image",
                 )
             # Rename Layers
             elif isinstance(output, Layer):
-                output.name = _devise_layer_name(info, output.name)
+                output.name = _devise_layer_name(info, name)
             # Add the layer to the layer output list
             layer_outputs.append(output)
+        # Strip layers from any iterable outputs, and pass the rest to some widget
+        elif (
+            isinstance(output, JavaList)
+            and len(output)
+            and isinstance(output[0], Layer)
+        ):
+            for value in output:
+                value.name = _devise_layer_name(info, value.name)
+                layer_outputs.append(value)
         # Otherwise, this output needs to go in a widget
         else:
             widget_outputs.append((name, output))
