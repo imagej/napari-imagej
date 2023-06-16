@@ -6,29 +6,39 @@ Here we adapt a workflow from `the BoneJ2 paper <https://wellcomeopenresearch.or
 napari Setup
 ------------
 
-We will install one additional plugin to support this use case. Instructions for finding and installing a napari plugin are `here <https://napari.org/stable/plugins/find_and_install_plugin.html>`_
+We will install one additional napari plugin, `napari-segment-blobs-and-things-with-membranes <https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes>`_, to support this use case. Instructions for finding and installing a napari plugin are `here <https://napari.org/stable/plugins/find_and_install_plugin.html>`__
 
-Please follow these instructions to install the plugin ``napari-segment-blobs-and-things-with-membranes``. More information
-on this plugin can be found `here <https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes>`_
+To install ``napari-segment-blobs-and-things-with-membranes``, simply ensure that your napari environment is active and paste the following into your terminal:
+
+.. code-block:: bash
+
+    pip install napari-segment-blobs-and-things-with-membranes
+
+Once the plugin has been installed correctly, ``napari-segment-blobs-and-things-with-membranes`` will appear as an option within the ``Plugins`` menu of napari, and the ``Tools`` menu will be populated with the various functions of the plugin.
 
 BoneJ2 Setup
 ------------
 
 We need to first specify the endpoint that we will use to access BoneJ2.
 
-We can configure napari-imagej to use a Fiji installation by opening the settings dialog and changing the ``imagej distribution_or_endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_). This example was created using an endpoint of ``sc.fiji:fiji:2.13.0+org.bonej:bonej-ops:MANAGED+org.bonej:bonej-plugins:MANAGED+org.bonej:bonej-utilities:MANAGED``.
+We can configure napari-imagej to use BoneJ2 by opening the settings dialog and changing the ``imagej directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`__). Within the napari-imagej settings dialog, paste the following into the ``imagej directory or endpoint`` field, and click ``OK``:
+
+.. code-block::
+
+    sc.fiji:fiji:2.13.0+org.bonej:bonej-ops:MANAGED+org.bonej:bonej-plugins:MANAGED+org.bonej:bonej-utilities:MANAGED
+
 
 **Note that napari must be restarted for these changes to take effect!**
 
 Preparing and Opening the Data
 ------------------------------
 
-We will use the same data that was used in the BoneJ2 paper. Go ahead and download umzc_378p_Apteryx_haastii_head.tif.bz2 from doi:10.6084/m9.figshare.7257179. Here is a direct link to the specific image: https://figshare.com/ndownloader/files/13369043
+We will use the same data that was used in the BoneJ2 paper. Go ahead and download ``umzc_378p_Apteryx_haastii_head.tif.bz2`` from ``doi:10.6084/m9.figshare.7257179``, linked directly `here <https://figshare.com/ndownloader/files/13369043>`__.
 
 Opening Data in napari
 ^^^^^^^^^^^^^^^^^^^^^^
 
-If you haven't already unzipped the file, then unzip the file. Once that is complete you can drag-and-drop the image onto napari to open it.
+Once you've unzipped the downloaded file, you can drag-and-drop the image onto napari to open it.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_open_data.png
 
@@ -51,8 +61,9 @@ First, we will blur the image to smooth intensity values and filter noise.
 
             Setting the parameters for the Gaussian.
 
-2. When the widget comes up, change the `sigma` value to 2 and ensure that the image layer is correctly set to the image that was opened.
-Run the widget!
+2. When the widget comes up, change the ``sigma`` value to ``2`` and ensure that the ``image`` layer is correctly set to the image that was opened.
+
+3. Run the widget! When the blurring is complete, a new ``Image`` layer will appear in the napari viewer.
 
 Now we will threshold the image to make it binary.
 
@@ -63,100 +74,110 @@ Now we will threshold the image to make it binary.
 1. Within napari's menus choose: ``Tools > Segmentation / binarization > Threshold (Li et al 1993, scikit image, nsbatwm)``
 
 2. When the widget comes up, ensure that the layer that is selected is the result of step 1.
-Run the widget!
 
-The result of thresholding is a Labels layer, but we will convert it to an Image layer to work with BoneJ2.
+3. Run the widget! When the thresholding is complete, a new ``Labels`` layer will appear in the napari viewer.
+
+4. Right click on the new ``Labels`` layer and select ``Convert to Image``. This will allow us to pass the result, now an ``Image`` layer, to BoneJ2.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_convert_to_image.png
 
             Converting the Labels layer to an Image layer for processing in BoneJ2.
    
-1. Right click on the layer that was created by step 2 and select ``Convert to Image``.
 
 Processing Data in napari with BoneJ2 and napari-imagej
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Calculating the degree of anisotropy:**
 
-1. In the napari-imagej search bar type ``anisotropy``
+1. In the napari-imagej search bar type ``anisotropy``, and select the ``Anisotropy`` Command from the search results.
 
-2. Click ``Run``
+2. Click ``Run``.
 
 3. Select the ``inputImage`` that corresponds to the theshold layer created previously.
 
-4. Check the ``Recommended minimums`` box.
+4. Enter ``1.73`` as the samplingInterval.
    
-5. Enter ``1.73`` as the samplingInterval.
+5. Check the ``Recommended minimums`` box.
+
+6. Click ``OK``.
+
+This will output the degree of anisotropy measurement for the image.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_anisotropy_parameters.png
 
             Setting the parameters of BoneJ2's Anisotropy command.
 
-This will output the degree of anisotropy measurement for the image.
-
 
 **Calculating the fractal dimension:**
 
-1. In the napari-imagej search bar type ``fractal dimension``
+1. In the napari-imagej search bar type ``fractal dimension``, and select the ``Fractal dimension`` Command from the search results.
 
-2. Click ``Run``
+2. Click ``Run``.
 
 3. Select the ``inputImage`` that corresponds to the theshold layer created previously.
 
 4. Check the ``Automatic parameters`` box.
 
+5. Click ``OK``.
+
+This will output the fractal dimension of the image.
+
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_fractal_dimension.png
 
             Setting the parameters of BoneJ2's fractal dimension command.
 
-This will output the fractal dimension of the image.
-
 
 **Calculating the surface area:**
 
-1. In the napari-imagej search bar type ``surface area``
+1. In the napari-imagej search bar type ``surface area``, and select the ``Surface area`` Command from the search results.
 
-2. Click ``Run``
+2. Click ``Run``.
 
 3. Select the ``inputImage`` that corresponds to the theshold layer created previously.
+
+4. Click ``OK``.
+
+**Note:** This command may take some time, because it runs a computationally costly algorithm called
+"Marching Cubes" that creates a surface mesh of the image before computing the surface area.
+This will output the surface area of the thresholded regions.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_surface_area.png
 
             Running BoneJ2's surface area command.
             
-This command may take some time, because it runs a computationally costly algorithm called
-"Marching Cubes" that creates a surface mesh of the image before computing the surface area.
-This will output the surface area of the thresholded regions.
-
 
 **Calculating the area/volume fraction:**
 
-1. In the napari-imagej search bar type ``volume fraction``
+1. In the napari-imagej search bar type ``volume fraction``, and select the ``Area/Volume fraction`` Command from the search results.
 
-2. Click ``Run``
+2. Click ``Run``.
 
 3. Select the ``inputImage`` that corresponds to the theshold layer created previously.
+
+4. Click ``OK``.
+
+This will output the Bone Volume Fraction (BV/TV) measurement for the image.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_area_volume_fraction.png
 
             Running BoneJ2's area/volume fraction command.
 
-This will output the Bone Volume Fraction (BV/TV) measurement for the image.
-
 
 **Calculating the connectivity:**
 
-1. In the napari-imagej search bar type ``connectivity``
+1. In the napari-imagej search bar type ``connectivity``, and select the ``Connectivity (Modern)`` Command from the search results.
 
-2. Click ``Run``
+2. Click ``Run``.
 
 3. Select the ``inputImage`` that corresponds to the theshold layer created previously.
+
+4. Click ``OK``.
+
+This will output the Euler characteristic and Conn.D for the image.
 
 .. figure:: https://media.imagej.net/napari-imagej/bonej2_connectivity.png
 
             Running BoneJ2's connectivity command.
-
-This will output the Euler characteristic and Conn.D for the image.
 
 
 The final measurements
