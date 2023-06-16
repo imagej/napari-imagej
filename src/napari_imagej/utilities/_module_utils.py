@@ -19,7 +19,15 @@ from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
-from scyjava import JavaIterable, JavaMap, JavaSet, is_arraylike, isjava, jstacktrace
+from scyjava import (
+    JavaIterable,
+    JavaList,
+    JavaMap,
+    JavaSet,
+    is_arraylike,
+    isjava,
+    jstacktrace,
+)
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.type_conversions import type_hint_for
@@ -254,6 +262,39 @@ def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
     return original_name
 
 
+def _handle_output(
+    output: Any,
+    name: str,
+    info: "jc.ModuleInfo",
+    layer_outputs: List,
+    widget_outputs: List,
+):
+    # Layers should be appended directly
+    if isinstance(output, Layer):
+        output.name = name
+        layer_outputs.append(output)
+    # Recurse on arraylikes, mapping them into a new image Layer
+    elif is_arraylike(output):
+        _handle_output(
+            Layer.create(data=output, layer_type="image"),
+            name,
+            info,
+            layer_outputs,
+            widget_outputs,
+        )
+    # Strip layers from any iterable outputs, and pass the rest to some widget
+    elif isinstance(output, JavaList) and len(output) and isinstance(output[0], Layer):
+        for i, value in enumerate(output):
+            if not isinstance(value, Layer):
+                log_debug(f"Skipping output {value}: part of a list with images inside")
+                continue
+            sub_name = f"{name}_{i}" if len(output) > 1 else name
+            _handle_output(value, sub_name, info, layer_outputs, widget_outputs)
+    # If none of the other cases match, we have to represent via a new widget
+    else:
+        widget_outputs.append((name, output))
+
+
 def _pure_module_outputs(
     module: "jc.Module",
     user_inputs: List["jc.ModuleItem"],
@@ -275,28 +316,18 @@ def _pure_module_outputs(
             continue
         # Get relevant output parameters
         name = str(output_entry.getKey())
-        output = ij().py.from_java(output_entry.getValue())
-        # If the output is layer data, add it as a layer output
-        if is_arraylike(output) or isinstance(output, Layer):
-            # If the layer was also an input, it came from a napari layer. We
-            # don't want duplicate layers, so skip this one.
-            if info.getInput(name) in user_inputs and module.getInput(name):
-                continue
-            # Convert arraylikes into a Layer
-            if is_arraylike(output):
-                output = Layer.create(
-                    data=output,
-                    meta={"name": _devise_layer_name(info, name)},
-                    layer_type="image",
-                )
-            # Rename Layers
-            elif isinstance(output, Layer):
-                output.name = _devise_layer_name(info, output.name)
-            # Add the layer to the layer output list
-            layer_outputs.append(output)
-        # Otherwise, this output needs to go in a widget
-        else:
-            widget_outputs.append((name, output))
+        # If the layer was also an input, it came from a napari layer. We
+        # don't want duplicate layers, so skip this one.
+        if info.getInput(name) in user_inputs and module.getInput(name):
+            continue
+
+        _handle_output(
+            ij().py.from_java(output_entry.getValue()),
+            _devise_layer_name(info, name),
+            info,
+            layer_outputs,
+            widget_outputs,
+        )
 
     # napari cannot handle empty List[Layer], so we return None if empty
     return (layer_outputs, widget_outputs)

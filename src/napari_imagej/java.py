@@ -622,8 +622,16 @@ class JavaClasses(object):
         return "net.imagej.display.DatasetView"
 
     @blocking_import
+    def DefaultLinearAxis(self):
+        return "net.imagej.axis.DefaultLinearAxis"
+
+    @blocking_import
     def DefaultROITree(self):
         return "net.imagej.roi.DefaultROITree"
+
+    @blocking_import
+    def EnumeratedAxis(self):
+        return "net.imagej.axis.EnumeratedAxis"
 
     @blocking_import
     def ImageDisplay(self):
