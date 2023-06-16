@@ -52,6 +52,12 @@ Here are some example endpoint constructions:
       - ``net.imagej:imagej+net.preibisch:BigStitcher``
       - NO
 
+Note that the endpoint can be set programmatically by running the following code before starting napari-imagej:
+
+.. code-block:: python
+
+   from napari_imagej import settings
+   settings.imagej_directory_or_endpoint = "sc.fiji:fiji:2.13.0+org.morphonets:SNT:MANAGED"
 
 *ImageJ base directory*
 ^^^^^^^^^^^^^^^^^^^^^^^
