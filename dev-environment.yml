@@ -42,6 +42,7 @@ dependencies:
   - black >= 23.1.0
   - build
   - flake8
+  - flake8-pyproject
   - flake8-typing-imports
   - isort
   - myst-parser
@@ -58,6 +59,5 @@ dependencies:
   # Project from source
   - pip
   - pip:
-    - flake8-pyproject
     - validate-pyproject[all]
     - -e '.'
