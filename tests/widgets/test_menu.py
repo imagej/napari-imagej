@@ -22,6 +22,7 @@ from napari_imagej.widgets.menu import (
     NapariImageJMenu,
     SettingsButton,
     ToIJButton,
+    ToIJExtendedButton,
 )
 from napari_imagej.widgets.widget_utils import _run_actions_for
 from tests.utils import DummySearchResult, jc
@@ -161,13 +162,14 @@ def clean_gui_elements(asserter, ij, viewer: Viewer):
 def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
-    assert len(subwidgets) == 5
+    assert len(subwidgets) == 6
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
-    assert isinstance(subwidgets[3], GUIButton)
-    assert isinstance(subwidgets[4], SettingsButton)
+    assert isinstance(subwidgets[3], ToIJExtendedButton)
+    assert isinstance(subwidgets[4], GUIButton)
+    assert isinstance(subwidgets[5], SettingsButton)
 
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
@@ -230,16 +232,15 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
         )
 
     button: ToIJButton = gui_widget.to_ij
-    assert button.isEnabled()
+    assert not button.isEnabled()
 
     # Show the button
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    asserter(lambda: button.isEnabled())
-
     # Add some data to the viewer
     sample_data = numpy.ones((100, 100, 3))
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
+    asserter(lambda: button.isEnabled())
 
     # Press the button, handle the Dialog
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
@@ -292,7 +293,7 @@ def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
 
     button_to: ToIJButton = gui_widget_chooser.to_ij
     button_from: FromIJButton = gui_widget_chooser.from_ij
-    assert button_to.isEnabled()
+    assert not button_to.isEnabled()
     assert button_from.isEnabled()
 
     # Add a layer

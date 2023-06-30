@@ -51,7 +51,7 @@ def _java_image_to_image_layer(image: Any) -> Image:
 @py_to_java_converter(
     predicate=lambda obj: isinstance(obj, Image), priority=Priority.VERY_HIGH
 )
-def _image_layer_to_dataset(image: Image) -> "jc.Dataset":
+def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     """
     Converts a napari Image layer into a Dataset.
 
@@ -59,7 +59,7 @@ def _image_layer_to_dataset(image: Image) -> "jc.Dataset":
     :return: a Dataset
     """
     # Construct a dataset from the data
-    dataset: "jc.Dataset" = ij().py.to_dataset(image.data)
+    dataset: "jc.Dataset" = ij().py.to_dataset(image.data, **kwargs)
 
     # Clean up the axes
     axes = [

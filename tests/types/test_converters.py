@@ -319,8 +319,8 @@ def test_polygon_mask_to_layer(ij, polygon_mask):
     polygon_data = data[0]
     assert len(polygon_data) == 3
     assert np.array_equal(polygon_data[0], np.array([0, 0]))
-    assert np.array_equal(polygon_data[1], np.array([-3, 0]))
-    assert np.array_equal(polygon_data[2], np.array([0, -4]))
+    assert np.array_equal(polygon_data[1], np.array([0, -3]))
+    assert np.array_equal(polygon_data[2], np.array([-4, 0]))
 
 
 def test_polygon_layer_to_mask(ij, polygon_layer):
@@ -391,8 +391,8 @@ def test_line_layer_to_mask(ij, line_layer):
     assert np.array_equal(ij.py.from_java(arr), arr)
     # Test some points
     _point_assertion(j_mask, [0, 0], True)
-    _point_assertion(j_mask, [4, -4], True)
-    _point_assertion(j_mask, [2, -2], True)
+    _point_assertion(j_mask, [-4, 4], True)
+    _point_assertion(j_mask, [-2, 2], True)
     _point_assertion(j_mask, [5, 6], False)
 
 
@@ -436,7 +436,7 @@ def test_path_mask_to_layer(ij, path_mask):
     assert len(path_data) == 3
     assert np.array_equal(path_data[0], np.array([0, 0]))
     assert np.array_equal(path_data[1], np.array([1, 1]))
-    assert np.array_equal(path_data[2], np.array([2, 0]))
+    assert np.array_equal(path_data[2], np.array([0, 2]))
 
 
 def test_path_layer_to_mask(ij, path_layer):
@@ -453,13 +453,13 @@ def test_path_layer_to_mask(ij, path_layer):
     actual = j_mask.vertices()
     for e, a in zip(expected, actual):
         a.localize(arr)
-        assert np.array_equal(ij.py.from_java(arr), e)
+        assert np.array_equal(ij.py.from_java(arr), e[::-1])
     # Test some points
     _point_assertion(j_mask, [0, 0], True)
-    _point_assertion(j_mask, [2, -2], True)
-    _point_assertion(j_mask, [4, -4], True)
-    _point_assertion(j_mask, [6, -2], True)
-    _point_assertion(j_mask, [8, 0], True)
+    _point_assertion(j_mask, [-2, 2], True)
+    _point_assertion(j_mask, [-4, 4], True)
+    _point_assertion(j_mask, [-2, 6], True)
+    _point_assertion(j_mask, [0, 8], True)
     _point_assertion(j_mask, [5, 6], False)
 
 

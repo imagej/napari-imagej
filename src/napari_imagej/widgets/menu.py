@@ -3,16 +3,27 @@ The top-level menu for the napari-imagej widget.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
-from napari.layers import Layer
+from napari.layers import Image, Labels, Layer, Points, Shapes
 from napari.utils._magicgui import get_layers
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
-from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
+from qtpy.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 from scyjava import is_arraylike
 
 from napari_imagej import settings
@@ -34,7 +45,10 @@ class NapariImageJMenu(QWidget):
         self.to_ij: ToIJButton = ToIJButton(viewer)
         self.layout().addWidget(self.to_ij)
 
-        self.gui_button: GUIButton = GUIButton()
+        self.to_ij_extended: ToIJExtendedButton = ToIJExtendedButton(viewer)
+        self.layout().addWidget(self.to_ij_extended)
+
+        self.gui_button: GUIButton = GUIButton(viewer)
         self.layout().addWidget(self.gui_button)
 
         self.settings_button: SettingsButton = SettingsButton(viewer)
@@ -70,13 +84,182 @@ class NapariImageJMenu(QWidget):
         subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
 
 
-class ToIJButton(QPushButton):
+class IJMenuButton(QPushButton):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
+        viewer.events.theme.connect(self.recolor)
+        self.recolor()
 
-        icon = QColoredSVGIcon.from_resources("long_right_arrow")
-        self.setIcon(icon.colored(theme=viewer.theme))
+    def recolor(self, event=None):
+        if hasattr(self, "_icon"):
+            if isinstance(self._icon, QColoredSVGIcon):
+                self.setIcon(self._icon.colored(theme=self.viewer.theme))
+
+
+class ToIJExtendedButton(IJMenuButton):
+    _icon = QColoredSVGIcon(resource_path("export_advanced"))
+
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.setEnabled(False)
+        viewer.layers.selection.events.changed.connect(self.layer_selection_changed)
+        self.viewer = viewer
+        self.clicked.connect(lambda: AdvancedExportDialog(self.viewer).exec())
+
+    def _handle_choices(self, choices):
+        # Queue UI call on the EDT
+        # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
+        img = ij().convert().convert(ij().py.to_java(choices["image"]), jc.Dataset)
+        if choices["rois"]:
+            rois = ij().convert().convert(ij().py.to_java(choices["rois"]), jc.ROITree)
+            img.getProperties().put("rois", rois)
+        ij().ui().show(img)
+
+    def handle_no_choices(self):
+        RichTextPopup(
+            rich_message="There is no active window to export to ImageJ!",
+            exec=True,
+        )
+
+    def layer_selection_changed(self, event):
+        for layer in self.viewer.layers:
+            if isinstance(layer, _IMAGE_LAYER_TYPES):
+                self.setEnabled(True)
+                return
+        self.setEnabled(False)
+
+
+_IMAGE_LAYER_TYPES = (Image, Labels)
+_ROI_LAYER_TYPES = (Points, Shapes)
+
+
+class AdvancedExportDialog(QDialog):
+    def __init__(self, viewer: Viewer):
+        super().__init__()
+        self.setLayout(QVBoxLayout())
+        # Write the title to a Label
+        self.layout().addWidget(QLabel("Transfer image data to ImageJ"))
+
+        # Parse layer options
+        self.imgs = []
+        self.rois = []
+        for layer in viewer.layers:
+            if isinstance(layer, _IMAGE_LAYER_TYPES):
+                self.imgs.append(layer)
+            elif isinstance(layer, _ROI_LAYER_TYPES):
+                self.rois.append(layer)
+
+        self.img_container = self.RichComboBox("Image:", self.imgs)
+        self.layout().addWidget(self.img_container)
+        self.roi_container = self.RichComboBox("ROIs:", self.rois, required=False)
+        self.layout().addWidget(self.roi_container)
+        self.dims_container = self.DimsComboBox(self.img_container)
+        self.layout().addWidget(self.dims_container)
+
+        current_layer: Layer = viewer.layers.selection.active
+        # The user likely wants to transfer the active layer, if it is an image
+        if isinstance(current_layer, _IMAGE_LAYER_TYPES):
+            self.img_container.combo.setCurrentText(current_layer.name)
+        else:
+            self.img_container.combo.setCurrentText(self.imgs[0].name)
+        self.dims_container.update(self.img_container.combo.currentIndex())
+        self.img_container.combo.currentIndexChanged.connect(self.dims_container.update)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.layout().addWidget(buttons)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+    def accept(self):
+        super().accept()
+
+        def pass_to_ij():
+            # Grab the selected data
+            img = self.img_container.combo.currentData()
+            roi = self.roi_container.combo.currentData()
+
+            j_img = ij().py.to_java(img, dim_order=self.dims_container.selections())
+            if roi:
+                j_img.getProperties().put("rois", ij().py.to_java(roi))
+
+            ij().ui().show(j_img)
+
+        pass_to_ij()
+        # ij().thread().queue(lambda: pass_to_ij())
+
+    class RichComboBox(QWidget):
+        def __init__(self, title: str, choices: List[Layer], required=True):
+            super().__init__()
+            self.setLayout(QHBoxLayout())
+            self.layout().addWidget(QLabel(title))
+            self.combo = QComboBox()
+            self.choices = choices
+            if not required:
+                self.combo.addItem("--------", None)
+            for c in choices:
+                self.combo.addItem(c.name, c)
+            self.layout().addWidget(self.combo)
+
+    class DimsComboBox(QFrame):
+        def __init__(self, combo_box):
+            super().__init__()
+            self.selection_box = combo_box
+            self.setLayout(QVBoxLayout())
+            self.setFrameStyle(QFrame.Box)
+            self.layout().addWidget(QLabel("Dimensions:"))
+
+            self.dims = [
+                [],
+                ["X"],
+                ["Y", "X"],
+                ["Z", "Y", "X"],
+                ["T", "Y", "X", "C"],
+                ["T", "Z", "Y", "X", "C"],
+            ]
+
+        def update(self, index: int):
+            # remove old widgets
+            for child in self.children():
+                if isinstance(child, self.DimSelector):
+                    self.layout().removeWidget(child)
+                    child.deleteLater()
+            selected = self.selection_box.combo.itemData(index)
+            guess = self.dims[len(selected.data.shape)]
+            for i, g in enumerate(guess):
+                self.layout().addWidget(
+                    self.DimSelector(f"dim_{i} ({selected.data.shape[i]} px)", g)
+                )
+
+        def selections(self):
+            selections = []
+            for child in self.children():
+                if isinstance(child, self.DimSelector):
+                    selections.append(child.combo.currentText())
+            return selections
+
+        class DimSelector(QWidget):
+            choices = ["X", "Y", "Z", "T", "C", "Unspecified"]
+
+            def __init__(self, title: str, guess: str):
+                super().__init__()
+                self.setLayout(QHBoxLayout())
+                self.layout().addWidget(QLabel(title))
+                self.combo = QComboBox()
+                for c in self.choices:
+                    self.combo.addItem(c)
+                self.combo.setCurrentText(guess)
+                self.layout().addWidget(self.combo)
+
+
+class ToIJButton(IJMenuButton):
+    _icon = QColoredSVGIcon(resource_path("export"))
+
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.setEnabled(False)
+        viewer.layers.selection.events.active.connect(self.layer_selection_changed)
+
         if settings.use_active_layer:
             self.setToolTip("Export active napari layer to ImageJ2")
             self.clicked.connect(self.send_active_layer)
@@ -121,24 +304,23 @@ class ToIJButton(QPushButton):
             exec=True,
         )
 
+    def layer_selection_changed(self, event):
+        if event.type == "active":
+            self.setEnabled(isinstance(event.source.active, Image))
 
-class FromIJButton(QPushButton):
+
+class FromIJButton(IJMenuButton):
+    _icon = QColoredSVGIcon(resource_path("import"))
+
     def __init__(self, viewer: Viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
 
-        icon = QColoredSVGIcon.from_resources("long_left_arrow")
-        self.setIcon(icon.colored(theme=viewer.theme))
         if settings.use_active_layer:
             self.setToolTip("Import active ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_active_layer)
         else:
             self.setToolTip("Import ImageJ2 Dataset to napari")
             self.clicked.connect(self.get_chosen_layer)
-
-    def _set_icon(self, path: str):
-        icon: QIcon = QIcon(QPixmap(path))
-        self.setIcon(icon)
 
     def _get_objects(self, t):
         compatibleInputs = ij().convert().getCompatibleInputs(t)
@@ -215,12 +397,12 @@ class FromIJButton(QPushButton):
         )
 
 
-class GUIButton(QPushButton):
-    def __init__(self):
-        super().__init__()
+class GUIButton(IJMenuButton):
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
         self.setEnabled(False)
-
         self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
+
         if settings.headless():
             self.setToolTip("ImageJ2 GUI unavailable!")
         else:
@@ -241,16 +423,14 @@ class GUIButton(QPushButton):
         )
 
 
-class SettingsButton(QPushButton):
+class SettingsButton(IJMenuButton):
     # Signal used to identify changes to user settings
     setting_change = Signal(bool)
 
-    def __init__(self, viewer: Viewer):
-        super().__init__()
-        self.viewer = viewer
+    _icon = QColoredSVGIcon(resource_path("gear"))
 
-        icon = QColoredSVGIcon(resource_path("gear"))
-        self.setIcon(icon.colored(theme=viewer.theme))
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
 
         self.clicked.connect(self._update_settings)
         self.setting_change.connect(self._handle_settings_change)
