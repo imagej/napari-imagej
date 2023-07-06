@@ -45,9 +45,11 @@ class NapariImageJMenu(QWidget):
         self.layout().addWidget(self.gui_button)
 
         self.repl_button: REPLButton = REPLButton(viewer)
+        self.repl_button.setToolTip("Show/hide the SciJava REPL")
         self.layout().addWidget(self.repl_button)
 
         self.settings_button: SettingsButton = SettingsButton(viewer)
+        self.settings_button.setToolTip("Show napari-imagej settings")
         self.layout().addWidget(self.settings_button)
 
         if settings.headless():
