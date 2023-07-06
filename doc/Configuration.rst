@@ -95,6 +95,15 @@ One common use case for this feature is to increase the maximum heap space avail
 
     Specifying 32GB of memory available to ImageJ ecosystem routines in the JVM.
 
+Using the SciJava REPL
+--------------------------------
+
+You can use the SciJava REPL to interactively run SciJava code. This makes it possible to do things like paste existing SciJava scripts into the REPL. More information on scripting in SciJava can be found `here <https://imagej.net/scripting/>`_.
+
+.. figure:: https://media.imagej.net/napari-imagej/scijava_repl.png
+    
+    The REPL can be shown/hidden by clicking on the command prompt icon.
+    
 
 .. _Fiji: https://imagej.net/software/fiji/
 .. _ImageJ2: https://imagej.net/software/imagej2/
