@@ -54,8 +54,7 @@ def _ellipse_mask_to_data(mask):
     # Make data array
     data = np.zeros((2, mask.numDimensions()))
     # Write center into the first column
-    center = mask.center().positionAsDoubleArray()
-    data[0, :] = center  # Slice needed for JArray
+    data[0, :] = mask.center().positionAsDoubleArray()
     # Write radii into the second column
     for i in range(data.shape[1]):
         data[1, i] = mask.semiAxisLength(i)
@@ -102,11 +101,9 @@ def _rectangle_data_to_mask(points: np.ndarray):
 
 
 def _rectangle_mask_to_data(mask):
-    min = mask.minAsDoubleArray()
-    max = mask.maxAsDoubleArray()
-    data = np.zeros((2, len(min)))
-    data[0, :] = min[:]  # Slice needed for JArray
-    data[1, :] = max[:]  # Slice needed for JArray
+    data = np.zeros((2, mask.numDimensions()))
+    data[0, :] = mask.minAsDoubleArray()
+    data[1, :] = mask.maxAsDoubleArray()
     return np.flip(data, axis=1)
 
 
