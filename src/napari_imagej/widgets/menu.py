@@ -1,7 +1,6 @@
 """
 The top-level menu for the napari-imagej widget.
 """
-from enum import Enum
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -9,7 +8,6 @@ from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
 from napari.layers import Image, Labels, Layer, Points, Shapes
-from napari.utils._magicgui import get_layers
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import (
@@ -260,12 +258,8 @@ class ToIJButton(IJMenuButton):
         self.setEnabled(False)
         viewer.layers.selection.events.active.connect(self.layer_selection_changed)
 
-        if settings.use_active_layer:
-            self.setToolTip("Export active napari layer to ImageJ2")
-            self.clicked.connect(self.send_active_layer)
-        else:
-            self.setToolTip("Export napari layer to ImageJ2")
-            self.clicked.connect(self.send_chosen_layer)
+        self.setToolTip("Export active napari layer to ImageJ2")
+        self.clicked.connect(self.send_active_layer)
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
@@ -277,21 +271,6 @@ class ToIJButton(IJMenuButton):
             self._show(active_layer)
         else:
             self.handle_no_choices()
-
-    def send_chosen_layer(self):
-        # Get Layer choice
-        choices: dict = request_values(
-            title="Send layers to ImageJ2",
-            layer={"annotation": Layer, "options": {"choices": get_layers}},
-        )
-        # Parse choices for the layer
-        if choices is None:
-            self.handle_no_choices()
-        else:
-            layer = choices["layer"]
-            if isinstance(layer, Layer):
-                # Pass the relevant data to ImageJ2
-                self._show(layer)
 
     def _show(self, layer):
         # Queue UI call on the EDT
@@ -315,40 +294,13 @@ class FromIJButton(IJMenuButton):
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
 
-        if settings.use_active_layer:
-            self.setToolTip("Import active ImageJ2 Dataset to napari")
-            self.clicked.connect(self.get_active_layer)
-        else:
-            self.setToolTip("Import ImageJ2 Dataset to napari")
-            self.clicked.connect(self.get_chosen_layer)
+        self.setToolTip("Import active ImageJ2 Dataset to napari")
+        self.clicked.connect(self.get_active_layer)
 
     def _get_objects(self, t):
         compatibleInputs = ij().convert().getCompatibleInputs(t)
         compatibleInputs.addAll(ij().object().getObjects(t))
         return list(compatibleInputs)
-
-    def get_chosen_layer(self) -> None:
-        # Find all images convertible to a napari layer
-        images = self._get_objects(jc.RandomAccessibleInterval)
-        names = [ij().object().getName(i) for i in images]
-        # Ask the user to pick one of these images by name
-        choices: dict = request_values(
-            title="Send layers to napari",
-            data={"annotation": Enum, "options": {"choices": names}},
-        )
-        if choices is None:
-            self.handle_no_choices
-        else:
-            # grab the chosen name
-            name = choices["data"]
-            display = ij().display().getDisplay(name)
-            # if the image is displayed, convert the DatasetView
-            if display:
-                self._add_layer(display.get(0))
-            # Otherwise, just convert the object
-            else:
-                image = images[names.index(name)]
-                self._add_layer(image)
 
     def get_active_layer(self) -> None:
         # HACK: Sync ImagePlus before transferring

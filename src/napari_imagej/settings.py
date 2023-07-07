@@ -31,13 +31,6 @@ enable_imagej_gui: bool = True
     More details can be found at:
     https://pyimagej.readthedocs.io/en/latest/Initialization.html#with-graphical-capabilities
 
-use_active_layer: bool = True
-    This can be used to identify whether transferred data between ImageJ2 and napari
-    should be selected via activation or by user selection via a dialog.
-    If True, the active layer/window is always used for transfer between applications.
-    If False, a popup will be shown, prompting the user to select data for transfer.
-    Defaults to True.
-
 jvm_command_line_arguments: str = ""
     Additional command line arguments to pass to the Java Virtual Machine (JVM).
     For example, "-Xmx4g" to allow Java to use up to 4 GB of memory.
@@ -62,7 +55,6 @@ defaults = {
     "imagej_base_directory": ".",
     "include_imagej_legacy": True,
     "enable_imagej_gui": True,
-    "use_active_layer": True,
     "jvm_command_line_arguments": "",
 }
 
@@ -72,7 +64,6 @@ imagej_directory_or_endpoint: str = defaults["imagej_directory_or_endpoint"]
 imagej_base_directory: str = defaults["imagej_base_directory"]
 include_imagej_legacy: bool = defaults["include_imagej_legacy"]
 enable_imagej_gui: bool = defaults["enable_imagej_gui"]
-use_active_layer: bool = defaults["use_active_layer"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))

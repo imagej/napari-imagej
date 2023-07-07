@@ -287,33 +287,6 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     assert (10, 10, 10) == layer.data.shape
 
 
-def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
-    if settings.headless():
-        pytest.skip("Only applies when not running headlessly")
-
-    button_to: ToIJButton = gui_widget_chooser.to_ij
-    button_from: FromIJButton = gui_widget_chooser.from_ij
-    assert not button_to.isEnabled()
-    assert button_from.isEnabled()
-
-    # Add a layer
-    sample_data = numpy.ones((100, 100, 3))
-    image: Image = Image(data=sample_data, name="test_to")
-    current_viewer().add_layer(image)
-
-    # Use the chooser to transfer data to ImageJ2
-    button_to.clicked.emit()
-
-    # Assert that the data is now in ImageJ2
-    asserter(lambda: isinstance(ij.display().getDisplay("test_to"), jc.ImageDisplay))
-
-    # Use the chooser to transfer that data back
-    button_from.clicked.emit()
-
-    # Assert that the data is now in napari
-    asserter(lambda: 2 == len(button_to.viewer.layers))
-
-
 def test_settings_no_change(gui_widget: NapariImageJMenu):
     """Ensure that no changes are made when there is no change from the defaults"""
     button: SettingsButton = gui_widget.settings_button
