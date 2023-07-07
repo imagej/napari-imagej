@@ -164,10 +164,10 @@ class AdvancedExportDialog(QDialog):
         self.dims_container.update(self.img_container.combo.currentIndex())
         self.img_container.combo.currentIndexChanged.connect(self.dims_container.update)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.layout().addWidget(buttons)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.layout().addWidget(self.buttons)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
 
     def accept(self):
         super().accept()
