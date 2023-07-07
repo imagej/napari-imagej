@@ -23,13 +23,13 @@ from napari_imagej import settings
 from napari_imagej.resources import resource_path
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
-    AdvancedExportDialog,
+    DetailExportDialog,
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
     SettingsButton,
     ToIJButton,
-    ToIJExtendedButton,
+    ToIJDetailedButton,
 )
 from napari_imagej.widgets.widget_utils import _run_actions_for
 from tests.utils import DummySearchResult, jc
@@ -180,7 +180,7 @@ def test_widget_layout(gui_widget: NapariImageJMenu):
 
     assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
-    assert isinstance(subwidgets[3], ToIJExtendedButton)
+    assert isinstance(subwidgets[3], ToIJDetailedButton)
     assert isinstance(subwidgets[4], GUIButton)
     assert isinstance(subwidgets[5], SettingsButton)
 
@@ -199,7 +199,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
     assert "" == button.text()
 
     # Sometimes ImageJ2 can take a little while to be ready
-    expected_toolTip = "Display ImageJ2 GUI"
+    expected_toolTip = "Display ImageJ2 UI"
     asserter(lambda: expected_toolTip == button.toolTip())
 
     # Test showing UI
@@ -304,7 +304,7 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 def test_advanced_data_transfer(
     popup_handler, asserter, ij, gui_widget: NapariImageJMenu
 ):
-    button: ToIJExtendedButton = gui_widget.to_ij_extended
+    button: ToIJDetailedButton = gui_widget.to_ij_extended
     assert not button.isEnabled()
 
     # Add an image to the viewer
@@ -321,7 +321,7 @@ def test_advanced_data_transfer(
     current_viewer().add_layer(shapes)
 
     def handle_transfer(widget: QDialog) -> bool:
-        if not isinstance(widget, AdvancedExportDialog):
+        if not isinstance(widget, DetailExportDialog):
             print("Not an AdvancedExportDialog")
             return False
         if not widget.img_container.combo.currentText() == "test_to":
@@ -337,7 +337,7 @@ def test_advanced_data_transfer(
         widget.roi_container.combo.setCurrentText(shapes.name)
 
         dim_bars = widget.dims_container.findChildren(
-            AdvancedExportDialog.DimsComboBox.DimSelector
+            DetailExportDialog.DimsComboBox.DimSelector
         )
         if not len(dim_bars) == 3:
             print("Expected more dimension comboboxes")

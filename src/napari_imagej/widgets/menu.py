@@ -43,7 +43,7 @@ class NapariImageJMenu(QWidget):
         self.to_ij: ToIJButton = ToIJButton(viewer)
         self.layout().addWidget(self.to_ij)
 
-        self.to_ij_extended: ToIJExtendedButton = ToIJExtendedButton(viewer)
+        self.to_ij_extended: ToIJDetailedButton = ToIJDetailedButton(viewer)
         self.layout().addWidget(self.to_ij_extended)
 
         self.gui_button: GUIButton = GUIButton(viewer)
@@ -77,7 +77,7 @@ class NapariImageJMenu(QWidget):
         if not settings.headless():
             self.gui_button._set_icon(resource_path("imagej2-16x16-flat"))
             self.gui_button.setEnabled(True)
-            self.gui_button.setToolTip("Display ImageJ2 GUI")
+            self.gui_button.setToolTip("Display ImageJ2 UI")
         # Subscribe UIShown subscriber
         subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
 
@@ -95,15 +95,18 @@ class IJMenuButton(QPushButton):
                 self.setIcon(self._icon.colored(theme=self.viewer.theme))
 
 
-class ToIJExtendedButton(IJMenuButton):
-    _icon = QColoredSVGIcon(resource_path("export_advanced"))
+class ToIJDetailedButton(IJMenuButton):
+    _icon = QColoredSVGIcon(resource_path("export_detailed"))
 
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
         self.setEnabled(False)
-        viewer.layers.selection.events.changed.connect(self.layer_selection_changed)
         self.viewer = viewer
-        self.clicked.connect(lambda: AdvancedExportDialog(self.viewer).exec())
+
+        self.setToolTip("Export napari Layer (detailed)")
+
+        viewer.layers.selection.events.changed.connect(self.layer_selection_changed)
+        self.clicked.connect(lambda: DetailExportDialog(self.viewer).exec())
 
     def _handle_choices(self, choices):
         # Queue UI call on the EDT
@@ -132,12 +135,12 @@ _IMAGE_LAYER_TYPES = (Image, Labels)
 _ROI_LAYER_TYPES = (Points, Shapes)
 
 
-class AdvancedExportDialog(QDialog):
+class DetailExportDialog(QDialog):
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.setLayout(QVBoxLayout())
         # Write the title to a Label
-        self.layout().addWidget(QLabel("Transfer image data to ImageJ"))
+        self.layout().addWidget(QLabel("Export data to ImageJ"))
 
         # Parse layer options
         self.imgs = []
@@ -258,7 +261,7 @@ class ToIJButton(IJMenuButton):
         self.setEnabled(False)
         viewer.layers.selection.events.active.connect(self.layer_selection_changed)
 
-        self.setToolTip("Export active napari layer to ImageJ2")
+        self.setToolTip("Export napari Layer")
         self.clicked.connect(self.send_active_layer)
 
     def _set_icon(self, path: str):
@@ -294,7 +297,7 @@ class FromIJButton(IJMenuButton):
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
 
-        self.setToolTip("Import active ImageJ2 Dataset to napari")
+        self.setToolTip("Import active ImageJ2 Dataset")
         self.clicked.connect(self.get_active_layer)
 
     def _get_objects(self, t):
@@ -358,7 +361,7 @@ class GUIButton(IJMenuButton):
         if settings.headless():
             self.setToolTip("ImageJ2 GUI unavailable!")
         else:
-            self.setToolTip("Display ImageJ2 GUI (loading)")
+            self.setToolTip("Display ImageJ2 UI (loading)")
 
     def _set_icon(self, path: str):
         icon: QIcon = QIcon(QPixmap(path))
