@@ -79,7 +79,7 @@ class NapariImageJMenu(QWidget):
             self.gui_button.setEnabled(True)
             self.gui_button.setToolTip("Display ImageJ2 UI")
         # Subscribe UIShown subscriber
-        subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
+        subscribe(ij(), UIShownListener())
 
 
 class IJMenuButton(QPushButton):
