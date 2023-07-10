@@ -186,8 +186,7 @@ class DetailExportDialog(QDialog):
 
             ij().ui().show(j_img)
 
-        pass_to_ij()
-        # ij().thread().queue(lambda: pass_to_ij())
+        ij().thread().queue(lambda: pass_to_ij())
 
     class RichComboBox(QWidget):
         def __init__(self, title: str, choices: List[Layer], required=True):

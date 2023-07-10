@@ -304,6 +304,10 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
 def test_advanced_data_transfer(
     popup_handler, asserter, ij, gui_widget: NapariImageJMenu
 ):
+    """Tests the detailed image exporter"""
+    if settings.headless():
+        pytest.skip("Only applies when not running headlessly")
+
     button: ToIJDetailedButton = gui_widget.to_ij_extended
     assert not button.isEnabled()
 
