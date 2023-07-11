@@ -28,7 +28,7 @@ from napari_imagej import settings
 from napari_imagej.java import ij, jc
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities.event_subscribers import UIShownListener
-from napari_imagej.utilities.events import subscribe
+from napari_imagej.utilities.events import subscribe, unsubscribe
 
 
 class NapariImageJMenu(QWidget):
@@ -79,7 +79,12 @@ class NapariImageJMenu(QWidget):
             self.gui_button.setEnabled(True)
             self.gui_button.setToolTip("Display ImageJ2 UI")
         # Subscribe UIShown subscriber
-        subscribe(ij(), UIShownListener())
+        self.subscriber = UIShownListener()
+        subscribe(ij(), self.subscriber)
+
+    def __del__(self):
+        if self.subscriber:
+            unsubscribe(ij(), self.subscriber)
 
 
 class IJMenuButton(QPushButton):
