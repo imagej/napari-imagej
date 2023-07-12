@@ -223,8 +223,6 @@ class ImageJInitializer(QThread):
     afterwards.
     """
 
-    SUBSCRIBERS = []
-
     def __init__(self, napari_imagej_widget: NapariImageJWidget):
         super().__init__()
         self.widget: NapariImageJWidget = napari_imagej_widget
@@ -298,16 +296,16 @@ class ImageJInitializer(QThread):
 
     def _finalize_subscribers(self):
         # Progress bar subscriber
-        progress_listener = ProgressBarListener(self.widget.progress_handler)
-        subscribe(ij(), progress_listener)
-        self.SUBSCRIBERS.append(progress_listener)
+        self.progress_listener = ProgressBarListener(self.widget.progress_handler)
+        subscribe(ij(), self.progress_listener)
         # Debug printer subscriber
         if is_debug():
-            subscriber = NapariEventSubscriber()
-            subscribe(ij(), subscriber)
-            self.SUBSCRIBERS.append(subscriber)
+            self.event_listener = NapariEventSubscriber()
+            subscribe(ij(), self.event_listener)
 
     def _clean_subscribers(self):
-        # Finalize EventSubscribers
-        for s in self.SUBSCRIBERS:
-            unsubscribe(ij(), s)
+        # Unsubscribe listeners
+        if hasattr(self, "progress_listener"):
+            unsubscribe(ij(), self.progress_listener)
+        if hasattr(self, "event_listener"):
+            unsubscribe(ij(), self.event_listener)
