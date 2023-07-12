@@ -31,7 +31,7 @@ from napari_imagej.widgets.menu import (
     ToIJButton,
     ToIJDetailedButton,
 )
-from napari_imagej.widgets.widget_utils import _run_actions_for
+from napari_imagej.widgets.widget_utils import DimsComboBox, _run_actions_for
 from tests.utils import DummySearchResult, jc
 
 
@@ -308,7 +308,7 @@ def test_advanced_data_transfer(
     if settings.headless():
         pytest.skip("Only applies when not running headlessly")
 
-    button: ToIJDetailedButton = gui_widget.to_ij_extended
+    button: ToIJDetailedButton = gui_widget.to_ij_detail
     assert not button.isEnabled()
 
     # Add an image to the viewer
@@ -340,9 +340,7 @@ def test_advanced_data_transfer(
             return False
         widget.roi_container.combo.setCurrentText(shapes.name)
 
-        dim_bars = widget.dims_container.findChildren(
-            DetailExportDialog.DimsComboBox.DimSelector
-        )
+        dim_bars = widget.dims_container.findChildren(DimsComboBox.DimSelector)
         if not len(dim_bars) == 3:
             print("Expected more dimension comboboxes")
             return False
