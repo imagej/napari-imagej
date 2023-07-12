@@ -318,6 +318,7 @@ def test_polygon_mask_to_layer(ij, polygon_mask):
     assert len(data) == 1
     polygon_data = data[0]
     assert len(polygon_data) == 3
+    # NB due to the conversion we transpose the points
     assert np.array_equal(polygon_data[0], np.array([0, 0]))
     assert np.array_equal(polygon_data[1], np.array([0, -3]))
     assert np.array_equal(polygon_data[2], np.array([-4, 0]))
@@ -332,6 +333,7 @@ def test_polygon_layer_to_mask(ij, polygon_layer):
     # Assert dimensionality
     assert j_mask.numDimensions() == 2
     # Test some points
+    # NB due to the conversion we transpose the points
     _point_assertion(j_mask, [0, 0], True)
     _point_assertion(j_mask, [3, 0], True)
     _point_assertion(j_mask, [2, 1], True)
@@ -453,8 +455,10 @@ def test_path_layer_to_mask(ij, path_layer):
     actual = j_mask.vertices()
     for e, a in zip(expected, actual):
         a.localize(arr)
+        # NB due to the conversion we transpose the points
         assert np.array_equal(ij.py.from_java(arr), e[::-1])
     # Test some points
+    # NB due to the conversion we transpose the points
     _point_assertion(j_mask, [0, 0], True)
     _point_assertion(j_mask, [-2, 2], True)
     _point_assertion(j_mask, [-4, 4], True)
