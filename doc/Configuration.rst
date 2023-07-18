@@ -84,15 +84,6 @@ By default, the ImageJ GUI will be available whenever possible; however, the Ima
 
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
-*use active layer*
-^^^^^^^^^^^^^^^^^^
-
-Defines which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
-
-If active, napari-imagej will transfer highlighted napari layers to ImageJ, and will transfer the currently selected Image window to napari. This choice aligns best with ImageJ2 ecosystem layer selection.
-
-If inactive, napari-imagej will prompt the user with a modal dialog, asking for the name of the layer to transfer.
-
 *JVM command line arguments*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
