@@ -27,7 +27,7 @@ A `gaussian blur <https://en.wikipedia.org/wiki/Gaussian_blur>`_ is easily perfo
 
 Ops are searchable directly from the napari-imagej search bar. Therefore, looking for a gaussian blur is as simple as typing ``gauss`` into the search bar:
 
-.. figure:: https://media.imagej.net/napari-imagej/gauss_search.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/gauss_search.png
 
 From this version of ImageJ Ops, we can see three different Gaussian Blur Ops. Let's look at the first one:
 
@@ -51,13 +51,13 @@ We can run this Op by clicking on it, and then selecting one of the following bu
 
 Below we see the effect of pressing the ``Widget`` button:
 
-.. figure:: https://media.imagej.net/napari-imagej/gauss_widget.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/gauss_widget.png
 
 With this widget, we only need to enter in our inputs, and then press the run button. Note that napari will allow users to omit any parameters with a ``-----``.
 
 Below, we run this Op on a focal plane of the `EmbryoCE <https://samples.scif.io/EmbryoCE.zip>`_ image from https://samples.scif.io:
 
-.. figure:: https://media.imagej.net/napari-imagej/gauss_op.gif
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/gauss_op.gif
 
 .. _ImageJ Ops: https://imagej.net/libs/imagej-ops/index
 
