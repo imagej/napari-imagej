@@ -1,28 +1,29 @@
 """
 The top-level menu for the napari-imagej widget.
 """
-from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
 
 from magicgui.widgets import request_values
 from napari import Viewer
 from napari._qt.qt_resources import QColoredSVGIcon
-from napari.layers import Layer
-from napari.utils._magicgui import get_layers
+from napari.layers import Image, Layer
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 from scyjava import is_arraylike
 
 from napari_imagej import settings
-from napari_imagej.java import ij, jc
+from napari_imagej.java import ij
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities.event_subscribers import UIShownListener
-from napari_imagej.utilities.events import subscribe
+from napari_imagej.utilities.events import subscribe, unsubscribe
+from napari_imagej.widgets.widget_utils import _IMAGE_LAYER_TYPES, DetailExportDialog
 
 
 class NapariImageJMenu(QWidget):
+    """Container widget comprising the napari-imagej menu bar."""
+
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.setLayout(QHBoxLayout())
@@ -34,7 +35,10 @@ class NapariImageJMenu(QWidget):
         self.to_ij: ToIJButton = ToIJButton(viewer)
         self.layout().addWidget(self.to_ij)
 
-        self.gui_button: GUIButton = GUIButton()
+        self.to_ij_detail: ToIJDetailedButton = ToIJDetailedButton(viewer)
+        self.layout().addWidget(self.to_ij_detail)
+
+        self.gui_button: GUIButton = GUIButton(viewer)
         self.layout().addWidget(self.gui_button)
 
         self.settings_button: SettingsButton = SettingsButton(viewer)
@@ -63,57 +67,93 @@ class NapariImageJMenu(QWidget):
     def finalize(self):
         # GUIButton initialization
         if not settings.headless():
-            self.gui_button._set_icon(resource_path("imagej2-16x16-flat"))
+            self.gui_button._icon_path = resource_path("imagej2-16x16-flat")
+            self.gui_button.setIcon(self.gui_button._icon())
             self.gui_button.setEnabled(True)
-            self.gui_button.setToolTip("Display ImageJ2 GUI")
-        # Subscribe UIShown subscriber
-        subscribe(ij(), jc.UIShownEvent.class_, UIShownListener())
+            self.gui_button.setToolTip("Display ImageJ2 UI")
+        # Subscribe UIShownListener
+        self.subscriber = UIShownListener()
+        subscribe(ij(), self.subscriber)
+
+    def __del__(self):
+        # Unsubscribe UIShownListener
+        if self.subscriber:
+            unsubscribe(ij(), self.subscriber)
 
 
-class ToIJButton(QPushButton):
+class IJMenuButton(QPushButton):
+    """Base class defining shared napari-imagej menu button functionality"""
+
     def __init__(self, viewer: Viewer):
         super().__init__()
         self.viewer = viewer
+        viewer.events.theme.connect(self.recolor)
+        self.recolor()
 
-        icon = QColoredSVGIcon.from_resources("long_right_arrow")
-        self.setIcon(icon.colored(theme=viewer.theme))
-        if settings.use_active_layer:
-            self.setToolTip("Export active napari layer to ImageJ2")
-            self.clicked.connect(self.send_active_layer)
-        else:
-            self.setToolTip("Export napari layer to ImageJ2")
-            self.clicked.connect(self.send_chosen_layer)
+    def recolor(self, event=None):
+        """Recolors this button's icon, if it can be recolored."""
+        if icon := self._icon():
+            if isinstance(icon, QColoredSVGIcon):
+                self.setIcon(icon.colored(theme=self.viewer.theme))
 
-    def _set_icon(self, path: str):
-        icon: QIcon = QIcon(QPixmap(path))
-        self.setIcon(icon)
+    def _icon(self):
+        """
+        Placeholder function returning this button's icon.
+        This function should be overwritten by subclasses.
+        """
+        return None
+
+
+class ToIJDetailedButton(IJMenuButton):
+    """
+    Button providing detailed image transfer from napari to ImageJ2.
+    Detailed image transfer allows the selection of an "image" layer
+    (either Image or Labels), along with the assignment of a "rois" layer
+    (either Points or Shapes), and the identification of dimension assignments
+    """
+
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.setEnabled(False)
+        self.viewer = viewer
+
+        self.setToolTip("Export napari Layer (detailed)")
+
+        viewer.layers.selection.events.changed.connect(self.layer_selection_changed)
+        self.clicked.connect(lambda: DetailExportDialog(self.viewer).exec())
+
+    def _icon(self):
+        return QColoredSVGIcon(resource_path("export_detailed"))
+
+    def layer_selection_changed(self, event):
+        """Disables the button if there are no "image" layers"""
+        for layer in self.viewer.layers:
+            if isinstance(layer, _IMAGE_LAYER_TYPES):
+                self.setEnabled(True)
+                return
+        self.setEnabled(False)
+
+
+class ToIJButton(IJMenuButton):
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.setEnabled(False)
+        viewer.layers.selection.events.active.connect(self.layer_selection_changed)
+
+        self.setToolTip("Export napari Layer")
+        self.clicked.connect(self.send_active_layer)
+
+    def _icon(self):
+        return QColoredSVGIcon(resource_path("export"))
 
     def send_active_layer(self):
-        active_layer: Optional[Layer] = self.viewer.layers.selection.active
-        if active_layer:
-            self._show(active_layer)
+        layer: Optional[Layer] = self.viewer.layers.selection.active
+        if layer:
+            # Queue UI call on the EDT
+            # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
+            ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
         else:
             self.handle_no_choices()
-
-    def send_chosen_layer(self):
-        # Get Layer choice
-        choices: dict = request_values(
-            title="Send layers to ImageJ2",
-            layer={"annotation": Layer, "options": {"choices": get_layers}},
-        )
-        # Parse choices for the layer
-        if choices is None:
-            self.handle_no_choices()
-        else:
-            layer = choices["layer"]
-            if isinstance(layer, Layer):
-                # Pass the relevant data to ImageJ2
-                self._show(layer)
-
-    def _show(self, layer):
-        # Queue UI call on the EDT
-        # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
-        ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
 
     def handle_no_choices(self):
         RichTextPopup(
@@ -121,52 +161,25 @@ class ToIJButton(QPushButton):
             exec=True,
         )
 
+    def layer_selection_changed(self, event):
+        if event.type == "active":
+            self.setEnabled(isinstance(event.source.active, Image))
 
-class FromIJButton(QPushButton):
+
+class FromIJButton(IJMenuButton):
     def __init__(self, viewer: Viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
 
-        icon = QColoredSVGIcon.from_resources("long_left_arrow")
-        self.setIcon(icon.colored(theme=viewer.theme))
-        if settings.use_active_layer:
-            self.setToolTip("Import active ImageJ2 Dataset to napari")
-            self.clicked.connect(self.get_active_layer)
-        else:
-            self.setToolTip("Import ImageJ2 Dataset to napari")
-            self.clicked.connect(self.get_chosen_layer)
+        self.setToolTip("Import active ImageJ2 Dataset")
+        self.clicked.connect(self.get_active_layer)
 
-    def _set_icon(self, path: str):
-        icon: QIcon = QIcon(QPixmap(path))
-        self.setIcon(icon)
+    def _icon(self):
+        return QColoredSVGIcon(resource_path("import"))
 
     def _get_objects(self, t):
         compatibleInputs = ij().convert().getCompatibleInputs(t)
         compatibleInputs.addAll(ij().object().getObjects(t))
         return list(compatibleInputs)
-
-    def get_chosen_layer(self) -> None:
-        # Find all images convertible to a napari layer
-        images = self._get_objects(jc.RandomAccessibleInterval)
-        names = [ij().object().getName(i) for i in images]
-        # Ask the user to pick one of these images by name
-        choices: dict = request_values(
-            title="Send layers to napari",
-            data={"annotation": Enum, "options": {"choices": names}},
-        )
-        if choices is None:
-            self.handle_no_choices
-        else:
-            # grab the chosen name
-            name = choices["data"]
-            display = ij().display().getDisplay(name)
-            # if the image is displayed, convert the DatasetView
-            if display:
-                self._add_layer(display.get(0))
-            # Otherwise, just convert the object
-            else:
-                image = images[names.index(name)]
-                self._add_layer(image)
 
     def get_active_layer(self) -> None:
         # HACK: Sync ImagePlus before transferring
@@ -215,20 +228,21 @@ class FromIJButton(QPushButton):
         )
 
 
-class GUIButton(QPushButton):
-    def __init__(self):
-        super().__init__()
-        self.setEnabled(False)
+class GUIButton(IJMenuButton):
+    _icon_path = resource_path("imagej2-16x16-flat-disabled")
 
-        self._set_icon(resource_path("imagej2-16x16-flat-disabled"))
+    def __init__(self, viewer: Viewer):
+        super().__init__(viewer)
+        self.setEnabled(False)
+        self.setIcon(self._icon())
+
         if settings.headless():
             self.setToolTip("ImageJ2 GUI unavailable!")
         else:
-            self.setToolTip("Display ImageJ2 GUI (loading)")
+            self.setToolTip("Display ImageJ2 UI (loading)")
 
-    def _set_icon(self, path: str):
-        icon: QIcon = QIcon(QPixmap(path))
-        self.setIcon(icon)
+    def _icon(self):
+        return QIcon(QPixmap(self._icon_path))
 
     def disable_popup(self):
         RichTextPopup(
@@ -241,19 +255,18 @@ class GUIButton(QPushButton):
         )
 
 
-class SettingsButton(QPushButton):
+class SettingsButton(IJMenuButton):
     # Signal used to identify changes to user settings
     setting_change = Signal(bool)
 
     def __init__(self, viewer: Viewer):
-        super().__init__()
-        self.viewer = viewer
-
-        icon = QColoredSVGIcon(resource_path("gear"))
-        self.setIcon(icon.colored(theme=viewer.theme))
+        super().__init__(viewer)
 
         self.clicked.connect(self._update_settings)
         self.setting_change.connect(self._handle_settings_change)
+
+    def _icon(self):
+        return QColoredSVGIcon(resource_path("gear"))
 
     def _update_settings(self):
         """

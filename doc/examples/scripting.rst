@@ -14,7 +14,7 @@ Configuration
 
 To run this use case, the following settings were used. For information on configuring napari-imagej, please see `here <../Configuration.html>`__.
 
-.. figure:: https://media.imagej.net/napari-imagej/settings_fiji.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_fiji.png
 
     Configuration for the Puncta Segmentation use case
 
@@ -110,7 +110,7 @@ With napari-imagej running, the first step is to open the input data. We'll down
 
 The second step is to find our script within napari-imagej. Discovered SciJava Scripts can be found under their `filename <https://imagej.net/scripting/#adding-scripts-to-the-plugins-menu>`_; so we search for "puncta segmentation"
 
-.. figure:: https://media.imagej.net/napari-imagej/puncta_search.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/puncta_search.png
     
     ``Puncta_Segmentation.py`` exposed within the napari-imagej searchbar as ``PunctaSegmentation``.
 
@@ -118,7 +118,7 @@ Double-clicking on ``PunctaSegmentation`` will bring a modal dialog, prompting t
 
 Once the "OK" button is clicked, the resuling table is displayed in a new window, or a new napari widget, based on the option you selected above:
 
-.. figure:: https://media.imagej.net/napari-imagej/puncta_results.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/puncta_results.png
 
 .. _Puncta Segmentation: https://pyimagej.readthedocs.io/en/latest/Puncta-Segmentation.html
 .. _SciJava Scripts: https://imagej.net/scripting/

@@ -11,7 +11,7 @@ Accessing napari-imagej Settings
 
 As soon as you launch napari-imagej, you can access napari-imagej's configuration dialog by clicking on the gear in the napari-imagej menu:
 
-.. figure:: https://media.imagej.net/napari-imagej/settings_wheel.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_wheel.png
     
     The configuration dialog is accessed through the gear button on the napari-imagej menu
 
@@ -84,15 +84,6 @@ By default, the ImageJ GUI will be available whenever possible; however, the Ima
 
 More details can be found `here <https://pyimagej.readthedocs.io/en/latest/Initialization.html#interactive-mode>`_.
 
-*use active layer*
-^^^^^^^^^^^^^^^^^^
-
-Defines which layer gets transferred when pressing the data transfer buttons in the napari-imagej menu.
-
-If active, napari-imagej will transfer highlighted napari layers to ImageJ, and will transfer the currently selected Image window to napari. This choice aligns best with ImageJ2 ecosystem layer selection.
-
-If inactive, napari-imagej will prompt the user with a modal dialog, asking for the name of the layer to transfer.
-
 *JVM command line arguments*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -100,7 +91,7 @@ Used to define command line arguments that should be passed to the JVM at startu
 
 One common use case for this feature is to increase the maximum heap space available to the JVM, as shown below:
 
-.. figure:: https://media.imagej.net/napari-imagej/benchmarking_settings.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/benchmarking_settings.png
 
     Specifying 32GB of memory available to ImageJ ecosystem routines in the JVM.
 

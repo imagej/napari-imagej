@@ -17,7 +17,7 @@ class NapariEventSubscriber(object):
 
     @JOverride
     def getEventClass(self):
-        return jc.SciJavaEvent.class_
+        return jc.ModuleEvent.class_
 
     @JOverride
     def equals(self, other):

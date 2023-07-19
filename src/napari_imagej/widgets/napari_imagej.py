@@ -21,7 +21,7 @@ from napari_imagej.utilities.event_subscribers import (
     NapariEventSubscriber,
     ProgressBarListener,
 )
-from napari_imagej.utilities.events import subscribe
+from napari_imagej.utilities.events import subscribe, unsubscribe
 from napari_imagej.utilities.logging import is_debug
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
@@ -134,6 +134,9 @@ class NapariImageJWidget(QWidget):
 
         # Start constructing the ImageJ instance
         self.ij_initializer.start()
+
+    def close(self):
+        self.ij_initializer._clean_subscribers()
 
     def wait_for_finalization(self):
         self.ij_initializer.wait()
@@ -293,9 +296,16 @@ class ImageJInitializer(QThread):
 
     def _finalize_subscribers(self):
         # Progress bar subscriber
-        progress_listener = ProgressBarListener(self.widget.progress_handler)
-        subscribe(ij(), jc.ModuleEvent.class_, progress_listener)
+        self.progress_listener = ProgressBarListener(self.widget.progress_handler)
+        subscribe(ij(), self.progress_listener)
         # Debug printer subscriber
         if is_debug():
-            subscriber = NapariEventSubscriber()
-            subscribe(ij(), jc.SciJavaEvent.class_, subscriber)
+            self.event_listener = NapariEventSubscriber()
+            subscribe(ij(), self.event_listener)
+
+    def _clean_subscribers(self):
+        # Unsubscribe listeners
+        if hasattr(self, "progress_listener"):
+            unsubscribe(ij(), self.progress_listener)
+        if hasattr(self, "event_listener"):
+            unsubscribe(ij(), self.event_listener)

@@ -7,23 +7,31 @@ from typing import Callable
 import numpy
 import pytest
 from napari import Viewer
-from napari.layers import Image, Layer
+from napari.layers import Image, Layer, Shapes
 from napari.viewer import current_viewer
 from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QMessageBox
+from qtpy.QtWidgets import (
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QMessageBox,
+)
 
 from napari_imagej import settings
 from napari_imagej.resources import resource_path
 from napari_imagej.widgets import menu
 from napari_imagej.widgets.menu import (
+    DetailExportDialog,
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
     SettingsButton,
     ToIJButton,
+    ToIJDetailedButton,
 )
-from napari_imagej.widgets.widget_utils import _run_actions_for
+from napari_imagej.widgets.widget_utils import DimsComboBox, _run_actions_for
 from tests.utils import DummySearchResult, jc
 
 
@@ -67,33 +75,16 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
     """Fixture used to handle RichTextPopups"""
 
     def handle_popup(
-        text: str, is_rich: bool, button, popup_generator: Callable[[], None]
+        popup_generator: Callable[[], None], popup_handler: Callable[[QDialog], bool]
     ):
         # # Start the handler in a new thread
         class Handler(QRunnable):
             # Test popup when running headlessly
             def run(self) -> None:
-                asserter(lambda: isinstance(QApplication.activeWindow(), QMessageBox))
-                msg = QApplication.activeWindow()
-                if text != msg.text():
-                    print("Text differed")
-                    print(text)
-                    print(msg.text())
-                    self._passed = False
-                    return
-                if is_rich and Qt.RichText != msg.textFormat():
-                    print("Not rich text")
-                    self._passed = False
-                    return
-                if is_rich and Qt.TextBrowserInteraction != msg.textInteractionFlags():
-                    print("No browser interaction")
-                    self._passed = False
-                    return
-
-                ok_button = msg.button(button)
-                ok_button.clicked.emit()
-                asserter(lambda: QApplication.activeModalWidget() is not msg)
-                self._passed = True
+                asserter(lambda: isinstance(QApplication.activeWindow(), QDialog))
+                widget = QApplication.activeWindow()
+                self._passed = popup_handler(widget)
+                asserter(lambda: QApplication.activeModalWidget() is not widget)
 
             def passed(self) -> bool:
                 return self._passed
@@ -108,6 +99,29 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
         assert runnable.passed()
 
     return handle_popup
+
+
+def _handle_QMessageBox(text: str, button_type: str, is_rich: bool):
+    def handle(widget: QDialog) -> bool:
+        if not isinstance(widget, QMessageBox):
+            return False
+        if text != widget.text():
+            print("Text differed")
+            print(text)
+            print(widget.text())
+            return False
+        if is_rich and Qt.RichText != widget.textFormat():
+            print("Not rich text")
+            return False
+        if is_rich and Qt.TextBrowserInteraction != widget.textInteractionFlags():
+            print("No browser interaction")
+            return False
+
+        ok_button = widget.button(button_type)
+        ok_button.clicked.emit()
+        return True
+
+    return handle
 
 
 def ui_visible(ij):
@@ -161,13 +175,14 @@ def clean_gui_elements(asserter, ij, viewer: Viewer):
 def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
-    assert len(subwidgets) == 5
+    assert len(subwidgets) == 6
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
-    assert isinstance(subwidgets[3], GUIButton)
-    assert isinstance(subwidgets[4], SettingsButton)
+    assert isinstance(subwidgets[3], ToIJDetailedButton)
+    assert isinstance(subwidgets[4], GUIButton)
+    assert isinstance(subwidgets[5], SettingsButton)
 
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
@@ -184,7 +199,7 @@ def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJM
     assert "" == button.text()
 
     # Sometimes ImageJ2 can take a little while to be ready
-    expected_toolTip = "Display ImageJ2 GUI"
+    expected_toolTip = "Display ImageJ2 UI"
     asserter(lambda: expected_toolTip == button.toolTip())
 
     # Test showing UI
@@ -216,7 +231,8 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
         'Initialization.html#interactive-mode">this site</a> '
         "for more information."
     )
-    popup_handler(expected_popup_text, True, QMessageBox.Ok, button.clicked.emit)
+    popup_func = _handle_QMessageBox(expected_popup_text, QMessageBox.Ok, True)
+    popup_handler(button.clicked.emit, popup_func)
 
 
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
@@ -230,16 +246,15 @@ def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
         )
 
     button: ToIJButton = gui_widget.to_ij
-    assert button.isEnabled()
+    assert not button.isEnabled()
 
     # Show the button
     qtbot.mouseClick(gui_widget.gui_button, Qt.LeftButton, delay=1)
-    asserter(lambda: button.isEnabled())
-
     # Add some data to the viewer
     sample_data = numpy.ones((100, 100, 3))
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
+    asserter(lambda: button.isEnabled())
 
     # Press the button, handle the Dialog
     qtbot.mouseClick(button, Qt.LeftButton, delay=1)
@@ -286,31 +301,67 @@ def test_active_data_receive(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     assert (10, 10, 10) == layer.data.shape
 
 
-def test_data_choosers(asserter, qtbot, ij, gui_widget_chooser):
+def test_advanced_data_transfer(
+    popup_handler, asserter, ij, gui_widget: NapariImageJMenu
+):
+    """Tests the detailed image exporter"""
     if settings.headless():
         pytest.skip("Only applies when not running headlessly")
 
-    button_to: ToIJButton = gui_widget_chooser.to_ij
-    button_from: FromIJButton = gui_widget_chooser.from_ij
-    assert button_to.isEnabled()
-    assert button_from.isEnabled()
+    button: ToIJDetailedButton = gui_widget.to_ij_detail
+    assert not button.isEnabled()
 
-    # Add a layer
+    # Add an image to the viewer
     sample_data = numpy.ones((100, 100, 3))
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
+    asserter(lambda: button.isEnabled())
 
-    # Use the chooser to transfer data to ImageJ2
-    button_to.clicked.emit()
+    # Add some rois to the viewer
+    sample_data = numpy.zeros((2, 2))
+    sample_data[1, :] = 2
+    shapes = Shapes(name="test_shapes")
+    shapes.add_rectangles(sample_data)
+    current_viewer().add_layer(shapes)
 
-    # Assert that the data is now in ImageJ2
-    asserter(lambda: isinstance(ij.display().getDisplay("test_to"), jc.ImageDisplay))
+    def handle_transfer(widget: QDialog) -> bool:
+        if not isinstance(widget, DetailExportDialog):
+            print("Not an AdvancedExportDialog")
+            return False
+        if not widget.img_container.combo.currentText() == "test_to":
+            print(widget.img_container.combo.currentText())
+            print("Unexpected starting image text")
+            return False
+        if not widget.roi_container.combo.currentText() == "--------":
+            print("Unexpected starting roi text")
+            return False
+        if shapes not in widget.roi_container.choices:
+            print("Shapes layer not available")
+            return False
+        widget.roi_container.combo.setCurrentText(shapes.name)
 
-    # Use the chooser to transfer that data back
-    button_from.clicked.emit()
+        dim_bars = widget.dims_container.findChildren(DimsComboBox.DimSelector)
+        if not len(dim_bars) == 3:
+            print("Expected more dimension comboboxes")
+            return False
 
-    # Assert that the data is now in napari
-    asserter(lambda: 2 == len(button_to.viewer.layers))
+        ok_button = widget.buttons.button(QDialogButtonBox.Ok)
+        ok_button.clicked.emit()
+        return True
+
+    popup_handler(button.clicked.emit, handle_transfer)
+
+    # Assert that the data is now in Fiji
+    def check_active_display():
+        if not ij.display().getActiveDisplay():
+            return False
+        dataset = ij.display().getActiveDisplay().getActiveView().getData()
+        if not dataset.getName() == "test_to":
+            return False
+        rois = dataset.getProperties().get("rois")
+        return rois is not None
+
+    asserter(check_active_display)
 
 
 def test_settings_no_change(gui_widget: NapariImageJMenu):
@@ -357,7 +408,8 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
     expected_text = (
         "Please restart napari for napari-imagej settings changes to take effect!"
     )
-    popup_handler(expected_text, True, QMessageBox.Ok, button._update_settings)
+    popup_func = _handle_QMessageBox(expected_text, QMessageBox.Ok, True)
+    popup_handler(button._update_settings, popup_func)
     assert settings.imagej_directory_or_endpoint == new_value
 
     menu.request_values = original_request_values
@@ -478,10 +530,12 @@ def test_legacy_directed_to_ij_ui(
         " and should be run from the ImageJ UI."
         " Would you like to launch the ImageJ UI?"
     )
-    popup_handler(expected_popup_text, False, QMessageBox.No, actions[0][1])
+    popup_func = _handle_QMessageBox(expected_popup_text, QMessageBox.No, False)
+    popup_handler(actions[0][1], popup_func)
     assert not ui_visible(ij)
 
-    popup_handler(expected_popup_text, False, QMessageBox.Yes, actions[0][1])
+    popup_func = _handle_QMessageBox(expected_popup_text, QMessageBox.Yes, False)
+    popup_handler(actions[0][1], popup_func)
     asserter(lambda: ui_visible(ij))
 
     frame = ij.ui().getDefaultUI().getApplicationFrame().getComponent()

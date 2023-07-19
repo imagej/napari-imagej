@@ -33,5 +33,5 @@ There might be a slight delay while the files open. This process can be an expen
 
 When complete, you should see the image, track and label layers in napari:
 
-.. figure:: https://media.imagej.net/napari-imagej/trackmate_reader.gif
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/trackmate_reader.gif
     :align: center

@@ -3,10 +3,14 @@ Helper functions for working with the SciJava event bus.
 """
 
 
-def subscribe(ij, event_class, subscriber):
+def subscribe(ij, subscriber):
     # NB: We need to retain a reference to this object or GC will delete it.
     ij.object().addObject(subscriber)
-    _event_bus(ij).subscribe(event_class, subscriber)
+    _event_bus(ij).subscribe(subscriber.getEventClass(), subscriber)
+
+
+def unsubscribe(ij, subscriber):
+    _event_bus(ij).unsubscribe(subscriber.getEventClass(), subscriber)
 
 
 def subscribers(ij, event_class):

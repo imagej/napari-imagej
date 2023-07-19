@@ -1,14 +1,22 @@
+from typing import List
+
 from magicgui import magicgui
+from napari import Viewer
+from napari.layers import Image, Labels, Layer, Points, Shapes
 from qtpy.QtCore import Signal
 from qtpy.QtGui import QFontMetrics
 from qtpy.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QTextEdit,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -130,3 +138,155 @@ class JavaErrorMessageBox(QDialog):
         btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
         btn_box.accepted.connect(self.accept)
         self.layout().addWidget(btn_box, 2, 0, 1, self.layout().columnCount())
+
+
+_IMAGE_LAYER_TYPES = (Image, Labels)
+_ROI_LAYER_TYPES = (Points, Shapes)
+
+
+class LayerComboBox(QWidget):
+    """A QWidget for selecting from a List of Layers, with a title"""
+
+    def __init__(self, title: str, choices: List[Layer], required=True):
+        super().__init__()
+        # Define layout
+        self.setLayout(QHBoxLayout())
+        self.layout().addWidget(QLabel(title))
+        self.combo = QComboBox()
+        self.layout().addWidget(self.combo)
+        # Add choices to widget
+        self.choices = choices
+        if not required:
+            self.combo.addItem("--------", None)
+        for c in choices:
+            self.combo.addItem(c.name, c)
+
+
+class DimsComboBox(QFrame):
+    """A QFrame used to map the axes of a Layer to dimension labels"""
+
+    dims = [
+        [],
+        ["X"],
+        ["Y", "X"],
+        ["Z", "Y", "X"],
+        ["T", "Y", "X", "C"],
+        ["T", "Z", "Y", "X", "C"],
+    ]
+
+    def __init__(self, combo_box: LayerComboBox):
+        super().__init__()
+        self.selection_box: LayerComboBox = combo_box
+        self.setLayout(QVBoxLayout())
+        self.setFrameStyle(QFrame.Box)
+        self.layout().addWidget(QLabel("Dimensions:"))
+
+    def update(self, index: int):
+        """
+        Updates the number of dimension combo boxes based on the selected index.
+
+        Designed to be called by a LayerComboBox
+        """
+
+        # remove old widgets
+        for child in self.children():
+            if isinstance(child, self.DimSelector):
+                self.layout().removeWidget(child)
+                child.deleteLater()
+        # Determine the selected layer
+        selected = self.selection_box.combo.itemData(index)
+        # Guess dimension labels for the selection
+        guess = self.dims[len(selected.data.shape)]
+        # Create dimension selectors for each dimension of the selection.
+        for i, g in enumerate(guess):
+            self.layout().addWidget(
+                self.DimSelector(f"dim_{i} ({selected.data.shape[i]} px)", g)
+            )
+
+    def provided_labels(self):
+        """
+        Returns a list, where the ith entry provides the label for the
+        ith dimension of the selected image
+        """
+        selections = []
+        for child in self.children():
+            if isinstance(child, self.DimSelector):
+                selections.append(child.combo.currentText())
+        return selections
+
+    class DimSelector(QWidget):
+        """A QWidget providing potential labels for each dimension"""
+
+        choices = ["X", "Y", "Z", "T", "C", "Unspecified"]
+
+        def __init__(self, title: str, guess: str):
+            # Define widget layout
+            super().__init__()
+            self.setLayout(QHBoxLayout())
+            self.layout().addWidget(QLabel(title))
+            self.combo = QComboBox()
+            # Add choices
+            for c in self.choices:
+                self.combo.addItem(c)
+            self.combo.setCurrentText(guess)
+            self.layout().addWidget(self.combo)
+
+
+class DetailExportDialog(QDialog):
+    """Qt Dialog launched to provide detailed image transfer"""
+
+    def __init__(self, viewer: Viewer):
+        super().__init__()
+        self.setLayout(QVBoxLayout())
+        # Write the title to a Label
+        self.layout().addWidget(QLabel("Export data to ImageJ"))
+
+        # Parse layer options
+        self.imgs = []
+        self.rois = []
+        for layer in viewer.layers:
+            if isinstance(layer, _IMAGE_LAYER_TYPES):
+                self.imgs.append(layer)
+            elif isinstance(layer, _ROI_LAYER_TYPES):
+                self.rois.append(layer)
+
+        # Add combo boxes
+        self.img_container = LayerComboBox("Image:", self.imgs)
+        self.layout().addWidget(self.img_container)
+        self.roi_container = LayerComboBox("ROIs:", self.rois, required=False)
+        self.layout().addWidget(self.roi_container)
+        self.dims_container = DimsComboBox(self.img_container)
+        self.layout().addWidget(self.dims_container)
+
+        # Determine default selection
+        current_layer: Layer = viewer.layers.selection.active
+        if isinstance(current_layer, _IMAGE_LAYER_TYPES):
+            # The user likely wants to transfer the active layer, if it is an image
+            self.img_container.combo.setCurrentText(current_layer.name)
+        else:
+            self.img_container.combo.setCurrentText(self.imgs[0].name)
+        self.dims_container.update(self.img_container.combo.currentIndex())
+        self.img_container.combo.currentIndexChanged.connect(self.dims_container.update)
+
+        # Add dialog buttons
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.layout().addWidget(self.buttons)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+    def accept(self):
+        super().accept()
+
+        def pass_to_ij():
+            img = self.img_container.combo.currentData()
+            roi = self.roi_container.combo.currentData()
+            # Convert the selections to Java equivalents
+            j_img = ij().py.to_java(
+                img, dim_order=self.dims_container.provided_labels()
+            )
+            if roi:
+                j_img.getProperties().put("rois", ij().py.to_java(roi))
+            # Show the resulting image
+            ij().ui().show(j_img)
+
+        ij().thread().queue(lambda: pass_to_ij())

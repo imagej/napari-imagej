@@ -14,7 +14,7 @@ Once triggered, napari-imagej will start up the JVM, and then the ImageJ2 gatewa
 
 **On the first initialization, napari-imagej must download an ImageJ2 distribution. This download can take minutes, depdending on the user's bandwidth.**
 
-.. figure:: https://media.imagej.net/napari-imagej/startup.gif
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/startup.gif
 
 Once napari-imagej is fully initilized, you can see the `Use Cases <./Use_Cases.html>`_ page for examples of available functionality. Alternatively, if you're new to ImageJ, you may want to start with a `high-level overview <https://imagej.net/learn/>`_.
 
@@ -27,7 +27,7 @@ While all ImageJ2 functionality should be accessible direclty through the napari
 
 If you try to run one of these commands through the napari-imagej search bar you will receive a message indicating the GUI is required, with an option to show it. Alternatively, at any point you can launch the ImageJ GUI via the GUI button in the napari-imagej menu.
 
-.. figure:: https://media.imagej.net/napari-imagej/settings_gui_button.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_gui_button.png
     
     The GUI is launched through the ImageJ button on the napari-imagej menu
 
