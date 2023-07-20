@@ -9,13 +9,14 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
+
 from typing import Any, Dict, List
 
 import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
-from napari_imagej.utilities.logging import log_debug, warn
+from napari_imagej.utilities.logging import log_debug
 
 # -- Constants -- #
 
@@ -31,9 +32,22 @@ minimum_versions = {
     "sc.fiji:TrackMate": "7.11.0",
 }
 
-
+# Each component listed here should be paired with a comment describing WHY it is here
 recommended_versions = {
+    # Versions above are easier for inclusion of scifio-labeling
+    # https://github.com/imagej/pyimagej/issues/280
     "net.imagej:imagej": "2.10.0",
+    # Enable visualizing Datasets with DefaultROITrees
+    # https://github.com/imagej/imagej-legacy/pull/300
+    "net.imagej:imagej-legacy": "1.2.1",
+    # Enables threshold Ops to return Images of BooleanTypes
+    # https://github.com/imagej/imagej-ops/pull/651
+    "net.imagej:imagej-ops": "2.0.1",
+    # Prevents non-empty SciJava Search Results for empty searches
+    # https://github.com/scijava/scijava-search/pull/30
+    "org.scijava:scijava-search": "2.0.4",
+    # Versions above are easier for inclusion of scifio-labeling
+    # https://github.com/imagej/pyimagej/issues/280
     "sc.fiji:fiji": "2.10.0",
 }
 
@@ -140,6 +154,7 @@ def validate_imagej(ij: "jc.ImageJ") -> List[str]:
         warnings.append("\n\t".join(violations))
 
     return warnings
+
 
 # -- Private functions -- #
 
