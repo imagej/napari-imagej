@@ -1,6 +1,6 @@
 from jpype import JImplements, JOverride
 
-from napari_imagej.java import init_ij, jc
+from napari_imagej.java import init_ij, jc, validate_imagej
 
 
 class NapariImageJ:
@@ -10,6 +10,7 @@ class NapariImageJ:
 
     def __init__(self):
         self._ij = None
+        self._init_warnings = []
         self._repl = None
         self._repl_callbacks = []
 
@@ -17,6 +18,7 @@ class NapariImageJ:
     def ij(self):
         if self._ij is None:
             self._ij = init_ij()
+            self._init_warnings = validate_imagej(self.ij)
         return self._ij
 
     @property

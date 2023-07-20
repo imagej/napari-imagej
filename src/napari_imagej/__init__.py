@@ -23,5 +23,6 @@ import scyjava as sj
 from napari_imagej.model import NapariImageJ
 
 __author__ = "ImageJ2 developers"
+__version__ = sj.get_version("napari-imagej")
 
 nij = NapariImageJ()

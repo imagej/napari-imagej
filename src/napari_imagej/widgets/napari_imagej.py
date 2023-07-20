@@ -6,7 +6,7 @@ This widget is made accessible to napari through napari.yml.
 """
 
 from traceback import format_exception
-from typing import Callable
+from typing import Callable, List
 
 from jpype import JArray, JImplements, JOverride
 from magicgui.widgets import FunctionGui, Widget
@@ -16,7 +16,7 @@ from qtpy.QtCore import QModelIndex, QThread, Signal, Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 from scyjava import jstacktrace, when_jvm_stops
 
-from napari_imagej import nij
+from napari_imagej import nij, settings
 from napari_imagej.java import jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.event_subscribers import (
@@ -31,7 +31,10 @@ from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import SearcherTreeView, SearchResultItem
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
-from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
+from napari_imagej.widgets.widget_utils import (
+    JavaErrorMessageBox,
+    JavaWarningMessageBox,
+)
 
 
 class NapariImageJWidget(QWidget):
@@ -40,6 +43,7 @@ class NapariImageJWidget(QWidget):
     output_handler = Signal(object)
     progress_handler = Signal(object)
     ij_error_handler = Signal(object)
+    ij_warning_handler = Signal(object)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
@@ -117,6 +121,7 @@ class NapariImageJWidget(QWidget):
         self.output_handler.connect(self._handle_output)
         self.progress_handler.connect(self._update_progress)
         self.ij_error_handler.connect(self._handle_ij_init_error)
+        self.ij_warning_handler.connect(self._handle_ij_init_warning)
 
         # -- Final setup -- #
 
@@ -214,6 +219,24 @@ class NapariImageJWidget(QWidget):
         msg: JavaErrorMessageBox = JavaErrorMessageBox(title, exception_str)
         msg.exec()
 
+    @Slot(object)
+    def _handle_ij_init_warning(self, warnings: List[str]):
+        """
+        Handles warnings associated initializing ImageJ.
+        Initializing ImageJ can fail for all sorts of reasons,
+        so we give it special attention here.
+
+        NB: This MUST be done within this slot, as slot functions
+        are run on the GUI thread. napari-imagej runs ImageJ initialization
+        on a separate Qt thread, which isn't the GUI thread.
+        """
+        # Print thet error
+        if not settings.display_java_warnings or len(warnings) == 0:
+            return
+        title = "During the initialization of ImageJ, warnings were raised:"
+        msg: JavaWarningMessageBox = JavaWarningMessageBox(title, "\n\n".join(warnings))
+        msg.exec()
+
 
 class ImageJInitializer(QThread):
     """
@@ -234,6 +257,8 @@ class ImageJInitializer(QThread):
         try:
             # Block until ImageJ2 is initialized.
             _ = nij.ij
+            # Log any warnings
+            self.widget.ij_warning_handler.emit(nij._init_warnings)
             # Finalize the menu
             self.widget.menu.finalize()
             # Finalize the search bar
@@ -247,6 +272,7 @@ class ImageJInitializer(QThread):
         except Exception as e:
             # Handle the exception on the GUI thread
             self.widget.ij_error_handler.emit(e)
+            return
 
     def _finalize_results_tree(self):
         """

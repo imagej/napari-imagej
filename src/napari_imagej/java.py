@@ -9,8 +9,7 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
-
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
@@ -34,6 +33,7 @@ minimum_versions = {
 recommended_versions = {}
 
 # -- Public functions -- #
+
 
 def init_ij() -> "jc.ImageJ":
     """
@@ -60,13 +60,76 @@ def init_ij() -> "jc.ImageJ":
     # Log initialization
     log_debug(f"Initialized at version {ij.getVersion()}")
 
-    # -- VALIDATION -- #
-
-    # Validate PyImageJ
-    _validate_imagej(ij)
-
     return ij
 
+
+def validate_imagej(ij: "jc.ImageJ") -> List[str]:
+    """
+    Ensures ij is suitable for use within napari-imagej.
+    Critical errors result in an exception being thrown by this function.
+    Noncritical errors (warnings) are described in the returned list of strings.
+    """
+    warnings = []
+
+    # If we want to require a minimum version for a java component, we need to
+    # be able to find our current version. We do that by querying a Java class
+    # within that component.
+    RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
+    SCIFIO = jimport("io.scif.SCIFIO")
+    UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
+    component_requirements = {
+        "io.scif:scifio": SCIFIO,
+        "net.imagej:imagej-common": jc.Dataset,
+        "net.imagej:imagej-ops": jc.OpInfo,
+        "net.imglib2:imglib2-unsafe": UnsafeImg,
+        "net.imglib2:imglib2-imglyb": RGRAI,
+        "org.scijava:scijava-common": jc.Module,
+        "org.scijava:scijava-search": jc.Searcher,
+    }
+    component_requirements.update(_optional_requirements(ij))
+    # Find version that violate the minimum
+    violations = []
+    for component, cls in component_requirements.items():
+        min_version = minimum_versions[component]
+        component_version = get_version(cls)
+        if not is_version_at_least(component_version, min_version):
+            violations.append(
+                f"{component} : {min_version} (Installed: {component_version})"
+            )
+
+    # If version requirements are violated, throw an error
+    if violations:
+        failure_str = "napari-imagej requires the following component versions:"
+        violations.insert(0, failure_str)
+        failure_str = "\n\t".join(violations)
+        failure_str += (
+            "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
+        )
+        raise RuntimeError(failure_str)
+
+    # If verison recommendations are violated, return a warning
+    violations = []
+    for component, cls in component_requirements.items():
+        if component not in recommended_versions:
+            continue
+        recommended_version = recommended_versions[component]
+        component_version = get_version(cls)
+        if not is_version_at_least(component_version, recommended_version):
+            violations.append(
+                f"{component} : {recommended_version} (Installed: {component_version})"
+            )
+
+    # If there are older versions, warn the user
+    if violations:
+        __version__ = get_version("napari-imagej")
+        failure_str = (
+            f"napari-imagej v{__version__} recommends using "
+            "the following component versions:"
+        )
+        violations.insert(0, failure_str)
+        warnings.append("\n\t".join(violations))
+
+    return warnings
 
 # -- Private functions -- #
 
@@ -94,70 +157,6 @@ def _configure_imagej() -> Dict[str, Any]:
         "add_legacy": settings.include_imagej_legacy,
     }
     return init_settings
-
-
-def _validate_imagej(ij: "jc.ImageJ"):
-    """
-    Ensure minimum requirements on java component versions are met.
-    """
-    # If we want to require a minimum version for a java component, we need to
-    # be able to find our current version. We do that by querying a Java class
-    # within that component.
-    RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
-    SCIFIO = jimport("io.scif.SCIFIO")
-    UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
-    component_requirements = {
-        "io.scif:scifio": SCIFIO,
-        "net.imagej:imagej-common": jc.Dataset,
-        "net.imagej:imagej-ops": jc.OpInfo,
-        "net.imglib2:imglib2-unsafe": UnsafeImg,
-        "net.imglib2:imglib2-imglyb": RGRAI,
-        "org.scijava:scijava-common": jc.Module,
-        "org.scijava:scijava-search": jc.Searcher,
-    }
-    component_requirements.update(_optional_requirements(ij))
-    # Find version that violate the minimum
-    violations = []
-    for component, cls in component_requirements.items():
-        min_version = minimum_versions[component]
-        component_version = get_version(cls)
-        if not is_version_at_least(component_version, min_version):
-            violations.append(
-                f"{component} : {min_version} (Installed: {component_version})"
-            )
-
-    # If there are version requirements, throw an error
-    if violations:
-        failure_str = "napari-imagej requires the following component versions:"
-        violations.insert(0, failure_str)
-        failure_str = "\n\t".join(violations)
-        failure_str += (
-            "\n\nPlease ensure your ImageJ2 endpoint is correct within the settings"
-        )
-        raise RuntimeError(failure_str)
-
-    # Find versions below recommended
-    violations = []
-    for component, cls in component_requirements.items():
-        if component not in recommended_versions:
-            continue
-        recommended_version = recommended_versions[component]
-        component_version = get_version(cls)
-        if not is_version_at_least(component_version, recommended_version):
-            violations.append(
-                f"{component} : {recommended_version} (Installed: {component_version})"
-            )
-
-    # If there are older versions, warn the user
-    if violations:
-        # FIXME: napari_imagej.__version__ causes package cycles
-        failure_str = (
-            f"napari-imagej v{get_version("napari-imagej")} recommends using "
-            "the following component versions:"
-        )
-        violations.insert(0, failure_str)
-        failure_str = "\n\t".join(violations)
-        warn(failure_str)
 
 
 def _optional_requirements(ij: "jc.ImageJ"):
