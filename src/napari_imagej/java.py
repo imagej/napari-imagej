@@ -314,6 +314,10 @@ class JavaClasses(object):
     def Window(self):
         return "java.awt.Window"
 
+    @blocking_import
+    def ScriptException(self):
+        return "javax.script.ScriptException"
+
     # SciJava Types
 
     @blocking_import

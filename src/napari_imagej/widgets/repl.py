@@ -6,6 +6,8 @@ This supports all of the languages of SciJava.
 from qtpy.QtGui import QTextCursor
 from qtpy.QtWidgets import QComboBox, QLineEdit, QTextEdit, QVBoxLayout, QWidget
 
+from napari_imagej.java import jc
+
 
 class REPLWidget(QWidget):
     def __init__(self, script_repl, parent=None):
@@ -60,10 +62,6 @@ class REPLWidget(QWidget):
         input_text = self.input_lineedit.text()
         self.input_lineedit.clear()
 
-        from scyjava import jimport
-
-        ScriptException = jimport("javax.script.ScriptException")
-
         # Catch script errors when evaluating
         try:
             # Evaluate the input using interpreter's eval method
@@ -72,7 +70,7 @@ class REPLWidget(QWidget):
             # Display the result in the output text area
             self.output_textedit.append(f">>> {input_text}")
             self.output_textedit.append(str(result))
-        except ScriptException as e:
+        except jc.ScriptException as e:
             # Display the exception message in the output text area
             self.output_textedit.append(f">>> {input_text}")
             self.output_textedit.append(f"Error: {str(e)}")
