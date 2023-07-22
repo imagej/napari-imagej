@@ -14,11 +14,8 @@ class REPLWidget(QWidget):
         """
         Initialize the REPLWidget.
 
-        Parameters:
-        - script_repl (ScriptREPL): The ScriptREPL object for evaluating commands.
-        - parent (QWidget): The parent widget (optional).
-
-        Set up the user interface and connect signals for the REPLWidget.
+        :param script_repl: The ScriptREPL object for evaluating commands.
+        :param parent: The parent widget (optional).
         """
         super().__init__(parent)
         self.script_repl = script_repl
@@ -40,22 +37,18 @@ class REPLWidget(QWidget):
         self.input_lineedit.returnPressed.connect(self.process_input)
         layout.addWidget(self.input_lineedit)
 
-    def change_language(self, language):
+    def change_language(self, language: str):
         """
-        Change the scripting language of the ScriptREPL object.
+        Change the active scripting language of the REPL.
 
-        Parameters:
-        - language (str): The selected scripting language.
-
-        Update the scripting language setting of the ScriptREPL object based on
-        the user's selection.
+        :param language: The new scripting language to use.
         """
         self.script_repl.lang(language)
         self.output_textedit.clear()
 
     def process_input(self):
         """
-        Process the user input and evaluate it using the ScriptREPL.
+        Process the user input and evaluate it using the REPL.
 
         Display the results in the output text area.
         """
