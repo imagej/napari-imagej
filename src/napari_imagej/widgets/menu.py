@@ -296,7 +296,7 @@ class REPLButton(IJMenuButton):
 
     def _toggle_repl(self):
         """
-        Spawn a popup allowing the user to configure napari-imagej settings.
+        Toggle visibility the SciJava REPL widget.
         """
         if not self._widget:
             self._add_repl_to_dock()
