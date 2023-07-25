@@ -281,15 +281,6 @@ class REPLButton(IJMenuButton):
         self._widget = None
 
     def _add_repl_to_dock(self):
-        from scyjava import jimport
-
-        ByteArrayOutputStream = jimport("java.io.ByteArrayOutputStream")
-        ScriptREPL = jimport("org.scijava.script.ScriptREPL")
-
-        output_stream = ByteArrayOutputStream()
-        self.repl = ScriptREPL(ij().context(), "jython", output_stream)
-        self.repl.lang("jython")
-
         self._widget = REPLWidget(self.repl)
         self._widget.visible = False
         self.viewer.window.add_dock_widget(self._widget, name="napari-imagej REPL")
