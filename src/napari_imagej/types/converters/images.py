@@ -10,7 +10,7 @@ from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
 from numpy import ones
-from scyjava import Priority, isjava
+from scyjava import Priority
 from xarray import DataArray
 
 from napari_imagej.java import ij, jc
@@ -19,7 +19,7 @@ from napari_imagej.utilities.logging import log_debug
 
 
 @java_to_py_converter(
-    predicate=lambda obj: isjava(obj) and ij().convert().supports(obj, jc.DatasetView),
+    predicate=lambda obj: ij().convert().supports(obj, jc.DatasetView),
     priority=Priority.VERY_HIGH + 1,
 )
 def _java_image_to_image_layer(image: Any) -> Image:
