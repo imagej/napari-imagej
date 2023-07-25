@@ -286,6 +286,10 @@ class JavaClasses(object):
         return "java.math.BigInteger"
 
     @blocking_import
+    def ByteArrayOutputStream(self):
+        "java.io.ByteArrayOutputStream"
+
+    @blocking_import
     def Date(self):
         return "java.util.Date"
 
@@ -382,6 +386,10 @@ class JavaClasses(object):
     @blocking_import
     def SciJavaEvent(self):
         return "org.scijava.event.SciJavaEvent"
+
+    @blocking_import
+    def ScriptREPL(self):
+        return "org.scijava.script.ScriptREPL"
 
     @blocking_import
     def Searcher(self):

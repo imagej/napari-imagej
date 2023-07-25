@@ -6,11 +6,11 @@ This supports all of the languages of SciJava.
 from qtpy.QtGui import QTextCursor
 from qtpy.QtWidgets import QComboBox, QLineEdit, QTextEdit, QVBoxLayout, QWidget
 
-from napari_imagej.java import jc
+from napari_imagej.java import ij, jc
 
 
 class REPLWidget(QWidget):
-    def __init__(self, script_repl, parent=None):
+    def __init__(self, script_repl: "ScriptREPL" = None, parent: QWidget = None):
         """
         Initialize the REPLWidget.
 
@@ -18,7 +18,14 @@ class REPLWidget(QWidget):
         :param parent: The parent widget (optional).
         """
         super().__init__(parent)
-        self.script_repl = script_repl
+
+        output_stream = ByteArrayOutputStream()
+        self.script_repl = (
+            script_repl
+            if script_repl
+            else jc.ScriptREPL(ij().context(), output_stream)
+        )
+        self.script_repl.lang("jython")
 
         layout = QVBoxLayout(self)
 
