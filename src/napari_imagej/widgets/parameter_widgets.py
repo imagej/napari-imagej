@@ -26,6 +26,10 @@ from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from numpy import dtype
+from qtpy.QtCore import QRegExp
+from qtpy.QtGui import QRegExpValidator
+from qtpy.QtWidgets import QAbstractSpinBox, QLineEdit
+from scyjava import numeric_bounds
 
 from napari_imagej.java import jc
 
@@ -80,6 +84,104 @@ def numeric_type_widget_for(cls: type):
             return real_type
 
     return Widget
+
+
+class BigIntSpinbox(QAbstractSpinBox):
+    def __init__(self, parent=None, **kwargs):
+        super(BigIntSpinbox, self).__init__(parent)
+
+        self._singleStep = 1
+        self._minimum = -18446744073709551616
+        self._maximum = 18446744073709551615
+
+        self.lineEdit = QLineEdit(self)
+
+        rx = QRegExp("[1-9]\\d{0,20}")
+        validator = QRegExpValidator(rx, self)
+
+        self.lineEdit.setValidator(validator)
+        self.setLineEdit(self.lineEdit)
+
+    def value(self):
+        return int(self.lineEdit.text())
+
+    def setValue(self, value):
+        if self._valueInRange(value):
+            self.lineEdit.setText(str(value))
+
+    def stepBy(self, steps):
+        self.setValue(self.value() + steps * self.singleStep())
+
+    def stepEnabled(self):
+        return self.StepUpEnabled | self.StepDownEnabled
+
+    def setSingleStep(self, singleStep):
+        assert isinstance(singleStep, int)
+        # don't use negative values
+        self._singleStep = abs(singleStep)
+
+    def singleStep(self):
+        return self._singleStep
+
+    def minimum(self):
+        return self._minimum
+
+    def setMinimum(self, minimum):
+        assert isinstance(minimum, int)
+        self._minimum = minimum
+
+    def maximum(self):
+        return self._maximum
+
+    def setMaximum(self, maximum):
+        assert isinstance(maximum, int)
+        self._maximum = maximum
+
+    def _valueInRange(self, value):
+        if value >= self.minimum() and value <= self.maximum():
+            return True
+        else:
+            return False
+
+
+@lru_cache(maxsize=None)
+def number_widget_for(cls: type):
+    extra_args = {}
+    # Set sensible defaults for interfaces
+    if cls in [jc.Double, jc.Float, jc.BigDecimal]:
+        parent = FloatSpinBox
+        interval = numeric_bounds(JClass(cls))
+        if interval[0]:
+            extra_args["min"] = interval[0]
+        if interval[1]:
+            extra_args["max"] = interval[1]
+    elif cls in [jc.Short, jc.Byte, jc.Integer]:
+        parent = SpinBox
+        interval = numeric_bounds(JClass(cls))
+        if interval[0]:
+            extra_args["min"] = interval[0]
+        if interval[1]:
+            extra_args["max"] = interval[1]
+    elif cls in [jc.Long, jc.BigInteger]:
+        parent = BigIntSpinbox
+        interval = numeric_bounds(JClass(cls))
+        if interval[0]:
+            extra_args["min"] = interval[0]
+        if interval[1]:
+            extra_args["max"] = interval[1]
+
+    # Define the new widget
+    if isinstance(parent, Widget):
+
+        class SubWidget(parent):
+            def __init__(self, **kwargs):
+                for k, v in extra_args.items():
+                    kwargs.setdefault(k, v)
+                super().__init__(**kwargs)
+
+        return SubWidget
+    else:
+        return parent
 
 
 class MutableOutputWidget(Container):
