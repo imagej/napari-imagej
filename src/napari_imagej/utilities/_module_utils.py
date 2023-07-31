@@ -19,15 +19,7 @@ from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
-from scyjava import (
-    JavaIterable,
-    JavaList,
-    JavaMap,
-    JavaSet,
-    is_arraylike,
-    isjava,
-    jstacktrace,
-)
+from scyjava import JavaIterable, JavaList, JavaMap, JavaSet, is_arraylike, jstacktrace
 
 from napari_imagej.java import ij, jc
 from napari_imagej.types.type_conversions import type_hint_for
@@ -397,7 +389,7 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
     if value is None:
         return
     try:
-        py_value = ij().py.from_java(value) if isjava(value) else value
+        py_value = ij().py.from_java(value)
         if isinstance(py_value, JavaMap):
             py_value = dict(py_value)
         elif isinstance(py_value, JavaSet):

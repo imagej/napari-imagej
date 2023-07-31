@@ -45,7 +45,7 @@ dependencies = [
     "numpy",
     "pandas",
     "pyimagej >= 1.4.1",
-    "scyjava >= 1.8.1",
+    "scyjava >= 1.9.1",
     # Version rules to avoid problems
     "qtconsole != 5.4.2", # https://github.com/napari/napari/issues/5700
     "typing_extensions != 4.6.0", # https://github.com/pydantic/pydantic/issues/5821
