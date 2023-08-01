@@ -65,7 +65,8 @@ def test_recommended_version(ij):
     # Save old recommended versions
     import napari_imagej.java
 
-    existing = napari_imagej.java.recommended_versions
+    existing_recommendations = napari_imagej.java.recommended_versions
+    existing_warnings = validate_imagej(ij)
     napari_imagej.java.recommended_versions = {"org.scijava:scijava-common": "999.0.0"}
 
     # Validate ImageJ - capture lower-than-recommended version
@@ -81,4 +82,5 @@ def test_recommended_version(ij):
     )
 
     # restore recommended versions
-    napari_imagej.java.recommended_versions = existing
+    napari_imagej.java.recommended_versions = existing_recommendations
+    napari_imagej.java._init_warnings = existing_warnings
