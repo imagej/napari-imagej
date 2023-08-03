@@ -21,7 +21,7 @@ from scyjava import config, get_version, is_version_at_least, jimport, jvm_start
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
 
-# -- Constants --
+# -- Constants -- #
 
 minimum_versions = {
     "io.scif:scifio": "0.45.0",
@@ -39,7 +39,6 @@ minimum_versions = {
 
 _ij = None
 
-
 def ij():
     if _ij is None:
         raise Exception(
@@ -47,10 +46,11 @@ def ij():
         )
     return _ij
 
+# -- Public functions -- #
 
 def init_ij() -> "jc.ImageJ":
     """
-    Creates the ImageJ instance
+    Create an ImageJ2 gateway.
     """
     global _ij
     if _ij:
@@ -87,10 +87,11 @@ def init_ij() -> "jc.ImageJ":
 
     return _ij
 
+# -- Private functions -- #
 
 def _configure_imagej() -> Dict[str, Any]:
     """
-    Configures scyjava and pyimagej.
+    Configure scyjava and pyimagej.
     This function returns the settings that must be passed in the
     actual initialization call.
 
@@ -115,7 +116,7 @@ def _configure_imagej() -> Dict[str, Any]:
 
 def _validate_imagej():
     """
-    Helper function to ensure minimum requirements on java component versions
+    Ensure minimum requirements on java component versions are met.
     """
     # If we want to require a minimum version for a java component, we need to
     # be able to find our current version. We do that by querying a Java class
