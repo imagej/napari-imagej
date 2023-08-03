@@ -4,10 +4,10 @@ from re import match
 
 import numpy as np
 from napari.layers import Labels, Tracks
-from scyjava import Priority
+from scyjava import JavaClasses, Priority
 
 from napari_imagej import settings
-from napari_imagej.java import JavaClasses, ij
+from napari_imagej.java import ij
 from napari_imagej.types.converters import java_to_py_converter
 
 
@@ -130,39 +130,39 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
 class TrackMateClasses(JavaClasses):
     # TrackMate Types
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def BranchTableView(self):
         return "fiji.plugin.trackmate.visualization.table.BranchTableView"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ConvexBranchesDecomposition(self):
         return "fiji.plugin.trackmate.graph.ConvexBranchesDecomposition"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def LabelImgExporter(self):
         return "fiji.plugin.trackmate.action.LabelImgExporter"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def Model(self):
         return "fiji.plugin.trackmate.Model"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def Spot(self):
         return "fiji.plugin.trackmate.Spot"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def SpotOverlay(self):
         return "fiji.plugin.trackmate.visualization.hyperstack.SpotOverlay"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def TMUtils(self):
         return "fiji.plugin.trackmate.util.TMUtils"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def TrackMate(self):
         return "fiji.plugin.trackmate.TrackMate"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def TrackOverlay(self):
         return "fiji.plugin.trackmate.visualization.hyperstack.TrackOverlay"
 
