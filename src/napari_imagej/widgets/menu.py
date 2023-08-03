@@ -13,8 +13,8 @@ from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QWidget
 from scyjava import is_arraylike
 
+from napari_imagej import nij
 from napari_imagej import settings
-from napari_imagej.java import ij
 from napari_imagej.resources import resource_path
 from napari_imagej.utilities.event_subscribers import UIShownListener
 from napari_imagej.utilities.events import subscribe, unsubscribe
@@ -54,20 +54,20 @@ class NapariImageJMenu(QWidget):
         if settings.headless():
             self.gui_button.clicked.connect(self.gui_button.disable_popup)
         else:
-            # NB We need to call ij().ui().showUI() on the GUI thread.
+            # NB We need to call nij.ij.ui().showUI() on the GUI thread.
             # TODO: Use PyImageJ functionality
             # see https://github.com/imagej/pyimagej/pull/260
             def show_ui():
-                if ij().ui().isVisible():
-                    ij().thread().queue(
-                        lambda: ij()
+                if nij.ij.ui().isVisible():
+                    nij.ij.thread().queue(
+                        lambda: nij.ij
                         .ui()
                         .getDefaultUI()
                         .getApplicationFrame()
                         .setVisible(True)
                     )
                 else:
-                    ij().thread().queue(lambda: ij().ui().showUI())
+                    nij.ij.thread().queue(lambda: nij.ij.ui().showUI())
 
             self.gui_button.clicked.connect(show_ui)
 
@@ -84,12 +84,12 @@ class NapariImageJMenu(QWidget):
 
         # Subscribe UIShownListener
         self.subscriber = UIShownListener()
-        subscribe(ij(), self.subscriber)
+        subscribe(nij.ij, self.subscriber)
 
     def __del__(self):
         # Unsubscribe UIShownListener
         if self.subscriber:
-            unsubscribe(ij(), self.subscriber)
+            unsubscribe(nij.ij, self.subscriber)
 
 
 class IJMenuButton(QPushButton):
@@ -162,7 +162,7 @@ class ToIJButton(IJMenuButton):
         if layer:
             # Queue UI call on the EDT
             # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
-            ij().thread().queue(lambda: ij().ui().show(ij().py.to_java(layer)))
+            nij.ij.thread().queue(lambda: nij.ij.ui().show(nij.ij.py.to_java(layer)))
         else:
             self.handle_no_choices()
 
@@ -188,20 +188,20 @@ class FromIJButton(IJMenuButton):
         return QColoredSVGIcon(resource_path("import"))
 
     def _get_objects(self, t):
-        compatibleInputs = ij().convert().getCompatibleInputs(t)
-        compatibleInputs.addAll(ij().object().getObjects(t))
+        compatibleInputs = nij.ij.convert().getCompatibleInputs(t)
+        compatibleInputs.addAll(nij.ij.object().getObjects(t))
         return list(compatibleInputs)
 
     def get_active_layer(self) -> None:
         # HACK: Sync ImagePlus before transferring
         # This code can be removed once
         # https://github.com/imagej/imagej-legacy/issues/286 is solved.
-        if ij().legacy and ij().legacy.isActive():
-            current_image_plus = ij().WindowManager.getCurrentImage()
+        if nij.ij.legacy and nij.ij.legacy.isActive():
+            current_image_plus = nij.ij.WindowManager.getCurrentImage()
             if current_image_plus is not None:
-                ij().py.sync_image(current_image_plus)
+                nij.ij.py.sync_image(current_image_plus)
         # Get the active view from the active image display
-        ids = ij().get("net.imagej.display.ImageDisplayService")
+        ids = nij.ij.get("net.imagej.display.ImageDisplayService")
         # TODO: simplify to no-args once
         # https://github.com/imagej/imagej-legacy/pull/287 is merged.
         view = ids.getActiveDatasetView(ids.getActiveImageDisplay())
@@ -212,7 +212,7 @@ class FromIJButton(IJMenuButton):
 
     def _add_layer(self, view):
         # Convert the object into Python
-        py_image = ij().py.from_java(view)
+        py_image = nij.ij.py.from_java(view)
         # Create and add the layer
         if isinstance(py_image, Layer):
             self.viewer.add_layer(py_image)
@@ -227,7 +227,7 @@ class FromIJButton(IJMenuButton):
                             self.viewer.add_layer(itm)
         # Other
         elif is_arraylike(py_image):
-            name = ij().object().getName(view)
+            name = nij.ij.object().getName(view)
             self.viewer.add_image(data=py_image, name=name)
         else:
             raise ValueError(f"{view} cannot be displayed in napari!")

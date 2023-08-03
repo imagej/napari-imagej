@@ -9,9 +9,6 @@ on:
       - main
     tags:
       - "*-[0-9]+.*"
-  pull_request:
-    branches:
-      - main
   
 env:
   NAPARI_IMAGEJ_TEST_TIMEOUT: 60000

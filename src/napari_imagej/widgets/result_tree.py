@@ -9,7 +9,8 @@ from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtWidgets import QAction, QMenu, QTreeWidget, QTreeWidgetItem
 from scyjava import Priority
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.widget_utils import python_actions_for
 
@@ -53,11 +54,11 @@ class SearcherTreeItem(QTreeWidgetItem):
         :param expanded: Indicates whether this SearcherTreeItem should start expanded
         """
         super().__init__()
-        self.title = ij().py.from_java(searcher.title())
+        self.title = nij.ij.py.from_java(searcher.title())
         self._searcher = searcher
         # Finding the priority is tricky - Searchers don't know their priority
         # To find it we have to ask the pluginService.
-        plugin_info = ij().plugin().getPlugin(searcher.getClass())
+        plugin_info = nij.ij.plugin().getPlugin(searcher.getClass())
         self.priority = plugin_info.getPriority() if plugin_info else priority
 
         # Set QtPy properties
@@ -202,14 +203,14 @@ class SearchResultTree(QTreeWidget):
         if column == 0:
             if isinstance(item, SearcherTreeItem):
                 checked = item.checkState(0) == Qt.Checked
-                ij().get("org.scijava.search.SearchService").setEnabled(
+                nij.ij.get("org.scijava.search.SearchService").setEnabled(
                     item._searcher, checked
                 )
                 if not checked:
                     item.update([])
 
     def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
-        name: str = ij().py.from_java(searcher.title())
+        name: str = nij.ij.py.from_java(searcher.title())
         matches = self.findItems(name, Qt.MatchStartsWith, 0)
         if len(matches) == 0:
             return None

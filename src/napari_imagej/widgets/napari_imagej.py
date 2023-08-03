@@ -1,8 +1,8 @@
 """
-This module contains ImageJWidget, the top-level QWidget enabling
+This module contains NapariImageJWidget, the top-level QWidget enabling
 graphical access to ImageJ functionality.
 
-This Widget is made accessible to napari through napari.yml
+This widget is made accessible to napari through napari.yml.
 """
 from traceback import format_exception
 from typing import Callable
@@ -15,7 +15,8 @@ from qtpy.QtCore import QThread, Signal, Slot
 from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
 from scyjava import jstacktrace, when_jvm_stops
 
-from napari_imagej.java import ij, init_ij, jc
+from napari_imagej import nij
+from napari_imagej.java import init_ij, jc
 from napari_imagej.utilities._module_utils import _non_layer_widget
 from napari_imagej.utilities.event_subscribers import (
     NapariEventSubscriber,
@@ -183,7 +184,7 @@ class NapariImageJWidget(QWidget):
         ):
             pm.close(module)
         if isinstance(event, jc.ModuleErroredEvent):
-            if not ij().ui().isVisible():
+            if not nij.ij.ui().isVisible():
                 # TODO Use napari's error handler once it works better
                 # see https://github.com/imagej/napari-imagej/issues/234
                 module_title = str(module.getInfo().getTitle())
@@ -233,8 +234,8 @@ class ImageJInitializer(QThread):
         Functionality partitioned into functions by subwidget.
         """
         try:
-            # Initialize ImageJ
-            init_ij()
+            # Block until ImageJ2 is initialized.
+            ij = nij.ij
             # Finalize the menu
             self.widget.menu.finalize()
             # Finalize the search bar
@@ -271,19 +272,19 @@ class ImageJInitializer(QThread):
             [NapariImageJSearchListener(self.widget.result_tree.process)]
         )
         self.widget.result_tree._searchOperation = (
-            ij().get("org.scijava.search.SearchService").search(listener_arr)
+            nij.ij.get("org.scijava.search.SearchService").search(listener_arr)
         )
         # Make sure that the search stops when we close napari
         # Otherwise the Java threads like to continue
         when_jvm_stops(self.widget.result_tree._searchOperation.terminate)
 
         # Add SearcherTreeItems for each Searcher
-        searchers = ij().plugin().createInstancesOfType(jc.Searcher)
+        searchers = nij.ij.plugin().createInstancesOfType(jc.Searcher)
         for searcher in searchers:
             self.widget.result_tree.insert.emit(
                 SearcherTreeItem(
                     searcher,
-                    checked=ij()
+                    checked=nij.ij
                     .get("org.scijava.search.SearchService")
                     .enabled(searcher),
                     expanded=False,
@@ -291,20 +292,20 @@ class ImageJInitializer(QThread):
             )
 
     def _finalize_info_bar(self):
-        self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")
+        self.widget.info_box.version_bar.setText(f"ImageJ2 v{nij.ij.getVersion()}")
 
     def _finalize_subscribers(self):
         # Progress bar subscriber
         self.progress_listener = ProgressBarListener(self.widget.progress_handler)
-        subscribe(ij(), self.progress_listener)
+        subscribe(nij.ij, self.progress_listener)
         # Debug printer subscriber
         if is_debug():
             self.event_listener = NapariEventSubscriber()
-            subscribe(ij(), self.event_listener)
+            subscribe(nij.ij, self.event_listener)
 
     def _clean_subscribers(self):
         # Unsubscribe listeners
         if hasattr(self, "progress_listener"):
-            unsubscribe(ij(), self.progress_listener)
+            unsubscribe(nij.ij, self.progress_listener)
         if hasattr(self, "event_listener"):
-            unsubscribe(ij(), self.event_listener)
+            unsubscribe(nij.ij, self.event_listener)
