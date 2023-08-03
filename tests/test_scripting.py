@@ -3,8 +3,8 @@ A module testing script discovery and wrapping
 """
 
 from magicgui import magicgui
-
 from scyjava import JavaClasses
+
 from napari_imagej.utilities._module_utils import functionify_module_execution
 
 

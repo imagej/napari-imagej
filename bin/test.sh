@@ -6,7 +6,7 @@ cd "$dir/.."
 modes="
 | Testing ImageJ2 + original ImageJ |NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=TRUE
 |    Testing ImageJ2 standalone     |NAPARI_IMAGEJ_INCLUDE_IMAGEJ_LEGACY=FALSE
-|  Testing Fiji Is Just ImageJ(2)   |NAPARI_IMAGEJ_IMAGEJ_DIRECTORY_OR_ENDPOINT=sc.fiji:fiji:2.13.1
+|  Testing Fiji Is Just ImageJ(2)   |NAPARI_IMAGEJ_IMAGEJ_DIRECTORY_OR_ENDPOINT=sc.fiji:fiji:2.15.0
 "
 
 echo "$modes" | while read mode

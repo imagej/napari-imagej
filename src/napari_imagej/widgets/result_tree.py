@@ -13,7 +13,8 @@ from qtpy.QtGui import QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import QAction, QMenu, QTreeView
 from scyjava import Priority
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
 
@@ -85,13 +86,13 @@ class SearcherItem(QStandardItem):
 
         # Finding the priority is tricky - Searchers don't know their priority
         # To find it we have to ask the pluginService.
-        plugin_info = ij().plugin().getPlugin(searcher.getClass())
+        plugin_info = nij.ij.plugin().getPlugin(searcher.getClass())
         self.priority = plugin_info.getPriority() if plugin_info else Priority.NORMAL
 
         # Set QtPy properties
         self.setEditable(False)
         self.setFlags(self.flags() | Qt.ItemIsUserCheckable)
-        checked = ij().get("org.scijava.search.SearchService").enabled(searcher)
+        checked = nij.ij.get("org.scijava.search.SearchService").enabled(searcher)
         self.setCheckState(Qt.Checked if checked else Qt.Unchecked)
 
     def __lt__(self, other):
@@ -172,7 +173,7 @@ class SearchResultModel(QStandardItemModel):
     def _detect_check_change(self, item):
         if isinstance(item, SearcherItem):
             checked = item.checkState() == Qt.Checked
-            ij().get("org.scijava.search.SearchService").setEnabled(
+            nij.ij.get("org.scijava.search.SearchService").setEnabled(
                 item.searcher, checked
             )
             if not checked and item.hasChildren():

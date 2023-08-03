@@ -4,8 +4,8 @@ A module testing napari_imagej.widgets.result_runner
 
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
-
 from scyjava import JavaClasses
+
 from napari_imagej.widgets.layouts import QFlowLayout
 from napari_imagej.widgets.result_runner import ResultRunner
 

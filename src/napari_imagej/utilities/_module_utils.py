@@ -22,7 +22,8 @@ from napari.utils._magicgui import get_layers
 from pandas import DataFrame
 from scyjava import JavaIterable, JavaList, JavaMap, JavaSet, is_arraylike, jstacktrace
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
@@ -43,7 +44,7 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
     :return: The list of preprocessors that have not yet run.
     """
 
-    preprocessors = ij().plugin().createInstancesOfType(jc.PreprocessorPlugin)
+    preprocessors = nij.ij.plugin().createInstancesOfType(jc.PreprocessorPlugin)
     for i, preprocessor in enumerate(preprocessors):
         # if preprocessor is an InputHarvester, stop and return the remaining list
         if isinstance(preprocessor, jc.InputHarvester):
@@ -190,7 +191,7 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
         # Parameter uses an internal type to denote a required parameter.
         return _empty
     try:
-        return ij().py.from_java(default)
+        return nij.ij.py.from_java(default)
     except Exception:
         return default
 
@@ -315,7 +316,7 @@ def _pure_module_outputs(
             continue
 
         _handle_output(
-            ij().py.from_java(output_entry.getValue()),
+            nij.ij.py.from_java(output_entry.getValue()),
             _devise_layer_name(info, name),
             info,
             layer_outputs,
@@ -359,7 +360,7 @@ def _add_napari_metadata(
     info: "jc.ModuleInfo",
     unresolved_inputs: List["jc.ModuleItem"],
 ) -> None:
-    module_name = ij().py.from_java(info.getTitle())
+    module_name = nij.ij.py.from_java(info.getTitle())
     execute_module.__doc__ = f"Invoke ImageJ2's {module_name}"
     execute_module.__name__ = module_name
     execute_module.__qualname__ = module_name
@@ -390,7 +391,7 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
     if value is None:
         return
     try:
-        py_value = ij().py.from_java(value)
+        py_value = nij.ij.py.from_java(value)
         if isinstance(py_value, JavaMap):
             py_value = dict(py_value)
         elif isinstance(py_value, JavaSet):
@@ -409,7 +410,7 @@ def _add_scijava_metadata(
 ) -> Dict[str, Dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
-        key = ij().py.from_java(input.getName())
+        key = nij.ij.py.from_java(input.getName())
         param_map = {}
         _add_param_metadata(param_map, "max", input.getMaximumValue())
         _add_param_metadata(param_map, "min", input.getMinimumValue())
@@ -440,7 +441,7 @@ def _get_postprocessors():
     on SciJava Modules from napari-imagej
     """
     # Discover all postprocessors
-    postprocessors = ij().plugin().createInstancesOfType(jc.PostprocessorPlugin)
+    postprocessors = nij.ij.plugin().createInstancesOfType(jc.PostprocessorPlugin)
 
     problematic_postprocessors = (
         # HACK: This particular postprocessor is trying to create a Display
@@ -499,7 +500,7 @@ def functionify_module_execution(
             start_time = perf_counter()
 
             # Create user input map
-            resolved_java_args = ij().py.jargs(*user_resolved_inputs)
+            resolved_java_args = nij.ij.py.jargs(*user_resolved_inputs)
             input_map = jc.HashMap()
             for module_item, input in zip(unresolved_inputs, resolved_java_args):
                 input_map.put(module_item.getName(), input)
@@ -523,7 +524,7 @@ def functionify_module_execution(
             # before the module can update it through its own execution.
             pm.init_progress(module)
             # Run the module asynchronously using the ModuleService
-            ij().module().run(
+            nij.ij.module().run(
                 module,
                 remaining_preprocessors,
                 postprocessors,
@@ -653,7 +654,7 @@ class NapariPostProcessor(object):
             "display_results_in_new_window",
         )
         if display_externally is not None and len(widget_outputs) > 0:
-            name = "Result: " + ij().py.from_java(module.getInfo().getTitle())
+            name = "Result: " + nij.ij.py.from_java(module.getInfo().getTitle())
             self.output_handler(
                 {"data": widget_outputs, "name": name, "external": display_externally}
             )

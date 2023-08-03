@@ -6,8 +6,8 @@ import numpy as np
 from napari.layers import Labels, Tracks
 from scyjava import JavaClasses, Priority
 
-from napari_imagej import settings
-from napari_imagej.java import ij
+from napari_imagej import nij, settings
+from napari_imagej.java import NijJavaClasses
 from napari_imagej.types.converters import java_to_py_converter
 
 
@@ -36,7 +36,7 @@ def track_overlay_predicate(obj):
     if not trackmate_present():
         return False
     # TrackMate data is wrapped in ImageJ Rois - we need ImageJ Legacy
-    if not (ij().legacy and ij().legacy.isActive()):
+    if not (nij.ij.legacy and nij.ij.legacy.isActive()):
         return False
     # TrackMate data will be wrapped within a ROITree
     if not isinstance(obj, jc.ROITree):
@@ -106,7 +106,7 @@ def model_and_image_to_tracks(model: "jc.Model", imp: "jc.ImagePlus"):
     java_label_img = jc.LabelImgExporter.createLabelImagePlus(
         model, imp, False, False, False
     )
-    py_label_img = ij().py.from_java(java_label_img)
+    py_label_img = nij.ij.py.from_java(java_label_img)
     labels = Labels(data=py_label_img.data, name=rois_name)
 
     return (tracks, labels)
@@ -119,7 +119,7 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
     """
     Converts a TrackMate overlay into a napari Tracks layer
     """
-    trackmate_plugins = ij().object().getObjects(jc.TrackMate)
+    trackmate_plugins = nij.ij.object().getObjects(jc.TrackMate)
     if len(trackmate_plugins) == 0:
         raise IndexError("Expected a TrackMate instance, but there was none!")
     model: jc.Model = trackmate_plugins[-1].getModel()
@@ -127,7 +127,7 @@ def _trackMate_model_to_tracks(obj: "jc.ROITree"):
     return model_and_image_to_tracks(model, src_image)
 
 
-class TrackMateClasses(JavaClasses):
+class TrackMateClasses(NijJavaClasses):
     # TrackMate Types
 
     @JavaClasses.java_import

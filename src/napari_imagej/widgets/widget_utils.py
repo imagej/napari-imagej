@@ -22,7 +22,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.utilities._module_utils import (
     execute_function_modally,
     functionify_module_execution,
@@ -36,7 +37,7 @@ def python_actions_for(
 ):
     actions = []
     # Iterate over all available python actions
-    searchService = ij().get("org.scijava.search.SearchService")
+    searchService = nij.ij.get("org.scijava.search.SearchService")
     for action in searchService.actions(result):
         action_name = str(action.toString())
         # Add buttons for the java action
@@ -61,8 +62,8 @@ def _run_actions_for(
             return []
 
         if (
-            ij().legacy
-            and ij().legacy.isActive()
+            nij.ij.legacy
+            and nij.ij.legacy.isActive()
             and isinstance(moduleInfo, jc.LegacyCommandInfo)
         ):
             reply = QMessageBox.question(
@@ -76,10 +77,10 @@ def _run_actions_for(
                 QMessageBox.Yes | QMessageBox.No,
             )
             if reply == QMessageBox.Yes:
-                ij().thread().queue(lambda: ij().ui().showUI())
+                nij.ij.thread().queue(lambda: nij.ij.ui().showUI())
             return
 
-        module = ij().module().createModule(moduleInfo)
+        module = nij.ij.module().createModule(moduleInfo)
 
         # preprocess using napari GUI
         func, param_options = functionify_module_execution(
@@ -283,15 +284,15 @@ class DetailExportDialog(QDialog):
             img = self.img_container.combo.currentData()
             roi = self.roi_container.combo.currentData()
             # Convert the selections to Java equivalents
-            j_img = ij().py.to_java(
+            j_img = nij.ij.py.to_java(
                 img, dim_order=self.dims_container.provided_labels()
             )
             if roi:
-                j_img.getProperties().put("rois", ij().py.to_java(roi))
+                j_img.getProperties().put("rois", nij.ij.py.to_java(roi))
             # Show the resulting image
-            ij().ui().show(j_img)
+            nij.ij.ui().show(j_img)
 
-        ij().thread().queue(lambda: pass_to_ij())
+        nij.ij.thread().queue(lambda: pass_to_ij())
 
 
 @lru_cache

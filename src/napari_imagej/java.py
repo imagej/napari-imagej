@@ -4,8 +4,6 @@ A module encapsulating access to Java functionality.
 Notable functions included in the module:
     * init_ij()
         - used to create the ImageJ instance.
-    * ij()
-        - used to access the ImageJ instance.
 
 Notable fields included in the module:
     * jc
@@ -15,7 +13,7 @@ Notable fields included in the module:
 from typing import Any, Dict
 
 import imagej
-from scyjava import config, get_version, is_version_at_least, jimport, JavaClasses
+from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
 from napari_imagej.utilities.logging import log_debug
@@ -29,64 +27,49 @@ minimum_versions = {
     "net.imagej:imagej-ops": "0.49.0",
     "net.imglib2:imglib2-unsafe": "1.0.0",
     "net.imglib2:imglib2-imglyb": "1.1.0",
-    "org.scijava:scijava-common": "2.94.0",
+    "org.scijava:scijava-common": "2.95.0",
     "org.scijava:scijava-search": "2.0.2",
     "sc.fiji:TrackMate": "7.11.0",
 }
 
-# -- ImageJ API -- #
-
-_ij = None
-
-def ij():
-    if _ij is None:
-        raise Exception(
-            "The ImageJ instance has not yet been initialized! Please run init_ij()"
-        )
-    return _ij
-
 # -- Public functions -- #
+
 
 def init_ij() -> "jc.ImageJ":
     """
     Create an ImageJ2 gateway.
     """
-    global _ij
-    if _ij:
-        return _ij
     log_debug("Initializing ImageJ2")
-
-    # determine whether imagej is already running
-    imagej_already_initialized: bool = hasattr(imagej, "gateway") and imagej.gateway
 
     # -- CONFIGURATION -- #
 
-    # Configure napari-imagej
     from napari_imagej.types.converters import install_converters
 
     install_converters()
-
     log_debug("Completed JVM Configuration")
 
     # -- INITIALIZATION -- #
 
     # Launch ImageJ
-    if imagej_already_initialized:
-        _ij = imagej.gateway
-    else:
-        _ij = imagej.init(**_configure_imagej())
+    ij = (
+        imagej.gateway
+        if hasattr(imagej, "gateway") and imagej.gateway
+        else imagej.init(**_configure_imagej())
+    )
 
     # Log initialization
-    log_debug(f"Initialized at version {_ij.getVersion()}")
+    log_debug(f"Initialized at version {ij.getVersion()}")
 
     # -- VALIDATION -- #
 
     # Validate PyImageJ
-    _validate_imagej()
+    _validate_imagej(ij)
 
-    return _ij
+    return ij
+
 
 # -- Private functions -- #
+
 
 def _configure_imagej() -> Dict[str, Any]:
     """
@@ -113,7 +96,7 @@ def _configure_imagej() -> Dict[str, Any]:
     return init_settings
 
 
-def _validate_imagej():
+def _validate_imagej(ij: "jc.ImageJ"):
     """
     Ensure minimum requirements on java component versions are met.
     """
@@ -132,7 +115,7 @@ def _validate_imagej():
         "org.scijava:scijava-common": jc.Module,
         "org.scijava:scijava-search": jc.Searcher,
     }
-    component_requirements.update(_optional_requirements())
+    component_requirements.update(_optional_requirements(ij))
     # Find version that violate the minimum
     violations = []
     for component, cls in component_requirements.items():
@@ -154,11 +137,11 @@ def _validate_imagej():
         raise RuntimeError(failure_str)
 
 
-def _optional_requirements():
+def _optional_requirements(ij: "jc.ImageJ"):
     optionals = {}
     # Add additional minimum versions for legacy components
-    if _ij.legacy and _ij.legacy.isActive():
-        optionals["net.imagej:imagej-legacy"] = _ij.legacy.getClass()
+    if ij.legacy and ij.legacy.isActive():
+        optionals["net.imagej:imagej-legacy"] = ij.legacy.getClass()
     # Add additional minimum versions for fiji components
     try:
         optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
@@ -195,10 +178,6 @@ class NijJavaClasses(JavaClasses):
     @JavaClasses.java_import
     def Float(self):
         return "java.lang.Float"
-
-    @JavaClasses.java_import
-    def ImageJ(self):
-        return "net.imagej.ImageJ"
 
     @JavaClasses.java_import
     def Integer(self):
@@ -270,7 +249,7 @@ class NijJavaClasses(JavaClasses):
 
     @JavaClasses.java_import
     def ByteArrayOutputStream(self):
-        "java.io.ByteArrayOutputStream"
+        return "java.io.ByteArrayOutputStream"
 
     @JavaClasses.java_import
     def Date(self):
@@ -631,6 +610,10 @@ class NijJavaClasses(JavaClasses):
     @JavaClasses.java_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
+
+    @JavaClasses.java_import
+    def ImageJ(self):
+        return "net.imagej.ImageJ"
 
     @JavaClasses.java_import
     def ImgPlus(self):

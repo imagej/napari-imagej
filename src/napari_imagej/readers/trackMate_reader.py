@@ -7,7 +7,8 @@ import xml.etree.ElementTree as ET
 from napari.utils import progress
 from scyjava import jimport
 
-from napari_imagej.java import ij, init_ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.types.converters.trackmate import (
     model_and_image_to_tracks,
     trackmate_present,
@@ -40,7 +41,7 @@ def napari_get_reader(path):
 
 def reader_function(path):
     pbr = progress(total=4, desc="Importing TrackMate XML: Starting JVM")
-    init_ij()
+    ij = nij.ij
     TmXMLReader = jimport("fiji.plugin.trackmate.io.TmXmlReader")
     pbr.update()
 
@@ -51,7 +52,7 @@ def reader_function(path):
     pbr.update()
 
     pbr.set_description("Importing TrackMate XML: Converting Image")
-    py_imp = ij().py.from_java(imp)
+    py_imp = ij.py.from_java(imp)
     pbr.update()
 
     pbr.set_description("Importing TrackMate XML: Converting Tracks and ROIs")

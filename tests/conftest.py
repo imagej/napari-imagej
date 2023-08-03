@@ -9,8 +9,7 @@ from typing import Callable, Generator
 import pytest
 from napari import Viewer
 
-from napari_imagej import settings
-from napari_imagej.java import init_ij
+from napari_imagej import nij, settings
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget
 
@@ -48,10 +47,10 @@ def ij():
     # if we don't add this.
     if sys.platform == "darwin":
         viewer = Viewer()
-        ij = init_ij()
+        ij = nij.ij
         viewer.close()
     else:
-        ij = init_ij()
+        ij = nij.ij
 
     yield ij
 
@@ -92,7 +91,7 @@ def gui_widget(viewer) -> Generator[NapariImageJMenu, None, None]:
     widget: NapariImageJMenu = NapariImageJMenu(viewer)
 
     # Wait for ImageJ initialization
-    init_ij()
+    _ = nij.ij
 
     # Finalize widget
     widget.finalize()

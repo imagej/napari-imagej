@@ -4,10 +4,10 @@ A module containing testing utilities
 
 from typing import List
 
-from napari_imagej.java import NijJavaClasses
 from jpype import JImplements, JOverride
-
 from scyjava import JavaClasses
+
+from napari_imagej.java import NijJavaClasses
 
 
 class JavaClassesTest(NijJavaClasses):

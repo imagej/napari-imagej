@@ -6,8 +6,8 @@ from typing import Tuple
 
 import numpy as np
 import pytest
-from scyjava import JavaClasses
 from napari.layers import Labels, Tracks
+from scyjava import JavaClasses
 
 from napari_imagej import settings
 from napari_imagej.types.converters.trackmate import TrackMateClasses, trackmate_present
