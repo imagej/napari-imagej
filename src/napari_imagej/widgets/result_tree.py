@@ -3,11 +3,13 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
+import tempfile
+from functools import lru_cache
+from typing import Dict, List
 
-from typing import List, Optional
-
-from qtpy.QtCore import Qt, Signal, Slot
-from qtpy.QtWidgets import QAction, QMenu, QTreeWidget, QTreeWidgetItem
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
+from qtpy.QtWidgets import QAction, QMenu, QTreeView
 from scyjava import Priority
 
 from napari_imagej.java import ij, jc
@@ -15,141 +17,52 @@ from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.widget_utils import python_actions_for
 
 
-class SearchResultTreeItem(QTreeWidgetItem):
-    """
-    A QTreeWidgetItem wrapping a org.scijava.search.SearchResult
-    Within a QTreeWidget, these items are designed to be LEAF items.
-    """
-
-    def __init__(self, result: "jc.SearchResult"):
-        super().__init__()
-        self.name = str(result.name())
-        self.result = result
-
-        # Set QtPy properties
-        self.setText(0, self.name)
-
-
-class SearcherTreeItem(QTreeWidgetItem):
-    """
-    A QTreeWidgetItem wrapping a org.scijava.search.Searcher
-    with a set of org.scijava.search.SearchResults
-
-    Within a QTreeWidget, these items are designed to be
-    NON-LEAF items containing SearchResultTreeItem children.
-    """
-
-    def __init__(
-        self,
-        searcher: "jc.Searcher",
-        checked: bool = True,
-        priority: float = Priority.LAST,
-        expanded: bool = False,
-    ):
-        """
-        Creates a new SearcherTreeItem
-        :param searcher: the backing SciJava Searcher
-        :param checked: Determines whether this SearcherTreeItem starts out checked.
-        :param priority: Determines the position of this Searcher in the tree
-        :param expanded: Indicates whether this SearcherTreeItem should start expanded
-        """
-        super().__init__()
-        self.title = ij().py.from_java(searcher.title())
-        self._searcher = searcher
-        # Finding the priority is tricky - Searchers don't know their priority
-        # To find it we have to ask the pluginService.
-        plugin_info = ij().plugin().getPlugin(searcher.getClass())
-        self.priority = plugin_info.getPriority() if plugin_info else priority
-
-        # Set QtPy properties
-        self.setText(0, self.title)
-        self.setFlags((self.flags() & ~Qt.ItemIsSelectable) | Qt.ItemIsUserCheckable)
-        self.setExpanded(expanded)
-        self.setCheckState(0, Qt.Checked if checked else Qt.Unchecked)
-
-    def __lt__(self, other):
-        """
-        Provides an ordering for SearcherTreeItems.
-        """
-        return self.priority > other.priority
-
-    def update(self, results: List[SearchResultTreeItem]):
-        """
-        Set the children of this node to results.
-        :param results: the future children of this node
-        """
-        self.takeChildren()
-        self.setExpanded(0 < len(results) < 10)
-        if self.checkState(0) == Qt.Checked:
-            self.setText(0, self.title + f" ({len(results)})")
-            if results and len(results):
-                self.addChildren(results)
-        else:
-            self.setText(0, self.title)
-
-
-class SearchResultTree(QTreeWidget):
-    # Signal used to update the children of this widget.
-    # NB the object passed in this signal's emissions will always be a
-    # org.scijava.search.SearchEvent in practice. BUT the signal requires
-    # a concrete type at instantiation time, and we don't want to delay
-    # the instantiation of this signal until we'd have that class. So,
-    # without a better option, we declare the type as object.
-    process = Signal(object)
-    insert = Signal(SearcherTreeItem)
+class SearcherTreeView(QTreeView):
     floatAbove = Signal()
 
-    def __init__(
-        self,
-        output_signal: Signal,
-    ):
+    def __init__(self, output_signal: Signal):
         super().__init__()
         self.output_signal = output_signal
 
-        # -- Configure GUI Options -- #
-        self.setColumnCount(1)
-        self.setHeaderLabels(["Search"])
-        self.setIndentation(self.indentation() // 2)
-
-        # Connect search result signal to slot
-        self.process.connect(self.update)
-
-        # Connect topLevelItem insertion signal to function
-        self.insert.connect(self._add_searcher_tree_item)
-        self.itemChanged.connect(self._register_item_change)
-
+        # Qt properties
+        self.setModel(SearchResultModel())
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._create_custom_menu)
+        self.model().rowsInserted.connect(self.expand_searchers)
 
     def search(self, text: str):
-        self._searchOperation.search(text)
+        """Convenience method for calling self.model().search()"""
+        self.model().search(text)
 
-    @Slot(SearcherTreeItem)
-    def _add_searcher_tree_item(self, item: SearcherTreeItem):
-        """
-        Slot designed for custom insertion of SearcherTreeItems
-        """
-        self.addTopLevelItem(item)
-        self.sortItems(0, Qt.AscendingOrder)
+    def expand_searchers(self, parent_idx, first: int, last: int):
+        # Searchers will have a null parent index
+        if parent_idx.row() != -1 or parent_idx.column() != -1:
+            return
+        for i in range(first, last + 1):
+            self.setExpanded(self.model().index(i, 0, parent_idx), True)
 
-    @Slot(object)
-    def update(self, event: "jc.SearchEvent"):
-        """
-        Update the search results using event
+    # -- QWidget Overrides -- #
 
-        :param event: The org.scijava.search.SearchResult asynchronously
-        returned by the org.scijava.search.SearchService
-        """
-        header = self._get_matching_item(event.searcher())
-        result_items = self._generate_result_items(event)
-        if header:
-            header.update(result_items)
-        else:
-            log_debug(f"Searcher {event.searcher()} not found!")
+    def keyPressEvent(self, event):
+        # Pressing the up arrow while at the top should go back to the search bar
+        if event.key() == Qt.Key_Up:
+            idx = self.currentIndex()
+            if idx.row() == 0 and not idx.parent().isValid():
+                self.selectionModel().clearSelection()
+                self.floatAbove.emit()
+        elif event.key() == Qt.Key_Return:
+            idx = self.currentIndex()
+            # Use the enter key to toggle Searchers
+            if not idx.parent().isValid():
+                self.setExpanded(idx, not self.isExpanded(idx))
+            # use the enter key like double clicking for Results
+            else:
+                self.doubleClicked.emit(idx)
+        super().keyPressEvent(event)
 
     def _create_custom_menu(self, pos):
-        item: QTreeWidgetItem = self.itemAt(pos)
-        if not isinstance(item, SearchResultTreeItem):
+        item = self.model().itemFromIndex(self.indexAt(pos))
+        if not isinstance(item, SearchResultItem):
             return
         menu: QMenu = QMenu(self)
 
@@ -160,76 +73,133 @@ class SearchResultTree(QTreeWidget):
 
         menu.exec_(self.mapToGlobal(pos))
 
-    # -- QWidget Overrides -- #
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            # Use the enter key to toggle Searchers
-            if self.currentItem().childCount() > 0:
-                self.currentItem().setExpanded(not self.currentItem().isExpanded())
-            # use the enter key like double clicking for Results
-            else:
-                self.itemDoubleClicked.emit(self.currentItem(), 0)
-        # Pressing the up arrow while at the top should go back to the search bar
-        elif event.key() == Qt.Key_Up and self.currentItem() is self.topLevelItem(0):
-            self.clearSelection()
-            self.floatAbove.emit()
-        # Pressing right on a searcher should either expand it or go to its first child
-        elif event.key() == Qt.Key_Right and self.currentItem().childCount() > 0:
-            if self.currentItem().isExpanded():
-                self.setCurrentItem(self.currentItem().child(0))
-            else:
-                self.currentItem().setExpanded(True)
-        elif event.key() == Qt.Key_Left:
-            # Pressing left on a searcher should close it
-            if self.currentItem().parent() is None:
-                self.currentItem().setExpanded(False)
-            # Pressing left on a result should go to the searcher
-            else:
-                self.setCurrentItem(self.currentItem().parent())
+class SearcherItem(QStandardItem):
+    def __init__(
+        self,
+        searcher: "jc.Searcher",
+    ):
+        super().__init__(str(searcher.title()))
+        self.searcher = searcher
+
+        # Finding the priority is tricky - Searchers don't know their priority
+        # To find it we have to ask the pluginService.
+        plugin_info = ij().plugin().getPlugin(searcher.getClass())
+        self.priority = plugin_info.getPriority() if plugin_info else Priority.NORMAL
+
+        # Set QtPy properties
+        self.setEditable(False)
+        self.setFlags((self.flags() & ~Qt.ItemIsSelectable) | Qt.ItemIsUserCheckable)
+        checked = ij().get("org.scijava.search.SearchService").enabled(searcher)
+        self.setCheckState(Qt.Checked if checked else Qt.Unchecked)
+
+    def __lt__(self, other):
+        """
+        Provides an ordering for SearcherTreeItems.
+        """
+        return self.priority > other.priority
+
+
+class SearchResultItem(QStandardItem):
+    def __init__(self, result: "jc.SearchResult"):
+        super().__init__(str(result.name()))
+        self.result = result
+
+        # Set QtPy properties
+        self.setEditable(False)
+        if icon := getIcon(result.iconPath()):
+            self.setIcon(icon)
+
+
+@lru_cache
+def getIcon(icon_path):
+    # Ignore falsy paths
+    if not icon_path:
+        return
+    try:
+        # It's tricky to extract files from JARs. So let's get the data as a stream,
+        # write it to a temporary file, and then use THAT file for the icon.
+        stream = jc.File.class_.getResourceAsStream(icon_path)
+        with tempfile.NamedTemporaryFile() as tmp:
+            file = jc.File(ij().py.to_java(tmp.name))
+            jc.Files.copy(stream, file.toPath(), jc.StandardCopyOption.REPLACE_EXISTING)
+            return QIcon(tmp.name)
+    except Exception as e:
+        log_debug(e)
+
+
+class SearchResultModel(QStandardItemModel):
+    insert_searcher: Signal = Signal(object)
+    process: Signal = Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self.searchers: Dict["jc.Searcher", SearcherItem] = {}
+        self.insert_searcher.connect(self.register_searcher)
+        self.process.connect(self.handle_search_event)
+
+        self.setHorizontalHeaderLabels(["Search"])
+        self.itemChanged.connect(self._detect_check_change)
+        self.rowsInserted.connect(self._update_searcher_title)
+        self.rowsRemoved.connect(self._update_searcher_title)
+
+    def search(self, text: str):
+        self._searchOperation.search(text)
+
+    def register_searcher(self, searcher: "jc.Searcher"):
+        if searcher not in self.searchers:
+            searcher_item: SearcherItem = SearcherItem(searcher)
+            self.searchers[str(searcher.title())] = searcher_item
+            self.invisibleRootItem().appendRow(searcher_item)
+
+    def handle_search_event(self, event: "jc.SearchEvent"):
+        searcher_name = str(event.searcher().title())
+        if searcher_name in self.searchers:
+            searcher_item = self.searchers[searcher_name]
+            # Clear all children
+            if searcher_item.hasChildren():
+                searcher_item.removeRows(0, searcher_item.rowCount())
+            # Add new children
+            result_items = self._generate_result_items(event)
+            searcher_item.appendRows(result_items)
+            # Update title
         else:
-            super().keyPressEvent(event)
-        self.itemClicked.emit(self.currentItem(), 0)
+            log_debug(f"Searcher {event.searcher()} not found!")
 
-    # -- Helper Functionality -- #
-    def _first_result(self) -> "jc.SearchResult":
-        for i in range(self.topLevelItemCount()):
-            searcher = self.topLevelItem(i)
-            if searcher.childCount() > 0:
-                return searcher.child(0).result
-        return None
+    def first_search_result(self) -> "jc.SearchResult":
+        root = self.invisibleRootItem()
+        for i in range(root.rowCount()):
+            child = root.child(i, 0)
+            if child.hasChildren():
+                return child.child(0, 0).result
 
-    def _register_item_change(self, item: QTreeWidgetItem, column: int):
-        if column == 0:
-            if isinstance(item, SearcherTreeItem):
-                checked = item.checkState(0) == Qt.Checked
-                ij().get("org.scijava.search.SearchService").setEnabled(
-                    item._searcher, checked
-                )
-                if not checked:
-                    item.update([])
-
-    def _get_matching_item(self, searcher: "jc.Searcher") -> Optional[SearcherTreeItem]:
-        name: str = ij().py.from_java(searcher.title())
-        matches = self.findItems(name, Qt.MatchStartsWith, 0)
-        if len(matches) == 0:
-            return None
-        elif len(matches) == 1:
-            return matches[0]
-        else:
-            raise ValueError(f"Multiple Search Result Items matching name {name}")
-
-    def _generate_result_items(
-        self, event: "jc.SearchEvent"
-    ) -> List[SearchResultTreeItem]:
+    def _generate_result_items(self, event: "jc.SearchEvent") -> List[SearchResultItem]:
         results = event.results()
         # Handle null results
         if not results:
             return []
-        # Handle empty searches
         # Return False for search errors
         if len(results) == 1:
             if str(results[0].name()) == "<error>":
                 log_debug(f"Failed Search: {str(results[0].properties().get(None))}")
                 return []
-        return [SearchResultTreeItem(r) for r in event.results()]
+        return [SearchResultItem(r) for r in event.results()]
+
+    def _detect_check_change(self, item):
+        if isinstance(item, SearcherItem):
+            checked = item.checkState() == Qt.Checked
+            ij().get("org.scijava.search.SearchService").setEnabled(
+                item.searcher, checked
+            )
+            if not checked and item.hasChildren():
+                item.removeRows(0, item.rowCount())
+
+    def _update_searcher_title(self, parent_idx, first: int, last: int):
+        item = self.itemFromIndex(parent_idx)
+        if isinstance(item, SearcherItem):
+            if item.hasChildren():
+                item.setData(
+                    f"{item.searcher.title()} ({item.rowCount()})", Qt.DisplayRole
+                )
+            else:
+                item.setData(str(item.searcher.title()), Qt.DisplayRole)
