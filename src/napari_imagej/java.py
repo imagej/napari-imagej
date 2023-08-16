@@ -299,20 +299,12 @@ class JavaClasses(object):
         return "java.io.File"
 
     @blocking_import
-    def Files(self):
-        return "java.nio.file.Files"
-
-    @blocking_import
     def HashMap(self):
         return "java.util.HashMap"
 
     @blocking_import
     def Path(self):
         return "java.nio.file.Path"
-
-    @blocking_import
-    def StandardCopyOption(self):
-        return "java.nio.file.StandardCopyOption"
 
     @blocking_import
     def Window(self):

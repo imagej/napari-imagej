@@ -1,10 +1,11 @@
+from functools import lru_cache
 from typing import List
 
 from magicgui import magicgui
 from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
-from qtpy.QtCore import Signal
-from qtpy.QtGui import QFontMetrics
+from qtpy.QtCore import QByteArray, Signal
+from qtpy.QtGui import QFontMetrics, QIcon, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -290,3 +291,22 @@ class DetailExportDialog(QDialog):
             ij().ui().show(j_img)
 
         ij().thread().queue(lambda: pass_to_ij())
+
+
+@lru_cache
+def _getIcon(icon_path):
+    # Ignore falsy paths
+    if not icon_path:
+        return
+    stream = jc.File.class_.getResourceAsStream(icon_path)
+    bytes_array = bytearray()
+    while True:
+        b = stream.read()
+        if b == -1:
+            break
+        bytes_array.append(b)
+
+    pixmap = QPixmap()
+    pixmap.loadFromData(QByteArray(bytes_array))
+
+    return QIcon(pixmap)

@@ -3,18 +3,16 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
-import tempfile
-from functools import lru_cache
 from typing import Dict, List
 
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
+from qtpy.QtGui import QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import QAction, QMenu, QTreeView
 from scyjava import Priority
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities.logging import log_debug
-from napari_imagej.widgets.widget_utils import python_actions_for
+from napari_imagej.widgets.widget_utils import _getIcon, python_actions_for
 
 
 class SearcherTreeView(QTreeView):
@@ -107,25 +105,8 @@ class SearchResultItem(QStandardItem):
 
         # Set QtPy properties
         self.setEditable(False)
-        if icon := getIcon(result.iconPath()):
+        if icon := _getIcon(result.iconPath()):
             self.setIcon(icon)
-
-
-@lru_cache
-def getIcon(icon_path):
-    # Ignore falsy paths
-    if not icon_path:
-        return
-    try:
-        # It's tricky to extract files from JARs. So let's get the data as a stream,
-        # write it to a temporary file, and then use THAT file for the icon.
-        stream = jc.File.class_.getResourceAsStream(icon_path)
-        with tempfile.NamedTemporaryFile() as tmp:
-            file = jc.File(ij().py.to_java(tmp.name))
-            jc.Files.copy(stream, file.toPath(), jc.StandardCopyOption.REPLACE_EXISTING)
-            return QIcon(tmp.name)
-    except Exception as e:
-        log_debug(e)
 
 
 class SearchResultModel(QStandardItemModel):
