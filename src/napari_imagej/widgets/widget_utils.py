@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import List
 
+from jpype import JArray, JByte
 from magicgui import magicgui
 from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
@@ -299,14 +300,21 @@ def _getIcon(icon_path):
     if not icon_path:
         return
     stream = jc.File.class_.getResourceAsStream(icon_path)
-    bytes_array = bytearray()
+    # Ignore falsy streams
+    if not stream:
+        return
+    # Create a buffer to create the byte[]
+    buffer = jc.ByteArrayOutputStream()
+    foo = JArray(JByte)(1024)
     while True:
-        b = stream.read()
-        if b == -1:
+        length = stream.read(foo, 0, foo.length)
+        if length == -1:
             break
-        bytes_array.append(b)
-
+        buffer.write(foo, 0, length)
+    # Convert the byte[] into a bytearray
+    bytes_array = bytearray()
+    bytes_array.extend(buffer.toByteArray())
+    # Convert thte bytearray into a QIcon
     pixmap = QPixmap()
     pixmap.loadFromData(QByteArray(bytes_array))
-
     return QIcon(pixmap)
