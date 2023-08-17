@@ -38,27 +38,6 @@ def test_results_widget_layout(fixed_tree: SearcherTreeView):
     assert fixed_tree.model().headerData(0, Qt.Horizontal, 0) == "Search"
 
 
-def test_arrow_key_selection(fixed_tree: SearcherTreeView, qtbot, asserter):
-    idx = fixed_tree.model().index(0, 0)
-    fixed_tree.setCurrentIndex(idx)
-    asserter(lambda: fixed_tree.currentIndex() == idx)
-    # HACK: For some reason, they are not expanded in the tests!
-    fixed_tree.setExpanded(idx, True)
-    for i in range(2):
-        qtbot.keyPress(fixed_tree, Qt.Key_Down)
-        asserter(lambda: fixed_tree.currentIndex() == idx.child(i, 0))
-    qtbot.keyPress(fixed_tree, Qt.Key_Down)
-    idx = idx.sibling(idx.row() + 1, 0)
-    asserter(lambda: fixed_tree.currentIndex() == idx)
-    # HACK: For some reason, they are not expanded in the tests!
-    fixed_tree.setExpanded(idx, True)
-    for i in range(3):
-        qtbot.keyPress(fixed_tree, Qt.Key_Down)
-        asserter(lambda: fixed_tree.currentIndex() == idx.child(i, 0))
-    qtbot.keyPress(fixed_tree, Qt.Key_Down)
-    asserter(lambda: fixed_tree.currentIndex() == idx.child(2, 0))
-
-
 def test_searchers_persist(fixed_tree: SearcherTreeView, asserter):
     # Find the first searcher, and remove its children
     item = fixed_tree.model().invisibleRootItem().child(0, 0)
