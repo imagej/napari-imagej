@@ -3,6 +3,7 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
+
 from typing import Dict, List
 
 from qtpy.QtCore import Qt, Signal
@@ -87,7 +88,7 @@ class SearcherItem(QStandardItem):
 
         # Set QtPy properties
         self.setEditable(False)
-        self.setFlags((self.flags() & ~Qt.ItemIsSelectable) | Qt.ItemIsUserCheckable)
+        self.setFlags(self.flags() | Qt.ItemIsUserCheckable)
         checked = ij().get("org.scijava.search.SearchService").enabled(searcher)
         self.setCheckState(Qt.Checked if checked else Qt.Unchecked)
 

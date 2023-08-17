@@ -85,6 +85,7 @@ def test_searcherTreeItem_regression():
     assert (
         item.flags()
         == Qt.ItemIsUserCheckable
+        | Qt.ItemIsSelectable
         | Qt.ItemIsEnabled
         | Qt.ItemIsDragEnabled
         | Qt.ItemIsDropEnabled
