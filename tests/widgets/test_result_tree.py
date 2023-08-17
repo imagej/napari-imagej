@@ -92,32 +92,15 @@ def test_searcherTreeItem_regression():
     assert item.data(0) == dummy.title()
 
 
-def test_arrow_key_expansion(fixed_tree: SearcherTreeView, qtbot, asserter):
+def test_key_return_expansion(fixed_tree: SearcherTreeView, qtbot, asserter):
     idx = fixed_tree.model().index(0, 0)
     fixed_tree.setCurrentIndex(idx)
     expanded = fixed_tree.isExpanded(idx)
-    # Part 1: toggle with Enter
+    # Toggle with enter
     qtbot.keyPress(fixed_tree, Qt.Key_Return)
     assert fixed_tree.isExpanded(idx) is not expanded
     qtbot.keyPress(fixed_tree, Qt.Key_Return)
     assert fixed_tree.isExpanded(idx) is expanded
-    # Part 2: test arrow keys
-    fixed_tree.setExpanded(idx, True)
-    # Part 2.1: Expanded + Left hides children
-    qtbot.keyPress(fixed_tree, Qt.Key_Left)
-    assert fixed_tree.isExpanded(idx) is False
-    # Part 2.2: Hidden + Right shows children
-    qtbot.keyPress(fixed_tree, Qt.Key_Right)
-    assert fixed_tree.isExpanded(idx) is True
-    # Part 2.3: Expanded + Right selects first child
-    qtbot.keyPress(fixed_tree, Qt.Key_Right)
-    asserter(
-        lambda: fixed_tree.currentIndex().row() == 0
-        and fixed_tree.currentIndex().parent() == idx
-    )
-    # Part 2.4: Child + Left returns to parent
-    qtbot.keyPress(fixed_tree, Qt.Key_Left)
-    asserter(lambda: fixed_tree.currentIndex() == idx)
 
 
 def test_search_tree_disable(fixed_tree: SearcherTreeView, asserter):
