@@ -51,6 +51,11 @@ For technical details involved with contributing, please see [here](https://napa
 Distributed under the terms of the [BSD-2] license,
 "napari-imagej" is free and open source software.
 
+## Citing
+
+_napari-imagej: ImageJ ecosystem access from napari_, Nature Methods, 2023 Aug 18
+
+DOI: [10.1038/s41592-023-01990-0](https://doi.org/10.1038/s41592-023-01990-0)
 
 [Apache Software License 2.0]: https://www.apache.org/licenses/LICENSE-2.0
 [black]: https://github.com/psf/black
