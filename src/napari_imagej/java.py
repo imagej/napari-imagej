@@ -286,6 +286,10 @@ class JavaClasses(object):
         return "java.math.BigInteger"
 
     @blocking_import
+    def ByteArrayOutputStream(self):
+        return "java.io.ByteArrayOutputStream"
+
+    @blocking_import
     def Date(self):
         return "java.util.Date"
 

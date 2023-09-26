@@ -177,6 +177,9 @@ class DummySearchResult(object):
     def info(self):
         return self._info
 
+    def iconPath(self):
+        return None
+
 
 class DummyModuleInfo:
     """
