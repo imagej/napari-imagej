@@ -13,13 +13,14 @@ from numpy import ones
 from scyjava import Priority
 from xarray import DataArray
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
 from napari_imagej.utilities.logging import log_debug
 
 
 @java_to_py_converter(
-    predicate=lambda obj: ij().convert().supports(obj, jc.DatasetView),
+    predicate=lambda obj: nij.ij.convert().supports(obj, jc.DatasetView),
     priority=Priority.VERY_HIGH + 1,
 )
 def _java_image_to_image_layer(image: Any) -> Image:
@@ -33,9 +34,9 @@ def _java_image_to_image_layer(image: Any) -> Image:
     :return: a napari Image layer
     """
     # Construct a DatasetView from the Java image
-    view = ij().convert().convert(image, jc.DatasetView)
+    view = nij.ij.convert().convert(image, jc.DatasetView)
     # Construct an xarray from the DatasetView
-    xarr: DataArray = java_to_xarray(ij(), view.getData())
+    xarr: DataArray = java_to_xarray(nij.ij, view.getData())
     # Construct a map of Image layer parameters
     kwargs = dict(
         data=xarr,
@@ -59,7 +60,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     :return: a Dataset
     """
     # Construct a dataset from the data
-    dataset: "jc.Dataset" = ij().py.to_dataset(image.data, **kwargs)
+    dataset: "jc.Dataset" = nij.ij.py.to_dataset(image.data, **kwargs)
 
     # Clean up the axes
     axes = [
@@ -94,7 +95,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     properties = dataset.getProperties()
     for k, v in image.metadata.items():
         try:
-            properties.put(ij().py.to_java(k), ij().py.to_java(v))
+            properties.put(nij.ij.py.to_java(k), nij.ij.py.to_java(v))
         except Exception:
             log_debug(f"Could not add property ({k}, {v}) to dataset {dataset}:")
     return dataset
