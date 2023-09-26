@@ -35,6 +35,11 @@ jvm_command_line_arguments: str = ""
     Additional command line arguments to pass to the Java Virtual Machine (JVM).
     For example, "-Xmx4g" to allow Java to use up to 4 GB of memory.
     By default, no arguments are passed.
+
+display_imagej_initialization_warnings: bool = True
+    When napari-imagej encounters a warnable issue pertaining to Java components
+    it will display the warnings iff this flag is true.
+    Defaults to True.
 """
 
 import os
@@ -56,6 +61,7 @@ defaults = {
     "include_imagej_legacy": True,
     "enable_imagej_gui": True,
     "jvm_command_line_arguments": "",
+    "display_java_warnings": True,
 }
 
 # -- Configuration options --
@@ -65,6 +71,7 @@ imagej_base_directory: str = defaults["imagej_base_directory"]
 include_imagej_legacy: bool = defaults["include_imagej_legacy"]
 enable_imagej_gui: bool = defaults["enable_imagej_gui"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
+display_java_warnings: bool = defaults["display_java_warnings"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
 _is_macos = sys.platform == "darwin"
