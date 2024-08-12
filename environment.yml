@@ -18,9 +18,7 @@ name: napari-imagej
 channels:
   - conda-forge
 dependencies:
-  # Breaking change in 3.11.1 breaks napari - see
-  # https://github.com/napari/napari/issues/5705 for the fix
-  - python >= 3.8, <= 3.11.0
+  - python >= 3.8, < 3.12
   # Project depenencies
   - confuse
   - imglyb >= 2.1.0

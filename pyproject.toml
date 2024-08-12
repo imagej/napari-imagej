@@ -32,9 +32,7 @@ classifiers = [
 ]
 
 # NB: Keep this in sync with environment.yml AND dev-environment.yml!
-# Breaking change in 3.11.1 breaks napari - see
-# https://github.com/napari/napari/issues/5705 for the fix
-requires-python = ">=3.8, <=3.11.0"
+requires-python = ">=3.8, <3.12"
 dependencies = [
     "confuse",
     "imglyb >= 2.1.0",
