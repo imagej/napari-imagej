@@ -17,7 +17,6 @@
 name: napari-imagej-dev
 channels:
   - conda-forge
-  - defaults
 dependencies:
   # Breaking change in 3.11.1 breaks napari - see
   # https://github.com/napari/napari/issues/5705 for the fix
