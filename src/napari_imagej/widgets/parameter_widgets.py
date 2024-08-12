@@ -2,6 +2,7 @@
 A collection of QWidgets, each designed to conveniently harvest a particular input.
 They should align with a SciJava ModuleItem that satisfies some set of conditions.
 """
+
 import importlib
 from dataclasses import dataclass
 from functools import lru_cache

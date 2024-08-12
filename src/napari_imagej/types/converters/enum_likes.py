@@ -1,6 +1,7 @@
 """
 scyjava Converters for converting JavaEnumLikes into their java equivalents.
 """
+
 from napari_imagej.java import jc
 from napari_imagej.types.converters import py_to_java_converter
 from napari_imagej.types.enum_likes import OutOfBoundsFactory

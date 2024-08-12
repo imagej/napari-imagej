@@ -6,6 +6,7 @@ Notable functions included in the module:
         - finds the best widget (as a str) for a ModuleItem
         and corresponding python type
 """
+
 from typing import Callable, Dict, Optional, Union, get_args, get_origin
 
 from napari.layers import Image

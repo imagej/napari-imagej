@@ -1,6 +1,7 @@
 """
 A module containing functionality useful for widget testing
 """
+
 from typing import Optional
 
 from scyjava import Priority

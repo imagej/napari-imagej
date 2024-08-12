@@ -1,6 +1,7 @@
 """
 A display showing information relative to the napari-imagej widget
 """
+
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 

@@ -2,6 +2,7 @@
 Module containing various EventSubscribers used by
 napari-imagej functionality
 """
+
 from jpype import JImplements, JOverride
 from qtpy.QtCore import Signal
 

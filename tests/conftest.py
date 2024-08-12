@@ -1,6 +1,7 @@
 """
 A module containing pytest configuration and globally-used fixtures
 """
+
 import os
 import sys
 from typing import Callable, Generator

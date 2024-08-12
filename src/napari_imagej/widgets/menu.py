@@ -1,6 +1,7 @@
 """
 The top-level menu for the napari-imagej widget.
 """
+
 from pathlib import Path
 from typing import Iterable, Optional
 

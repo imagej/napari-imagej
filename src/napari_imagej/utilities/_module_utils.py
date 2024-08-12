@@ -10,6 +10,7 @@ There are a few functions that are designed for use by graphical widgets, namely
     * info_for(searchResult)
         - converts a SciJava SearchResult to a ModuleInfo
 """
+
 from inspect import Parameter, Signature, _empty, isclass, signature
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union

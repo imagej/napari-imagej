@@ -18,6 +18,7 @@ to enumerations of that JavaEnumLike, as done below.
 JavaEnumLikes are NOT intended for direct use. Instead, use enum_like() to obtain
 the correct JavaEnumLike for a Java enum-like!
 """
+
 from enum import Enum, auto
 from typing import List
 

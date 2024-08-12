@@ -16,6 +16,7 @@ Notable functions included in the module:
     * python_type_of()
         - determines an "equivalent" python type for a given SciJava ModuleItem
 """
+
 from typing import Callable, List, Optional, Tuple, Type
 
 from jpype import JObject

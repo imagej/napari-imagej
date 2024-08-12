@@ -1,6 +1,7 @@
 """
 A module containing useful functions for operating on python types
 """
+
 from napari_imagej.types import type_hints
 
 

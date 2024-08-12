@@ -2,6 +2,7 @@
 scyjava Converters for converting between ImageJ2 RealPointCollections
 and napari Points
 """
+
 import numpy as np
 from jpype import JArray, JDouble
 from napari.layers import Points

@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.types.converters.trackmate
 """
+
 from typing import Tuple
 
 import numpy as np

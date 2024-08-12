@@ -2,6 +2,7 @@
 scyjava Converters for converting between ImgLib2 ImgLabelings
 and napari Labels
 """
+
 from imagej.convert import imglabeling_to_labeling
 from labeling.Labeling import Labeling
 from napari.layers import Labels

@@ -1,6 +1,7 @@
 """
 A module testing napari-imagej settings
 """
+
 from scyjava import jimport
 
 from napari_imagej import settings

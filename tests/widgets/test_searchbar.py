@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.widgets.searchbar
 """
+
 import pytest
 from qtpy.QtWidgets import QHBoxLayout, QLineEdit
 

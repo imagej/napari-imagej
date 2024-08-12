@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.types.widget_mappings
 """
+
 from typing import Optional
 
 import magicgui

@@ -4,6 +4,7 @@ graphical access to ImageJ functionality.
 
 This Widget is made accessible to napari through napari.yml
 """
+
 from traceback import format_exception
 from typing import Callable
 

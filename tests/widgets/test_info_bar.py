@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.widgets.info_bar
 """
+
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout
 

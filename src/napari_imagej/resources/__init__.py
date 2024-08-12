@@ -1,6 +1,7 @@
 """
 A module used to help find napari-imagej widget resources
 """
+
 from pathlib import Path
 
 PATH = Path(__file__).parent.resolve()

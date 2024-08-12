@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.widgets.parameter_widgets
 """
+
 import importlib
 
 import napari

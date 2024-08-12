@@ -11,6 +11,7 @@ Notable fields included in the module:
     * jc
         - object whose fields are lazily-loaded Java Class instances.
 """
+
 from typing import Any, Callable, Dict
 
 import imagej

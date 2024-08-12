@@ -1,6 +1,7 @@
 """
 A module containing testing utilities
 """
+
 from typing import List
 
 from jpype import JImplements, JOverride

@@ -396,9 +396,11 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
 
     def provide_updated_values(values={}, title="", **kwargs):
         return {
-            name: new_value
-            if name == "imagej_directory_or_endpoint"
-            else settings.defaults[name]
+            name: (
+                new_value
+                if name == "imagej_directory_or_endpoint"
+                else settings.defaults[name]
+            )
             for name in values
         }
 

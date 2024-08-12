@@ -2,6 +2,7 @@
 scyjava Converters for converting between ImgLib2 RealMasks
 and napari Shapes
 """
+
 import numpy as np
 from jpype import JArray, JDouble
 from napari.layers import Shapes

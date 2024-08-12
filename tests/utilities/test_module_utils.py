@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.utilities._module_utils
 """
+
 import sys
 from collections import OrderedDict
 from inspect import Parameter, _empty, signature

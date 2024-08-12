@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.types.type_conversions
 """
+
 from typing import List
 
 import pytest

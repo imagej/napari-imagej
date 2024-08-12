@@ -1,6 +1,7 @@
 """
 A napari reader plugin for importing TrackMate data stored in XML
 """
+
 import xml.etree.ElementTree as ET
 
 from napari.utils import progress

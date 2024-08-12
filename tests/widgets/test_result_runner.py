@@ -1,6 +1,7 @@
 """
 A module testing napari_imagej.widgets.result_runner
 """
+
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 

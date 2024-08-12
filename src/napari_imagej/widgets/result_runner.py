@@ -4,6 +4,7 @@ A QWidget designed to run SciJava SearchResult functionality.
 Calls to ResultRunner.select(result) will generate a set of actions that operate
 on the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
+
 from typing import Callable, Dict, List, Union
 
 from napari import Viewer

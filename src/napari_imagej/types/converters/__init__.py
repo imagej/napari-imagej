@@ -9,6 +9,7 @@ Notable functions included in the module:
     * install_converters()
         - used to add the napari-imagej Converters to scyjava's conversion framework.
 """
+
 import pkgutil
 from importlib.util import module_from_spec
 from typing import Any, Callable, List

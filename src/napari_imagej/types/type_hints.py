@@ -9,6 +9,7 @@ in a programmatic way. Those types should be declared elsewhere.
 
 The hint maps are broken up into sub-maps for convenience and utility.
 """
+
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Callable, List, Union

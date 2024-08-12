@@ -1,6 +1,7 @@
 """
 scyjava Converters for converting between ImageJ2 Meshes and napari Surfaces
 """
+
 import numpy as np
 from jpype import JArray, JDouble
 from napari.layers import Surface

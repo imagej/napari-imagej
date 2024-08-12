@@ -3,6 +3,7 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
+
 from typing import List, Optional
 
 from qtpy.QtCore import Qt, Signal, Slot
