@@ -23,7 +23,8 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.11.0']
+        # NB: [3.11.0, 3.11.2] do not have arm64 macos support
+        python-version: ['3.8', '3.11.3']
 
     steps:
       - uses: actions/checkout@v2
