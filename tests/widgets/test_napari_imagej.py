@@ -40,10 +40,17 @@ def test_widget_subwidget_layout(imagej_widget: NapariImageJWidget):
 
 def test_keymaps(make_napari_viewer, qtbot):
     """Tests that 'Ctrl+L' is added to the keymap by ImageJWidget"""
+
+    def find_keybind(kb: str) -> bool:
+        for k, _ in viewer.keymap.items():
+            if str(k) == kb:
+                return True
+        return False
+
     viewer: Viewer = make_napari_viewer()
-    assert "Control-L" not in viewer.keymap
+    assert not find_keybind("Ctrl+L")
     NapariImageJWidget(viewer)
-    assert "Control-L" in viewer.keymap
+    assert find_keybind("Ctrl+L")
     # TODO: I can't seem to figure out how to assert that pressing 'L'
     # sets the focus of the search bar.
     # Typing viewer.keymap['L'](viewer) does nothing. :(

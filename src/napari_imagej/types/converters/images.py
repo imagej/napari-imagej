@@ -68,7 +68,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     for i in range(dataset.numDimensions()):
         axis = dataset.axis(i)
         # Overwrite EnumeratedAxes with LinearAxes
-        if isinstance(axis, jc.EnumeratedAxis):
+        if isinstance(axis, (jc.EnumeratedAxis, jc.DefaultLinearAxis)):
             # Copy the dim name, unless it's unnamed
             # in that case, assign it with X/Y/Z, if they aren't used already
             if any(x in axis.type().getLabel() for x in ["dim", "Unknown"]) and len(

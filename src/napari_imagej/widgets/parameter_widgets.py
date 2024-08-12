@@ -134,7 +134,7 @@ class MutableOutputWidget(Container):
         the (first) input. We find the (first) input in this function.
         """
         # Attempt to guess a good size based off of the first image input
-        for widget in self.parent._magic_widget.parent._magic_widget:
+        for widget in self.parent:
             if widget is self:
                 continue
             if isinstance(widget, ComboBox) and issubclass(widget.annotation, Layer):
