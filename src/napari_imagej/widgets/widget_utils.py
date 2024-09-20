@@ -295,26 +295,32 @@ class DetailExportDialog(QDialog):
 
 
 @lru_cache
-def _getIcon(icon_path):
+def _get_icon(path: str, cls: "jc.Class" = None):
     # Ignore falsy paths
-    if not icon_path:
+    if not path:
         return
-    stream = jc.File.class_.getResourceAsStream(icon_path)
-    # Ignore falsy streams
-    if not stream:
+    # Web URLs
+    if path.startswith("https"):
+        # TODO: Add icons from web
         return
-    # Create a buffer to create the byte[]
-    buffer = jc.ByteArrayOutputStream()
-    foo = JArray(JByte)(1024)
-    while True:
-        length = stream.read(foo, 0, foo.length)
-        if length == -1:
-            break
-        buffer.write(foo, 0, length)
-    # Convert the byte[] into a bytearray
-    bytes_array = bytearray()
-    bytes_array.extend(buffer.toByteArray())
-    # Convert thte bytearray into a QIcon
-    pixmap = QPixmap()
-    pixmap.loadFromData(QByteArray(bytes_array))
-    return QIcon(pixmap)
+    # Java Resources
+    elif isinstance(cls, jc.Class):
+        stream = cls.getResourceAsStream(path)
+        # Ignore falsy streams
+        if not stream:
+            return
+        # Create a buffer to create the byte[]
+        buffer = jc.ByteArrayOutputStream()
+        foo = JArray(JByte)(1024)
+        while True:
+            length = stream.read(foo, 0, foo.length)
+            if length == -1:
+                break
+            buffer.write(foo, 0, length)
+        # Convert the byte[] into a bytearray
+        bytes_array = bytearray()
+        bytes_array.extend(buffer.toByteArray())
+        # Convert thte bytearray into a QIcon
+        pixmap = QPixmap()
+        pixmap.loadFromData(QByteArray(bytes_array))
+        return QIcon(pixmap)
