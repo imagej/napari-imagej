@@ -3,6 +3,7 @@ A QWidget designed to list SciJava SearchResults.
 
 SearchResults are grouped by the SciJava Searcher that created them.
 """
+from __future__ import annotations
 
 from typing import Dict, List
 
@@ -13,7 +14,7 @@ from scyjava import Priority
 
 from napari_imagej.java import ij, jc
 from napari_imagej.utilities.logging import log_debug
-from napari_imagej.widgets.widget_utils import _getIcon, python_actions_for
+from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
 
 
 class SearcherTreeView(QTreeView):
@@ -106,7 +107,7 @@ class SearchResultItem(QStandardItem):
 
         # Set QtPy properties
         self.setEditable(False)
-        if icon := _getIcon(result.iconPath()):
+        if icon := _get_icon(str(result.iconPath()), result.getClass()):
             self.setIcon(icon)
 
 
