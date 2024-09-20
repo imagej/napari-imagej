@@ -37,7 +37,6 @@ dependencies:
   # Developer tools
   - autopep8
   - black >= 23.1.0
-  - build
   - flake8
   - flake8-pyproject
   - flake8-typing-imports
@@ -45,6 +44,7 @@ dependencies:
   - myst-parser
   - pre-commit
   - pyqt5-sip
+  - python-build
   - pytest
   - pytest-cov
   - pytest-env
