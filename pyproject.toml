@@ -32,14 +32,14 @@ classifiers = [
 ]
 
 # NB: Keep this in sync with environment.yml AND dev-environment.yml!
-requires-python = ">=3.8, <3.12"
+requires-python = ">=3.8, <3.13"
 dependencies = [
-    "confuse",
+    "confuse >= 2.0.0",
     "imglyb >= 2.1.0",
     "jpype1 >= 1.4.1",
     "labeling >= 0.1.12",
     "magicgui >= 0.5.1",
-    "napari >= 0.4.17, <0.5",
+    "napari >= 0.4.17",
     "numpy",
     "pandas",
     "pyimagej >= 1.4.1",
