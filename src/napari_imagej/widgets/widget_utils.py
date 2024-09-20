@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import List
+from urllib3 import PoolManager
 
 from jpype import JArray, JByte
 from magicgui import magicgui
@@ -293,6 +294,7 @@ class DetailExportDialog(QDialog):
 
         ij().thread().queue(lambda: pass_to_ij())
 
+pool = PoolManager(num_pools=10)
 
 @lru_cache
 def _get_icon(path: str, cls: "jc.Class" = None):
@@ -303,6 +305,14 @@ def _get_icon(path: str, cls: "jc.Class" = None):
     if path.startswith("https"):
         # TODO: Add icons from web
         return
+        # r = pool.request(
+        #     method="GET",
+        #     url=str(path),
+        #     headers= {"User-Agent": "Mozilla"},
+        # )
+        # pixmap = QPixmap()
+        # pixmap.loadFromData(r.data)
+        # return QIcon(pixmap)
     # Java Resources
     elif isinstance(cls, jc.Class):
         stream = cls.getResourceAsStream(path)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, Signal, QThread
 from qtpy.QtGui import QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import QAction, QMenu, QTreeView
 from scyjava import Priority
@@ -100,6 +100,19 @@ class SearcherItem(QStandardItem):
         return self.priority > other.priority
 
 
+class _ImageLoader(QThread):
+
+    def __init__(self, wdg: SearchResultItem, result: "jc.SearchResult") -> None:
+        super().__init__()
+        self._wdg = wdg
+        self._rslt = result
+
+    def run(self):
+        if icon := _get_icon(str(self._rslt.iconPath()), self._rslt.getClass()):
+            # self._wdg.setIcon(icon)
+            pass
+
+
 class SearchResultItem(QStandardItem):
     def __init__(self, result: "jc.SearchResult"):
         super().__init__(str(result.name()))
@@ -109,6 +122,8 @@ class SearchResultItem(QStandardItem):
         self.setEditable(False)
         if icon := _get_icon(str(result.iconPath()), result.getClass()):
             self.setIcon(icon)
+        # self._loader = _ImageLoader(self, result)
+        # self._loader.start(QThread.Priority.LowestPriority)
 
 
 class SearchResultModel(QStandardItemModel):
