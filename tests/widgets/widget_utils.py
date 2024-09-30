@@ -4,39 +4,39 @@ A module containing functionality useful for widget testing
 
 from typing import Optional
 
-from scyjava import Priority
+from qtpy.QtCore import Qt
 
-from napari_imagej.widgets.result_tree import SearcherTreeItem, SearchResultTree
+from napari_imagej.widgets.result_tree import SearcherItem, SearcherTreeView
 from tests.utils import DummySearcher, DummySearchEvent, jc
 
 
-def _searcher_tree_named(
-    tree: SearchResultTree, name: str
-) -> Optional[SearcherTreeItem]:
-    for i in range(tree.topLevelItemCount()):
-        if tree.topLevelItem(i).title.startswith(name):
-            return tree.topLevelItem(i)
+def _searcher_tree_named(tree: SearcherTreeView, name: str) -> Optional[SearcherItem]:
+    root = tree.model().invisibleRootItem()
+    for i in range(root.rowCount()):
+        if str(root.child(i, 0).searcher.title()).startswith(name):
+            return root.child(i, 0)
     return None
 
 
-def _populate_tree(tree: SearchResultTree, asserter):
-    asserter(lambda: tree.topLevelItemCount() == 0)
+def _populate_tree(tree: SearcherTreeView, asserter):
+    root = tree.model().invisibleRootItem()
+    asserter(lambda: root.rowCount() == 0)
     # Add two searchers
     searcher1 = DummySearcher("Test1")
-    item1 = SearcherTreeItem(searcher1, priority=Priority.LOW)
-    tree.insert.emit(item1)
+    tree.model().insert_searcher.emit(searcher1)
     searcher2 = DummySearcher("Test2")
-    item2 = SearcherTreeItem(searcher2, priority=Priority.HIGH)
-    tree.insert.emit(item2)
-    asserter(lambda: tree.topLevelItemCount() == 2)
+    tree.model().insert_searcher.emit(searcher2)
+    asserter(lambda: root.rowCount() == 2)
+    tree.model().item(0).setCheckState(Qt.Checked)
+    tree.model().item(1).setCheckState(Qt.Checked)
 
     # Update each searcher with data
-    tree.process.emit(
+    tree.model().process.emit(
         DummySearchEvent(
             searcher1, [jc.ClassSearchResult(c, "") for c in (jc.Float, jc.Double)]
         )
     )
-    tree.process.emit(
+    tree.model().process.emit(
         DummySearchEvent(
             searcher2,
             [jc.ClassSearchResult(c, "") for c in (jc.Short, jc.Integer, jc.Long)],
@@ -44,5 +44,7 @@ def _populate_tree(tree: SearchResultTree, asserter):
     )
 
     # Wait for the tree to populate
-    asserter(lambda: tree.topLevelItem(0).childCount() == 3)
-    asserter(lambda: tree.topLevelItem(1).childCount() == 2)
+    asserter(lambda: root.child(0, 0).rowCount() == 2)
+    asserter(lambda: root.child(0, 0).data(0) == "Test1 (2)")
+    asserter(lambda: root.child(1, 0).rowCount() == 3)
+    asserter(lambda: root.child(1, 0).data(0) == "Test2 (3)")

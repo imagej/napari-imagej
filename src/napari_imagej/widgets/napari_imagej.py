@@ -12,8 +12,8 @@ from jpype import JArray, JImplements, JOverride
 from magicgui.widgets import FunctionGui, Widget
 from napari import Viewer
 from napari.layers import Layer
-from qtpy.QtCore import QThread, Signal, Slot
-from qtpy.QtWidgets import QTreeWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtCore import QModelIndex, QThread, Signal, Slot
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 from scyjava import jstacktrace, when_jvm_stops
 
 from napari_imagej.java import ij, init_ij, jc
@@ -28,11 +28,7 @@ from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.result_runner import ResultRunner
-from napari_imagej.widgets.result_tree import (
-    SearcherTreeItem,
-    SearchResultTree,
-    SearchResultTreeItem,
-)
+from napari_imagej.widgets.result_tree import SearcherTreeView, SearchResultItem
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 
@@ -58,7 +54,7 @@ class NapariImageJWidget(QWidget):
         self.search: JVMEnabledSearchbar = JVMEnabledSearchbar()
         self.layout().addWidget(self.search)
         # Then: The results tree
-        self.result_tree: SearchResultTree = SearchResultTree(self.output_handler)
+        self.result_tree: SearcherTreeView = SearcherTreeView(self.output_handler)
         self.layout().addWidget(self.result_tree)
         # Second-to-lastly: The SearchResult runner
         self.result_runner: ResultRunner = ResultRunner(
@@ -72,26 +68,27 @@ class NapariImageJWidget(QWidget):
         # -- Interwidget connections -- #
 
         # When the text bar changes, update the search results.
-        self.search.bar.textEdited.connect(self.result_tree.search)
+        self.search.bar.textEdited.connect(self.result_tree.model().search)
         self.search.bar.textEdited.connect(self.result_runner.clear)
 
         # When clicking a result, select it with the ResultRunner
-        def click(treeItem: QTreeWidgetItem):
-            if isinstance(treeItem, SearchResultTreeItem):
-                self.result_runner.select(treeItem.result)
+        def click(idx: QModelIndex):
+            item = self.result_tree.model().itemFromIndex(idx)
+            if isinstance(item, SearchResultItem):
+                self.result_runner.select(item.result)
             else:
                 self.result_runner.clear()
 
-        # self.results.onClick = clickFunc
-        self.result_tree.itemClicked.connect(click)
+        self.result_tree.clicked.connect(click)
 
         # When double clicking a result,
         # select it with the ResultRunner and run the first action
-        def double_click(treeItem: QTreeWidgetItem):
-            if isinstance(treeItem, SearchResultTreeItem):
-                self.result_runner.run(treeItem.result)
+        def double_click(idx: QModelIndex):
+            item = self.result_tree.model().itemFromIndex(idx)
+            if isinstance(item, SearchResultItem):
+                self.result_runner.run(item.result)
 
-        self.result_tree.itemDoubleClicked.connect(double_click)
+        self.result_tree.doubleClicked.connect(double_click)
 
         # When pressing the up arrow on the topmost row in the results list,
         # go back up to the search bar
@@ -102,7 +99,7 @@ class NapariImageJWidget(QWidget):
         def key_down_from_search_bar():
             self.search.bar.clearFocus()
             self.result_tree.setFocus()
-            self.result_tree.setCurrentItem(self.result_tree.topLevelItem(0))
+            self.result_tree.setCurrentIndex(self.result_tree.model().index(0, 0))
 
         self.search.bar.floatBelow.connect(key_down_from_search_bar)
 
@@ -110,7 +107,7 @@ class NapariImageJWidget(QWidget):
         # in the results list and run it
         def return_search_bar():
             """Define the return behavior for this widget"""
-            result = self.result_tree._first_result()
+            result = self.result_tree.model().first_search_result()
             if result is not None:
                 self.result_runner.run(result)
 
@@ -269,27 +266,19 @@ class ImageJInitializer(QThread):
         # Start the search!
         # NB: SearchService.search takes varargs, so we need an array
         listener_arr = JArray(jc.SearchListener)(
-            [NapariImageJSearchListener(self.widget.result_tree.process)]
+            [NapariImageJSearchListener(self.widget.result_tree.model().process)]
         )
-        self.widget.result_tree._searchOperation = (
+        self.widget.result_tree.model()._searchOperation = (
             ij().get("org.scijava.search.SearchService").search(listener_arr)
         )
         # Make sure that the search stops when we close napari
         # Otherwise the Java threads like to continue
-        when_jvm_stops(self.widget.result_tree._searchOperation.terminate)
+        when_jvm_stops(self.widget.result_tree.model()._searchOperation.terminate)
 
         # Add SearcherTreeItems for each Searcher
         searchers = ij().plugin().createInstancesOfType(jc.Searcher)
         for searcher in searchers:
-            self.widget.result_tree.insert.emit(
-                SearcherTreeItem(
-                    searcher,
-                    checked=ij()
-                    .get("org.scijava.search.SearchService")
-                    .enabled(searcher),
-                    expanded=False,
-                )
-            )
+            self.widget.result_tree.model().insert_searcher.emit(searcher)
 
     def _finalize_info_bar(self):
         self.widget.info_box.version_bar.setText(f"ImageJ2 v{ij().getVersion()}")

@@ -17,7 +17,7 @@ from napari_imagej.utilities.events import subscribers
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
-from napari_imagej.widgets.result_tree import SearchResultTree
+from napari_imagej.widgets.result_tree import SearcherTreeView
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 from tests.utils import jc
@@ -33,7 +33,7 @@ def test_widget_subwidget_layout(imagej_widget: NapariImageJWidget):
 
     assert isinstance(subwidgets[1], NapariImageJMenu)
     assert isinstance(subwidgets[2], JVMEnabledSearchbar)
-    assert isinstance(subwidgets[3], SearchResultTree)
+    assert isinstance(subwidgets[3], SearcherTreeView)
     assert isinstance(subwidgets[4], ResultRunner)
     assert isinstance(subwidgets[5], InfoBox)
 
@@ -84,15 +84,14 @@ def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter)
     # Find the ModuleSearcher
     searcher_item = _searcher_tree_named(tree, "Command")
     assert searcher_item is not None
-    searcher_item.setCheckState(0, Qt.Checked)
-    asserter(lambda: searcher_item.checkState(0) == Qt.Checked)
+    searcher_item.setCheckState(Qt.Checked)
+    asserter(lambda: searcher_item.checkState() == Qt.Checked)
     # Search something, then wait for the results to populate
     imagej_widget.result_tree.search("Frangi")
-    asserter(lambda: searcher_item.childCount() > 0)
+    asserter(lambda: searcher_item.rowCount() > 0)
     # Test single click spawns buttons
-    item = searcher_item.child(0)
-    rect = tree.visualItemRect(item)
-    qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
+    item = searcher_item.child(0, 0)
+    tree.clicked.emit(tree.model().indexFromItem(item))
 
     def assert_buttons():
         expected = len(imagej_widget.result_runner._buttons_for(item.result))
@@ -102,8 +101,7 @@ def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter)
     asserter(assert_buttons)
     # Test single click on searcher hides buttons
     item = searcher_item
-    rect = tree.visualItemRect(item)
-    qtbot.mouseClick(tree.viewport(), Qt.LeftButton, pos=rect.center())
+    tree.clicked.emit(tree.model().indexFromItem(item))
     # Ensure we don't see any text in the runner widget
     asserter(
         lambda: imagej_widget.result_runner.selected_module_label.isHidden()
@@ -126,16 +124,20 @@ def test_searchbar_results_transitions(
     Ensures that the arrow keys can be used to transfer focus between
     the searchbar and the results table
     """
-    tree: SearchResultTree = imagej_widget.result_tree
+    tree: SearcherTreeView = imagej_widget.result_tree
     _ensure_searchers_available(imagej_widget, asserter)
 
     # Ensure that no element is highlighted to start out
-    asserter(lambda: tree.currentItem() is None)
+    asserter(
+        lambda: tree.currentIndex().row() == -1 and tree.currentIndex().column() == -1
+    )
 
     # Then, press down from the search bar
     # and ensure that the first item is highlighted
     qtbot.keyPress(imagej_widget.search.bar, Qt.Key_Down)
-    asserter(lambda: tree.currentItem() is tree.topLevelItem(0))
+    asserter(
+        lambda: tree.currentIndex().row() == 0 and tree.currentIndex().column() == 0
+    )
 
     # Then, press up and ensure that the search bar is highlighted
     qtbot.keyPress(tree, Qt.Key_Up)
@@ -162,68 +164,75 @@ def test_search_tree_ordering(imagej_widget: NapariImageJWidget, asserter):
 
     # Ensure the ordering applies
     results = imagej_widget.result_tree
-    for i in range(results.topLevelItemCount() - 1):
-        asserter(lambda: ordering(results.topLevelItem(i), results.topLevelItem(i + 1)))
+    root = results.model().invisibleRootItem()
+    for i in range(root.rowCount() - 1):
+        asserter(lambda: ordering(root.child(i, 0), root.child(i + 1, 0)))
 
 
 def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asserter):
     # Grab an arbitratry enabled Searcher
-    asserter(lambda: imagej_widget.result_tree.topLevelItemCount() > 0)
-    searcher_item = imagej_widget.result_tree.topLevelItem(0)
-    searcher_item.setCheckState(0, Qt.Checked)
-    asserter(lambda: searcher_item.checkState(0) == Qt.Checked)
-    asserter(lambda: searcher_item.childCount() == 0)
+    root = imagej_widget.result_tree.model().invisibleRootItem()
+    asserter(lambda: root.rowCount() > 0)
+    searcher_item = root.child(0, 0)
+    searcher_item.setCheckState(Qt.Checked)
+    asserter(lambda: searcher_item.checkState() == Qt.Checked)
+    asserter(lambda: searcher_item.rowCount() == 0)
 
     # Disable the searcher, assert the proper ImageJ response
-    searcher_item.setCheckState(0, Qt.Unchecked)
+    searcher_item.setCheckState(Qt.Unchecked)
     asserter(
         lambda: not ij.get("org.scijava.search.SearchService").enabled(
-            searcher_item._searcher
+            searcher_item.searcher
         )
     )
 
     # Enabled the searcher, assert the proper ImageJ response
-    searcher_item.setCheckState(0, Qt.Checked)
+    searcher_item.setCheckState(Qt.Checked)
     asserter(
         lambda: ij.get("org.scijava.search.SearchService").enabled(
-            searcher_item._searcher
+            searcher_item.searcher
         )
     )
 
 
 def test_widget_finalization(ij, imagej_widget: NapariImageJWidget, asserter):
     # Ensure that we have the handle on a non-null SearchOperation
-    assert imagej_widget.result_tree._searchOperation is not None
+    assert imagej_widget.result_tree.model()._searchOperation is not None
 
     # Ensure that all Searchers are represented in the tree with a top level
     # item
     numSearchers = len(ij.plugin().getPluginsOfType(jc.Searcher))
-    asserter(lambda: imagej_widget.result_tree.topLevelItemCount() == numSearchers)
+    root = imagej_widget.result_tree.model().invisibleRootItem()
+    asserter(lambda: root.rowCount() == numSearchers)
 
 
 def test_widget_clearing(imagej_widget: NapariImageJWidget, qtbot, asserter):
     """
     Ensures that searching something clears the result runner
     """
+    tree = imagej_widget.result_tree
 
     # Ensure that the tree is fully populated
     _ensure_searchers_available(imagej_widget, asserter)
 
     # Find the ModuleSearcher
-    searcher_item = _searcher_tree_named(imagej_widget.result_tree, "Command")
+    searcher_item = _searcher_tree_named(tree, "Command")
     assert searcher_item is not None
-    searcher_item.setCheckState(0, Qt.Checked)
-    asserter(lambda: searcher_item.checkState(0) == Qt.Checked)
+    searcher_item.setCheckState(Qt.Checked)
+    asserter(lambda: searcher_item.checkState() == Qt.Checked)
     # Search something, then wait for the results to populate
     imagej_widget.search.bar.insert("Frangi")
-    asserter(lambda: searcher_item.childCount() > 0)
+    asserter(lambda: searcher_item.rowCount() > 0)
     # Test single click spawns buttons
-    item = searcher_item.child(0)
-    rect = imagej_widget.result_tree.visualItemRect(item)
-    qtbot.mouseClick(
-        imagej_widget.result_tree.viewport(), Qt.LeftButton, pos=rect.center()
-    )
-    asserter(lambda: len(_run_buttons(imagej_widget)) > 0)
+    item = searcher_item.child(0, 0)
+    tree.clicked.emit(tree.model().indexFromItem(item))
+
+    def assert_buttons():
+        expected = len(imagej_widget.result_runner._buttons_for(item.result))
+        actual = len(_run_buttons(imagej_widget))
+        return expected == actual
+
+    asserter(assert_buttons)
 
     # Search something else
     imagej_widget.search.bar.insert("Add")
