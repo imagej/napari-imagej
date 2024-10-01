@@ -63,7 +63,7 @@ Using the SciJava REPL
 
 You can use the SciJava REPL to interactively run SciJava code. This makes it possible to do things like paste existing SciJava scripts into the REPL. More information on scripting in SciJava can be found `here <https://imagej.net/scripting/interpreter>`_.
 
-.. figure:: https://media.imagej.net/napari-imagej/scijava_repl.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/script_repl.png
     
     The REPL can be shown/hidden by clicking on the command prompt icon.
     
