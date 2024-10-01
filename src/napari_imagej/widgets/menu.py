@@ -43,11 +43,9 @@ class NapariImageJMenu(QWidget):
         self.layout().addWidget(self.gui_button)
 
         self.repl_button: REPLButton = REPLButton(viewer)
-        self.repl_button.setToolTip("Show/hide the SciJava REPL")
         self.layout().addWidget(self.repl_button)
 
         self.settings_button: SettingsButton = SettingsButton(viewer)
-        self.settings_button.setToolTip("Show napari-imagej settings")
         self.layout().addWidget(self.settings_button)
 
         if settings.headless():
@@ -268,6 +266,7 @@ class REPLButton(IJMenuButton):
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
         self.viewer = viewer
+        self.setToolTip("Show/hide the SciJava REPL")
 
         self.setEnabled(False)
 
@@ -300,6 +299,7 @@ class SettingsButton(IJMenuButton):
 
     def __init__(self, viewer: Viewer):
         super().__init__(viewer)
+        self.setToolTip("Show napari-imagej settings")
 
         self.clicked.connect(self._update_settings)
         self.setting_change.connect(self._handle_settings_change)
