@@ -7,22 +7,22 @@ from typing import Tuple
 import numpy as np
 import pytest
 from napari.layers import Labels, Tracks
+from scyjava import JavaClasses
 
 from napari_imagej import settings
-from napari_imagej.java import JavaClasses
 from napari_imagej.types.converters.trackmate import TrackMateClasses, trackmate_present
 
 
 class TestTrackMateClasses(TrackMateClasses):
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def DisplaySettings(self):
         return "fiji.plugin.trackmate.gui.displaysettings.DisplaySettings"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def HyperStackDisplayer(self):
         return "fiji.plugin.trackmate.visualization.hyperstack.HyperStackDisplayer"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def SelectionModel(self):
         return "fiji.plugin.trackmate.SelectionModel"
 

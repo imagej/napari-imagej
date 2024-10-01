@@ -27,6 +27,7 @@ from napari_imagej.widgets.menu import (
     FromIJButton,
     GUIButton,
     NapariImageJMenu,
+    REPLButton,
     SettingsButton,
     ToIJButton,
     ToIJDetailedButton,
@@ -175,14 +176,15 @@ def clean_gui_elements(asserter, ij, viewer: Viewer):
 def test_widget_layout(gui_widget: NapariImageJMenu):
     """Tests the number and expected order of imagej_widget children"""
     subwidgets = gui_widget.children()
-    assert len(subwidgets) == 6
+    assert len(subwidgets) == 7
     assert isinstance(subwidgets[0], QHBoxLayout)
 
     assert isinstance(subwidgets[1], FromIJButton)
     assert isinstance(subwidgets[2], ToIJButton)
     assert isinstance(subwidgets[3], ToIJDetailedButton)
     assert isinstance(subwidgets[4], GUIButton)
-    assert isinstance(subwidgets[5], SettingsButton)
+    assert isinstance(subwidgets[5], REPLButton)
+    assert isinstance(subwidgets[6], SettingsButton)
 
 
 def test_GUIButton_layout_headful(qtbot, asserter, ij, gui_widget: NapariImageJMenu):
@@ -233,6 +235,20 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     )
     popup_func = _handle_QMessageBox(expected_popup_text, QMessageBox.Ok, True)
     popup_handler(button.clicked.emit, popup_func)
+
+
+def test_script_repl(asserter, qtbot, ij, viewer: Viewer, gui_widget: NapariImageJMenu):
+    repl_button = gui_widget.repl_button
+
+    # Press the button - ensure the script repl appears as a dock widget
+    qtbot.mouseClick(repl_button, Qt.LeftButton, delay=1)
+
+    # the Viewer gives us no (public) API to query dock widgets,
+    # so the best we can do is to ensure that the parent is set on our widget
+    def find_repl() -> bool:
+        return repl_button._widget.parent() is not None
+
+    asserter(find_repl)
 
 
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):

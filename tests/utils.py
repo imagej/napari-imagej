@@ -5,124 +5,125 @@ A module containing testing utilities
 from typing import List
 
 from jpype import JImplements, JOverride
+from scyjava import JavaClasses
 
-from napari_imagej.java import JavaClasses
+from napari_imagej.java import NijJavaClasses
 
 
-class JavaClassesTest(JavaClasses):
+class JavaClassesTest(NijJavaClasses):
     """
     Here we override JavaClasses to get extra test imports
     """
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ArrayImg(self):
         return "net.imglib2.img.array.ArrayImg"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ArrayImgs(self):
         return "net.imglib2.img.array.ArrayImgs"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def Axes(self):
         return "net.imagej.axis.Axes"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def BoolType(self):
         return "net.imglib2.type.logic.BoolType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ByteType(self):
         return "net.imglib2.type.numeric.integer.ByteType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ClassesSearcher(self):
         return "org.scijava.search.classes.ClassesSearcher"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ClassSearchResult(self):
         return "org.scijava.search.classes.ClassSearchResult"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def DefaultMutableModuleItem(self):
         return "org.scijava.module.DefaultMutableModuleItem"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def DefaultMutableModuleInfo(self):
         return "org.scijava.module.DefaultMutableModuleInfo"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def DoubleArray(self):
         return "org.scijava.util.DoubleArray"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def EuclideanSpace(self):
         return "net.imglib2.EuclideanSpace"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def FloatType(self):
         return "net.imglib2.type.numeric.real.FloatType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def Frame(self):
         return "java.awt.Frame"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def IllegalArgumentException(self):
         return "java.lang.IllegalArgumentException"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ImageDisplay(self):
         return "net.imagej.display.ImageDisplay"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def IntType(self):
         return "net.imglib2.type.numeric.integer.IntType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ItemIO(self):
         return "org.scijava.ItemIO"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ItemVisibility(self):
         return "org.scijava.ItemVisibility"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ModuleSearchResult(self):
         return "org.scijava.search.module.ModuleSearchResult"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def OpSearchResult(self):
         return "net.imagej.ops.search.OpSearchResult"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ScriptInfo(self):
         return "org.scijava.script.ScriptInfo"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ShortType(self):
         return "net.imglib2.type.numeric.integer.ShortType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def System(self):
         return "java.lang.System"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def UnsignedByteType(self):
         return "net.imglib2.type.numeric.integer.UnsignedByteType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def UnsignedShortType(self):
         return "net.imglib2.type.numeric.integer.UnsignedShortType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def UnsignedIntType(self):
         return "net.imglib2.type.numeric.integer.UnsignedIntType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def UnsignedLongType(self):
         return "net.imglib2.type.numeric.integer.UnsignedLongType"
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def WindowEvent(self):
         return "java.awt.event.WindowEvent"
 

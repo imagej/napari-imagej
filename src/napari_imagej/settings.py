@@ -48,7 +48,7 @@ from napari_imagej.utilities.logging import log_debug, warn
 # -- Constants --
 
 default_java_components = [
-    "net.imagej:imagej:2.13.1",
+    "net.imagej:imagej:2.15.0",
 ]
 defaults = {
     "imagej_directory_or_endpoint": "",

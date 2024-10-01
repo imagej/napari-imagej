@@ -8,7 +8,8 @@ from labeling.Labeling import Labeling
 from napari.layers import Labels
 from scyjava import Priority
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
 
 
@@ -42,7 +43,7 @@ def _imglabeling_to_layer(imgLabeling: "jc.ImgLabeling") -> Labels:
     :param imgLabeling: the Java ImgLabeling
     :return: a Labels layer
     """
-    labeling: Labeling = imglabeling_to_labeling(ij(), imgLabeling)
+    labeling: Labeling = imglabeling_to_labeling(nij.ij, imgLabeling)
     return _labeling_to_layer(labeling)
 
 
@@ -56,4 +57,4 @@ def _layer_to_imglabeling(layer: Labels) -> "jc.ImgLabeling":
     :return: the Java ImgLabeling
     """
     labeling: Labeling = _layer_to_labeling(layer)
-    return ij().py.to_java(labeling)
+    return nij.ij.py.to_java(labeling)

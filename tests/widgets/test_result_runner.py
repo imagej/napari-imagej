@@ -4,14 +4,14 @@ A module testing napari_imagej.widgets.result_runner
 
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+from scyjava import JavaClasses
 
-from napari_imagej.java import JavaClasses
 from napari_imagej.widgets.layouts import QFlowLayout
 from napari_imagej.widgets.result_runner import ResultRunner
 
 
 class JavaClassesTest(JavaClasses):
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def ModuleSearchResult(self):
         return "org.scijava.search.module.ModuleSearchResult"
 

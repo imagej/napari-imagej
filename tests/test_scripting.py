@@ -3,8 +3,8 @@ A module testing script discovery and wrapping
 """
 
 from magicgui import magicgui
+from scyjava import JavaClasses
 
-from napari_imagej.java import JavaClasses
 from napari_imagej.utilities._module_utils import functionify_module_execution
 
 
@@ -13,7 +13,7 @@ class JavaClassesTest(JavaClasses):
     Here we override JavaClasses to get extra test imports
     """
 
-    @JavaClasses.blocking_import
+    @JavaClasses.java_import
     def DefaultModuleService(self):
         return "org.scijava.module.DefaultModuleService"
 

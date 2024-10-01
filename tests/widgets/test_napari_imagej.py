@@ -8,7 +8,7 @@ from numpy import ones
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QTextEdit, QVBoxLayout
 
-from napari_imagej.java import ij
+from napari_imagej import nij
 from napari_imagej.utilities.event_subscribers import (
     ProgressBarListener,
     UIShownListener,
@@ -63,7 +63,7 @@ def _run_buttons(imagej_widget: NapariImageJWidget):
 def _ensure_searchers_available(imagej_widget: NapariImageJWidget, asserter):
     tree = imagej_widget.result_tree
     # Find the ModuleSearcher
-    numSearchers = len(ij().plugin().getPluginsOfType(jc.Searcher))
+    numSearchers = len(nij.ij.plugin().getPluginsOfType(jc.Searcher))
     try:
         asserter(lambda: tree.topLevelItemCount() == numSearchers)
     except Exception:
@@ -181,7 +181,7 @@ def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asser
     # Disable the searcher, assert the proper ImageJ response
     searcher_item.setCheckState(Qt.Unchecked)
     asserter(
-        lambda: not ij.get("org.scijava.search.SearchService").enabled(
+        lambda: not nij.ij.get("org.scijava.search.SearchService").enabled(
             searcher_item.searcher
         )
     )
@@ -189,7 +189,7 @@ def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asser
     # Enabled the searcher, assert the proper ImageJ response
     searcher_item.setCheckState(Qt.Checked)
     asserter(
-        lambda: ij.get("org.scijava.search.SearchService").enabled(
+        lambda: nij.ij.get("org.scijava.search.SearchService").enabled(
             searcher_item.searcher
         )
     )
@@ -201,7 +201,7 @@ def test_widget_finalization(ij, imagej_widget: NapariImageJWidget, asserter):
 
     # Ensure that all Searchers are represented in the tree with a top level
     # item
-    numSearchers = len(ij.plugin().getPluginsOfType(jc.Searcher))
+    numSearchers = len(nij.ij.plugin().getPluginsOfType(jc.Searcher))
     root = imagej_widget.result_tree.model().invisibleRootItem()
     asserter(lambda: root.rowCount() == numSearchers)
 
@@ -248,12 +248,12 @@ def test_info_validity(imagej_widget: NapariImageJWidget, qtbot, asserter):
     """
 
     # Wait for the info to populate
-    ij()
+    ij = nij.ij
 
     # Check the version
     info_box = imagej_widget.info_box
 
-    asserter(lambda: info_box.version_bar.text() == f"ImageJ2 v{ij().getVersion()}")
+    asserter(lambda: info_box.version_bar.text() == f"ImageJ2 v{ij.getVersion()}")
 
 
 def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):

@@ -22,7 +22,8 @@ from typing import Callable, List, Optional, Tuple, Type
 from jpype import JObject
 from scyjava import Priority
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.types.enum_likes import enum_like
 from napari_imagej.types.enums import py_enum_for
 from napari_imagej.types.type_hints import type_hints
@@ -202,6 +203,6 @@ def canConvertChecker(item: "jc.ModuleItem") -> Optional[Type]:
     """
 
     def isAssignable(from_type, to_type) -> bool:
-        return ij().convert().supports(from_type, to_type)
+        return nij.ij.convert().supports(from_type, to_type)
 
     return _checkerUsingFunc(item, isAssignable)

@@ -6,7 +6,8 @@ napari-imagej functionality
 from jpype import JImplements, JOverride
 from qtpy.QtCore import Signal
 
-from napari_imagej.java import ij, jc
+from napari_imagej import nij
+from napari_imagej.java import jc
 from napari_imagej.utilities.logging import log_debug
 
 
@@ -52,7 +53,7 @@ class UIShownListener(object):
     def onEvent(self, event):
         if not self.initialized:
             # add our custom settings to the User Interface
-            if ij().legacy and ij().legacy.isActive():
+            if nij.ij.legacy and nij.ij.legacy.isActive():
                 self._ij1_UI_setup()
             self._ij2_UI_setup(event.getUI())
             self.initialized = True
@@ -67,7 +68,7 @@ class UIShownListener(object):
 
     def _ij1_UI_setup(self):
         """Configure the ImageJ Legacy GUI"""
-        ij().IJ.getInstance().exitWhenQuitting(False)
+        nij.ij.IJ.getInstance().exitWhenQuitting(False)
 
     def _ij2_UI_setup(self, ui: "jc.UserInterface"):
         """Configure the ImageJ2 Swing GUI behavior"""
@@ -120,5 +121,5 @@ class UIShownListener(object):
                 pass
 
         listener = NapariAdapter()
-        ij().object().addObject(listener)
+        nij.ij.object().addObject(listener)
         window.addWindowListener(listener)

@@ -57,3 +57,13 @@ Note that these buttons are only enabled when there is a ``Layer`` that can be t
     Using the |advanced export| button, users can provide metadata for richer data transfer to the ImageJ UI
 
 The |import| button can be used to transfer the **active** ImageJ window back into the napari application.
+
+Using the SciJava REPL
+--------------------------------
+
+You can use the SciJava REPL to interactively run SciJava code. This makes it possible to do things like paste existing SciJava scripts into the REPL. More information on scripting in SciJava can be found `here <https://imagej.net/scripting/interpreter>`_.
+
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/script_repl.png
+    
+    The REPL can be shown/hidden by clicking on the command prompt icon.
+    
