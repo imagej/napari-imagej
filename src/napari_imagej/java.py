@@ -152,7 +152,6 @@ def _optional_requirements(ij: "jc.ImageJ"):
 
 
 class NijJavaClasses(JavaClasses):
-
     # Java Primitives
 
     @JavaClasses.java_import
@@ -352,6 +351,10 @@ class NijJavaClasses(JavaClasses):
     @JavaClasses.java_import
     def ScriptREPL(self):
         return "org.scijava.script.ScriptREPL"
+
+    @JavaClasses.java_import
+    def ScriptService(self):
+        return "org.scijava.script.ScriptService"
 
     @JavaClasses.java_import
     def Searcher(self):

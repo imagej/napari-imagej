@@ -20,15 +20,9 @@ class REPLWidget(QWidget):
         """
         super().__init__(parent)
 
-        self.script_repl = nij.repl
-
         layout = QVBoxLayout(self)
 
         self.language_combo = QComboBox(self)
-        self.language_combo.addItems(
-            [str(el) for el in list(self.script_repl.getInterpretedLanguages())]
-        )
-        self.language_combo.currentTextChanged.connect(self.change_language)
         layout.addWidget(self.language_combo)
 
         self.output_textedit = QTextEdit(self)
@@ -40,6 +34,15 @@ class REPLWidget(QWidget):
         self.input_lineedit = QLineEdit(self)
         self.input_lineedit.returnPressed.connect(self.process_input)
         layout.addWidget(self.input_lineedit)
+
+        self.script_repl = nij.repl
+        self.language_combo.addItems(
+            [str(el) for el in list(self.script_repl.getInterpretedLanguages())]
+        )
+        self.language_combo.setCurrentText(
+            str(self.script_repl.getInterpreter().getLanguage())
+        )
+        self.language_combo.currentTextChanged.connect(self.change_language)
 
     def change_language(self, language: str):
         """

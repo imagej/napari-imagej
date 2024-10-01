@@ -33,8 +33,13 @@ class NapariImageJ:
                     for callback in model._repl_callbacks:
                         callback(s)
 
-            self._repl = jc.ScriptREPL(ctx, "jython", REPLOutput())
-            self._repl.lang("jython")
+            scriptService = ctx.service(jc.ScriptService)
+            # Find a Pythonic script language (might be Jython)
+            names = [lang.getLanguageName() for lang in scriptService.getLanguages()]
+            name_pref = next(n for n in names if "python" in n.toLowerCase())
+            self._repl = jc.ScriptREPL(ctx, name_pref, REPLOutput())
+            # NB: Adds bindings
+            self._repl.initialize(True)
         return self._repl
 
     def add_repl_callback(self, repl_callback) -> None:
