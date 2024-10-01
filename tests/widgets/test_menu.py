@@ -237,6 +237,20 @@ def test_GUIButton_layout_headless(popup_handler, gui_widget: NapariImageJMenu):
     popup_handler(button.clicked.emit, popup_func)
 
 
+def test_script_repl(asserter, qtbot, ij, viewer: Viewer, gui_widget: NapariImageJMenu):
+    repl_button = gui_widget.repl_button
+
+    # Press the button - ensure the script repl appears as a dock widget
+    qtbot.mouseClick(repl_button, Qt.LeftButton, delay=1)
+
+    # the Viewer gives us no (public) API to query dock widgets,
+    # so the best we can do is to ensure that the parent is set on our widget
+    def find_repl() -> bool:
+        return repl_button._widget.parent() is not None
+
+    asserter(find_repl)
+
+
 def test_active_data_send(asserter, qtbot, ij, gui_widget: NapariImageJMenu):
     if settings.headless():
         pytest.skip("Only applies when not running headlessly")
