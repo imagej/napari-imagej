@@ -270,11 +270,11 @@ class REPLButton(IJMenuButton):
 
         self.setEnabled(False)
 
-        icon = QColoredSVGIcon(resource_path("repl"))
-        self.setIcon(icon.colored(theme=viewer.theme))
-
         self.clicked.connect(self._toggle_repl)
         self._widget = None
+
+    def _icon(self):
+        return QColoredSVGIcon(resource_path("repl"))
 
     def _add_repl_to_dock(self):
         self._widget = REPLWidget(nij=nij)
