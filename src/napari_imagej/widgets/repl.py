@@ -5,7 +5,14 @@ This supports all of the languages of SciJava.
 """
 
 from qtpy.QtGui import QTextCursor
-from qtpy.QtWidgets import QComboBox, QLineEdit, QTextEdit, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLineEdit,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from napari_imagej.model import NapariImageJ
 
@@ -22,18 +29,21 @@ class REPLWidget(QWidget):
 
         layout = QVBoxLayout(self)
 
-        self.language_combo = QComboBox(self)
-        layout.addWidget(self.language_combo)
-
         self.output_textedit = QTextEdit(self)
         self.output_textedit.setReadOnly(True)
         layout.addWidget(self.output_textedit)
 
         nij.add_repl_callback(lambda s: self.process_output(s))
 
+        h_layout = QHBoxLayout()
+        layout.addLayout(h_layout)
+
+        self.language_combo = QComboBox(self)
+        h_layout.addWidget(self.language_combo)
+
         self.input_lineedit = QLineEdit(self)
         self.input_lineedit.returnPressed.connect(self.process_input)
-        layout.addWidget(self.input_lineedit)
+        h_layout.addWidget(self.input_lineedit)
 
         self.script_repl = nij.repl
         self.language_combo.addItems(
