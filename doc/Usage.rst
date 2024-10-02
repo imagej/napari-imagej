@@ -24,11 +24,17 @@ By clicking on an item in the search results, a set of actions is displayed at t
 .. NB: The svgs must have a fixed width to appear nicely inline
 
 .. |import| image:: ../src/napari_imagej/resources/import.svg
-   :width: 15em
+   :width: 1.5em
+   :height: 1.5em
+   :class: no-scaled-link
 .. |export| image:: ../src/napari_imagej/resources/export.svg
-   :width: 15em
+   :width: 1.5em
+   :height: 1.5em
+   :class: no-scaled-link
 .. |advanced export| image:: ../src/napari_imagej/resources/export_detailed.svg
-   :width: 15em
+   :width: 1.5em
+   :height: 1.5em
+   :class: no-scaled-link
 
 
 Using the ImageJ2 UI
