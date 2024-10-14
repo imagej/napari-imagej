@@ -7,7 +7,7 @@ repos:
         args: ["--in-place", "--remove-all-unused-imports"]
   # Then, flake
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 7.1.0
     hooks:
       - id: flake8
         additional_dependencies: 

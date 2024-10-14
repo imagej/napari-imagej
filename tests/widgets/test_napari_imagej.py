@@ -19,10 +19,7 @@ from napari_imagej.widgets.menu import NapariImageJMenu
 from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
 from napari_imagej.widgets.result_tree import SearcherTreeView
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
-from napari_imagej.widgets.widget_utils import (
-    JavaErrorMessageBox,
-    JavaWarningMessageBox,
-)
+from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
 from tests.utils import jc
 from tests.widgets.widget_utils import _searcher_tree_named
 
@@ -326,30 +323,3 @@ def test_handle_ij_init_error(imagej_widget: NapariImageJWidget):
 
     # Finally, restore JavaErrorMessageBox.exec
     JavaErrorMessageBox.exec = old_exec
-
-
-def test_handle_ij_init_warning(imagej_widget: NapariImageJWidget):
-    """
-    Ensure that napari-imagej's ij init warnings are displayed correctly
-    """
-    title = ""
-    contents = ""
-
-    # first, mock JavaErrorMessageBox.exec
-    old_exec = JavaWarningMessageBox.exec
-
-    def new_exec(self):
-        nonlocal title, contents
-        title = self.findChild(QLabel).text()
-        contents = self.findChild(QTextEdit).toPlainText()
-
-    JavaWarningMessageBox.exec = new_exec
-
-    # Then, test a Java exception is correctly configured
-    warnings = ["This is a warning"]
-    imagej_widget._handle_ij_init_warning(warnings)
-    assert title == "During the initialization of ImageJ, warnings were raised:"
-    assert contents == "This is a warning"
-
-    # Finally, restore JavaErrorMessageBox.exec
-    JavaWarningMessageBox.exec = old_exec

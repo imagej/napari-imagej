@@ -10,7 +10,8 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 
-from typing import Any, Dict, List
+from logging import getLogger
+from typing import Any, Dict
 
 import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
@@ -83,13 +84,12 @@ def init_ij() -> "jc.ImageJ":
     return ij
 
 
-def validate_imagej(ij: "jc.ImageJ") -> List[str]:
+def validate_imagej(ij: "jc.ImageJ") -> None:
     """
     Ensures ij is suitable for use within napari-imagej.
     Critical errors result in an exception being thrown by this function.
     Noncritical errors (warnings) are described in the returned list of strings.
     """
-    warnings = []
 
     # If we want to require a minimum version for a java component, we need to
     # be able to find our current version. We do that by querying a Java class
@@ -98,7 +98,7 @@ def validate_imagej(ij: "jc.ImageJ") -> List[str]:
     RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
     SCIFIO = jimport("io.scif.SCIFIO")
     UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
-    component_requirements = {
+    class_from = {
         "io.scif:scifio": SCIFIO,
         "net.imagej:imagej": ImageJ,
         "net.imagej:imagej-common": jc.Dataset,
@@ -108,17 +108,15 @@ def validate_imagej(ij: "jc.ImageJ") -> List[str]:
         "org.scijava:scijava-common": jc.Module,
         "org.scijava:scijava-search": jc.Searcher,
     }
-    component_requirements.update(_optional_requirements(ij))
+    class_from.update(_optional_requirements(ij))
     # Find version that violate the minimum
     violations = []
-    for component, cls in component_requirements.items():
-        if component not in minimum_versions:
-            continue
-        min_version = minimum_versions[component]
-        component_version = get_version(cls)
-        if not is_version_at_least(component_version, min_version):
+    for component in set(class_from) & set(minimum_versions):
+        component_version = get_version(class_from[component])
+        minimum_version = minimum_versions[component]
+        if not is_version_at_least(component_version, minimum_version):
             violations.append(
-                f"{component} : {min_version} (Installed: {component_version})"
+                f"{component} : {minimum_version} (Installed: {component_version})"
             )
 
     # If version requirements are violated, throw an error
@@ -131,29 +129,17 @@ def validate_imagej(ij: "jc.ImageJ") -> List[str]:
         )
         raise RuntimeError(failure_str)
 
-    # If verison recommendations are violated, return a warning
-    violations = []
-    for component, cls in component_requirements.items():
-        if component not in recommended_versions:
-            continue
+    # If verison recommendations are violated, warn the user
+    for component in set(class_from) & set(recommended_versions):
         recommended_version = recommended_versions[component]
-        component_version = get_version(cls)
+        component_version = get_version(class_from[component])
         if not is_version_at_least(component_version, recommended_version):
-            violations.append(
-                f"{component} : {recommended_version} (Installed: {component_version})"
+            nij_version = get_version("napari-imagej")
+            getLogger("napari-imagej").warning(
+                f"napari-imagej v{nij_version} recommends "
+                f"{component} version {recommended_version} "
+                f"(Installed: {component_version})"
             )
-
-    # If there are older versions, warn the user
-    if violations:
-        __version__ = get_version("napari-imagej")
-        failure_str = (
-            f"napari-imagej v{__version__} recommends using "
-            "the following component versions:"
-        )
-        violations.insert(0, failure_str)
-        warnings.append("\n\t".join(violations))
-
-    return warnings
 
 
 # -- Private functions -- #
