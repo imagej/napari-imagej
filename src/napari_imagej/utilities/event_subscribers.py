@@ -3,19 +3,20 @@ Module containing various EventSubscribers used by
 napari-imagej functionality
 """
 
+from logging import getLogger
+
 from jpype import JImplements, JOverride
 from qtpy.QtCore import Signal
 
 from napari_imagej import nij
 from napari_imagej.java import jc
-from napari_imagej.utilities.logging import log_debug
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
 class NapariEventSubscriber(object):
     @JOverride
     def onEvent(self, event):
-        log_debug(str(event))
+        getLogger("napari-imagej").debug(str(event))
 
     @JOverride
     def getEventClass(self):

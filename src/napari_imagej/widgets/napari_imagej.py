@@ -5,8 +5,10 @@ graphical access to ImageJ functionality.
 This widget is made accessible to napari through napari.yml.
 """
 
+from __future__ import annotations
+
 from traceback import format_exception
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from jpype import JArray, JImplements, JOverride
 from magicgui.widgets import FunctionGui, Widget
@@ -24,7 +26,6 @@ from napari_imagej.utilities.event_subscribers import (
     ProgressBarListener,
 )
 from napari_imagej.utilities.events import subscribe, unsubscribe
-from napari_imagej.utilities.logging import is_debug
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.info_bar import InfoBox
 from napari_imagej.widgets.menu import NapariImageJMenu
@@ -32,6 +33,9 @@ from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import SearcherTreeView, SearchResultItem
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
+
+if TYPE_CHECKING:
+    pass
 
 
 class NapariImageJWidget(QWidget):
@@ -247,6 +251,7 @@ class ImageJInitializer(QThread):
         except Exception as e:
             # Handle the exception on the GUI thread
             self.widget.ij_error_handler.emit(e)
+            return
 
     def _finalize_results_tree(self):
         """
@@ -289,9 +294,8 @@ class ImageJInitializer(QThread):
         self.progress_listener = ProgressBarListener(self.widget.progress_handler)
         subscribe(nij.ij, self.progress_listener)
         # Debug printer subscriber
-        if is_debug():
-            self.event_listener = NapariEventSubscriber()
-            subscribe(nij.ij, self.event_listener)
+        self.event_listener = NapariEventSubscriber()
+        subscribe(nij.ij, self.event_listener)
 
     def _clean_subscribers(self):
         # Unsubscribe listeners

@@ -10,13 +10,13 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 
+from logging import getLogger
 from typing import Any, Dict
 
 import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
-from napari_imagej.utilities.logging import log_debug
 
 # -- Constants -- #
 
@@ -32,6 +32,26 @@ minimum_versions = {
     "sc.fiji:TrackMate": "7.11.0",
 }
 
+# Each component listed here should be paired with a comment describing WHY it is here
+recommended_versions = {
+    # Versions above are easier for inclusion of scifio-labeling
+    # https://github.com/imagej/pyimagej/issues/280
+    "net.imagej:imagej": "2.10.0",
+    # Enable visualizing Datasets with DefaultROITrees
+    # https://github.com/imagej/imagej-legacy/pull/300
+    "net.imagej:imagej-legacy": "1.2.1",
+    # Enables threshold Ops to return Images of BooleanTypes
+    # https://github.com/imagej/imagej-ops/pull/651
+    "net.imagej:imagej-ops": "2.0.1",
+    # Prevents non-empty SciJava Search Results for empty searches
+    # https://github.com/scijava/scijava-search/pull/30
+    "org.scijava:scijava-search": "2.0.4",
+    # Versions above are easier for inclusion of scifio-labeling
+    # https://github.com/imagej/pyimagej/issues/280
+    "sc.fiji:fiji": "2.10.0",
+}
+
+
 # -- Public functions -- #
 
 
@@ -39,14 +59,14 @@ def init_ij() -> "jc.ImageJ":
     """
     Create an ImageJ2 gateway.
     """
-    log_debug("Initializing ImageJ2")
+    getLogger("napari-imagej").debug("Initializing ImageJ2")
 
     # -- CONFIGURATION -- #
 
     from napari_imagej.types.converters import install_converters
 
     install_converters()
-    log_debug("Completed JVM Configuration")
+    getLogger("napari-imagej").debug("Completed JVM Configuration")
 
     # -- INITIALIZATION -- #
 
@@ -58,11 +78,9 @@ def init_ij() -> "jc.ImageJ":
     )
 
     # Log initialization
-    log_debug(f"Initialized at version {ij.getVersion()}")
+    getLogger("napari-imagej").debug(f"Initialized at version {ij.getVersion()}")
 
-    # -- VALIDATION -- #
-
-    # Validate PyImageJ
+    # Ensure ImageJ instance is suitable for napari-imagej
     _validate_imagej(ij)
 
     return ij
@@ -96,18 +114,23 @@ def _configure_imagej() -> Dict[str, Any]:
     return init_settings
 
 
-def _validate_imagej(ij: "jc.ImageJ"):
+def _validate_imagej(ij: "jc.ImageJ") -> None:
     """
-    Ensure minimum requirements on java component versions are met.
+    Ensures ij is suitable for use within napari-imagej.
+    Critical errors result in an exception being thrown by this function.
+    Non-critical errors (i.e. warnings) are logged.
     """
+
     # If we want to require a minimum version for a java component, we need to
     # be able to find our current version. We do that by querying a Java class
     # within that component.
+    ImageJ = jimport("net.imagej.Main")
     RGRAI = jimport("net.imglib2.python.ReferenceGuardingRandomAccessibleInterval")
     SCIFIO = jimport("io.scif.SCIFIO")
     UnsafeImg = jimport("net.imglib2.img.unsafe.UnsafeImg")
-    component_requirements = {
+    class_from = {
         "io.scif:scifio": SCIFIO,
+        "net.imagej:imagej": ImageJ,
         "net.imagej:imagej-common": jc.Dataset,
         "net.imagej:imagej-ops": jc.OpInfo,
         "net.imglib2:imglib2-unsafe": UnsafeImg,
@@ -115,18 +138,18 @@ def _validate_imagej(ij: "jc.ImageJ"):
         "org.scijava:scijava-common": jc.Module,
         "org.scijava:scijava-search": jc.Searcher,
     }
-    component_requirements.update(_optional_requirements(ij))
+    class_from.update(_optional_requirements(ij))
     # Find version that violate the minimum
     violations = []
-    for component, cls in component_requirements.items():
-        min_version = minimum_versions[component]
-        component_version = get_version(cls)
-        if not is_version_at_least(component_version, min_version):
+    for component in set(class_from) & set(minimum_versions):
+        component_version = get_version(class_from[component])
+        minimum_version = minimum_versions[component]
+        if not is_version_at_least(component_version, minimum_version):
             violations.append(
-                f"{component} : {min_version} (Installed: {component_version})"
+                f"{component} : {minimum_version} (Installed: {component_version})"
             )
 
-    # If there are version requirements, throw an error
+    # If version requirements are violated, throw an error
     if violations:
         failure_str = "napari-imagej requires the following component versions:"
         violations.insert(0, failure_str)
@@ -136,6 +159,18 @@ def _validate_imagej(ij: "jc.ImageJ"):
         )
         raise RuntimeError(failure_str)
 
+    # If verison recommendations are violated, warn the user
+    for component in set(class_from) & set(recommended_versions):
+        recommended_version = recommended_versions[component]
+        component_version = get_version(class_from[component])
+        if not is_version_at_least(component_version, recommended_version):
+            nij_version = get_version("napari-imagej")
+            getLogger("napari-imagej").warning(
+                f"napari-imagej v{nij_version} recommends "
+                f"{component} version {recommended_version} "
+                f"(Installed: {component_version})"
+            )
+
 
 def _optional_requirements(ij: "jc.ImageJ"):
     optionals = {}
@@ -143,10 +178,15 @@ def _optional_requirements(ij: "jc.ImageJ"):
     if ij.legacy and ij.legacy.isActive():
         optionals["net.imagej:imagej-legacy"] = ij.legacy.getClass()
     # Add additional minimum versions for fiji components
-    try:
-        optionals["sc.fiji:TrackMate"] = jimport("fiji.plugin.trackmate.TrackMate")
-    except Exception:
-        pass
+    optional_classes = {
+        "sc.fiji:TrackMate": "fiji.plugin.trackmate.TrackMate",
+        "sc.fiji:Fiji": "fiji.Main",
+    }
+    for artifact, cls in optional_classes.items():
+        try:
+            optionals[artifact] = jimport(cls)
+        except Exception:
+            pass
 
     return optionals
 

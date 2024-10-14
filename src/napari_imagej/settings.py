@@ -39,11 +39,10 @@ jvm_command_line_arguments: str = ""
 
 import os
 import sys
+from logging import DEBUG, getLogger
 from typing import Any, Callable, Dict, Optional
 
 import confuse
-
-from napari_imagej.utilities.logging import log_debug, warn
 
 # -- Constants --
 
@@ -67,6 +66,7 @@ enable_imagej_gui: bool = defaults["enable_imagej_gui"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
+_debug_mode = bool(os.environ.get("DEBUG", None))
 _is_macos = sys.platform == "darwin"
 
 
@@ -90,7 +90,7 @@ def basedir() -> str:
     abs_basedir = os.path.abspath(imagej_base_directory)
     if not os.path.exists(abs_basedir):
         cwd = os.getcwd()
-        warn(
+        getLogger("napari-imagej").warning(
             f"Non-existent base directory '{abs_basedir}'; "
             f"falling back to current working directory '{cwd}'"
         )
@@ -238,7 +238,7 @@ def _confuse_get(config: confuse.Configuration, name, default_value) -> Any:
     try:
         return config[name].get(type(default_value))
     except confuse.ConfigError as e:
-        log_debug(e)
+        getLogger("napari-imagej").debug(e)
         return default_value
 
 
@@ -296,3 +296,6 @@ def _copy_settings(
 # -- Initialization logic --
 
 load()
+
+if _debug_mode:
+    getLogger("napari-imagej").setLevel(DEBUG)

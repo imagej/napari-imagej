@@ -12,6 +12,7 @@ There are a few functions that are designed for use by graphical widgets, namely
 """
 
 from inspect import Parameter, Signature, _empty, isclass, signature
+from logging import getLogger
 from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -27,7 +28,6 @@ from napari_imagej.java import jc
 from napari_imagej.types.type_conversions import type_hint_for
 from napari_imagej.types.type_utils import type_displayable_in_napari
 from napari_imagej.types.widget_mappings import preferred_widget_for
-from napari_imagej.utilities.logging import log_debug
 from napari_imagej.utilities.progress_manager import pm
 
 
@@ -280,7 +280,9 @@ def _handle_output(
     elif isinstance(output, JavaList) and len(output) and isinstance(output[0], Layer):
         for i, value in enumerate(output):
             if not isinstance(value, Layer):
-                log_debug(f"Skipping output {value}: part of a list with images inside")
+                getLogger("napari-imagej").debug(
+                    f"Skipping output {value}: part of a list with images inside"
+                )
                 continue
             sub_name = f"{name}_{i}" if len(output) > 1 else name
             _handle_output(value, sub_name, info, layer_outputs, widget_outputs)
@@ -517,7 +519,7 @@ def functionify_module_execution(
                 )
             )
 
-            log_debug("Processing...")
+            getLogger("napari-imagej").debug("Processing...")
 
             # Start this module's progress bar.
             # We do it here, because it can be done on the GUI thread,
@@ -638,9 +640,11 @@ class NapariPostProcessor(object):
         layer_outputs, widget_outputs = _pure_module_outputs(module, self.params)
         # log outputs
         for layer in layer_outputs:
-            log_debug(f"Result: ({type(layer).__name__}) {layer.name}")
+            getLogger("napari-imagej").debug(
+                f"Result: ({type(layer).__name__}) {layer.name}"
+            )
         for output in widget_outputs:
-            log_debug(f"Result: ({type(output[1])}) {output[0]}")
+            getLogger("napari-imagej").debug(f"Result: ({type(output[1])}) {output[0]}")
 
         mutated_layers = _mutable_layers(
             self.params,
@@ -663,11 +667,13 @@ class NapariPostProcessor(object):
         for layer in mutated_layers:
             layer.refresh()
 
-        log_debug("Refreshed all layers")
+        getLogger("napari-imagej").debug("Refreshed all layers")
 
         # Hand off layer outputs to napari via return
         for layer in layer_outputs:
             self.output_handler(layer)
 
         end_time = perf_counter()
-        log_debug(f"Computation completed in {end_time - self.start_time:0.4f} seconds")
+        getLogger("napari-imagej").debug(
+            f"Computation completed in {end_time - self.start_time:0.4f} seconds"
+        )

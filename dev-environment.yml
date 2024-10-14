@@ -37,7 +37,7 @@ dependencies:
   # Developer tools
   - autopep8
   - black >= 23.1.0
-  - flake8
+  - flake8 >= 7.1.0
   - flake8-pyproject
   - flake8-typing-imports
   - isort
