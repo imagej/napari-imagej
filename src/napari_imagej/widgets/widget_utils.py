@@ -123,7 +123,7 @@ class JavaErrorMessageBox(QDialog):
         msg_edit.setReadOnly(True)
         msg_edit.setText(error_message)
         self.layout().addWidget(msg_edit, 1, 0, 1, self.layout().columnCount())
-        msg_edit.setLineWrapMode(0)
+        msg_edit.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
         # Default size - size of the error message
         font = msg_edit.document().defaultFont()
