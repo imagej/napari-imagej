@@ -3,7 +3,7 @@ from typing import List
 from scyjava import get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
-from napari_imagej.java import minimum_versions, validate_imagej
+from napari_imagej.java import _validate_imagej, minimum_versions
 from tests.utils import jc
 
 version_checks = {
@@ -76,7 +76,7 @@ def test_recommended_version(ij):
     ch.setLevel(logging.WARN)
     logging.getLogger("napari-imagej").addHandler(ch)
     # Validate ImageJ - capture lower-than-recommended version
-    validate_imagej(ij)
+    _validate_imagej(ij)
     log_contents = log_capture_string.getvalue()
     log_capture_string.close()
     # Assert warning given
@@ -89,3 +89,4 @@ def test_recommended_version(ij):
 
     # restore recommended versions
     napari_imagej.java.recommended_versions = existing_recommendations
+    logging.getLogger("napari-imagej").removeHandler(ch)

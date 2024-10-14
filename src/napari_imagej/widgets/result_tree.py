@@ -6,6 +6,7 @@ SearchResults are grouped by the SciJava Searcher that created them.
 
 from __future__ import annotations
 
+from logging import getLogger
 from typing import Dict, List
 
 from qtpy.QtCore import Qt, Signal
@@ -15,7 +16,6 @@ from scyjava import Priority
 
 from napari_imagej import nij
 from napari_imagej.java import jc
-from napari_imagej.utilities.logging import log_debug
 from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
 
 
@@ -149,7 +149,7 @@ class SearchResultModel(QStandardItemModel):
             searcher_item.appendRows(result_items)
             # Update title
         else:
-            log_debug(f"Searcher {event.searcher()} not found!")
+            getLogger("napari-imagej").debug(f"Searcher {event.searcher()} not found!")
 
     def first_search_result(self) -> "jc.SearchResult":
         root = self.invisibleRootItem()
@@ -166,7 +166,9 @@ class SearchResultModel(QStandardItemModel):
         # Return False for search errors
         if len(results) == 1:
             if str(results[0].name()) == "<error>":
-                log_debug(f"Failed Search: {str(results[0].properties().get(None))}")
+                getLogger("napari-imagej").debug(
+                    f"Failed Search: {str(results[0].properties().get(None))}"
+                )
                 return []
         return [SearchResultItem(r) for r in event.results()]
 

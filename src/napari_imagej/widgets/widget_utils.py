@@ -1,4 +1,5 @@
 from functools import lru_cache
+from logging import getLogger
 from typing import List
 
 from jpype import JArray, JByte
@@ -29,7 +30,6 @@ from napari_imagej.utilities._module_utils import (
     functionify_module_execution,
     info_for,
 )
-from napari_imagej.utilities.logging import log_debug
 
 
 def python_actions_for(
@@ -53,12 +53,12 @@ def _run_actions_for(
 ):
     def execute_result(modal: bool):
         """Helper function to perform module execution."""
-        log_debug("Creating module...")
+        getLogger("napari-imagej").debug("Creating module...")
 
         name = str(result.name())
         moduleInfo = info_for(result)
         if not moduleInfo:
-            log_debug(f"Search Result {result} cannot be run!")
+            getLogger("napari-imagej").debug(f"Search Result {result} cannot be run!")
             return []
 
         if (

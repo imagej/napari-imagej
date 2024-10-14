@@ -3,6 +3,7 @@ scyjava Converters for converting between ImageJ ecosystem image types
 (referred to collectively as "java image"s) and napari Image layers
 """
 
+from logging import getLogger
 from typing import Any
 
 from imagej.convert import java_to_xarray
@@ -16,7 +17,6 @@ from xarray import DataArray
 from napari_imagej import nij
 from napari_imagej.java import jc
 from napari_imagej.types.converters import java_to_py_converter, py_to_java_converter
-from napari_imagej.utilities.logging import log_debug
 
 
 @java_to_py_converter(
@@ -97,7 +97,9 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
         try:
             properties.put(nij.ij.py.to_java(k), nij.ij.py.to_java(v))
         except Exception:
-            log_debug(f"Could not add property ({k}, {v}) to dataset {dataset}:")
+            getLogger("napari-imagej").debug(
+                f"Could not add property ({k}, {v}) to dataset {dataset}:"
+            )
     return dataset
 
 

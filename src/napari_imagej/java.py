@@ -17,7 +17,6 @@ import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
-from napari_imagej.utilities.logging import log_debug
 
 # -- Constants -- #
 
@@ -60,14 +59,14 @@ def init_ij() -> "jc.ImageJ":
     """
     Create an ImageJ2 gateway.
     """
-    log_debug("Initializing ImageJ2")
+    getLogger("napari-imagej").debug("Initializing ImageJ2")
 
     # -- CONFIGURATION -- #
 
     from napari_imagej.types.converters import install_converters
 
     install_converters()
-    log_debug("Completed JVM Configuration")
+    getLogger("napari-imagej").debug("Completed JVM Configuration")
 
     # -- INITIALIZATION -- #
 
@@ -79,16 +78,47 @@ def init_ij() -> "jc.ImageJ":
     )
 
     # Log initialization
-    log_debug(f"Initialized at version {ij.getVersion()}")
+    getLogger("napari-imagej").debug(f"Initialized at version {ij.getVersion()}")
+
+    # Ensure ImageJ instance is suitable for napari-imagej
+    _validate_imagej(ij)
 
     return ij
 
 
-def validate_imagej(ij: "jc.ImageJ") -> None:
+# -- Private functions -- #
+
+
+def _configure_imagej() -> Dict[str, Any]:
+    """
+    Configure scyjava and pyimagej.
+    This function returns the settings that must be passed in the
+    actual initialization call.
+
+    :return: kwargs that should be passed to imagej.init()
+    """
+    # ScyJava configuration
+    config.add_option(f"-Dimagej2.dir={settings.basedir()}")
+
+    # Append napari-imagej-specific cli arguments
+    cli_args = settings.jvm_command_line_arguments
+    if cli_args:
+        config.add_option(cli_args)
+
+    # PyImageJ configuration
+    init_settings = {
+        "ij_dir_or_version_or_endpoint": settings.endpoint(),
+        "mode": settings.jvm_mode(),
+        "add_legacy": settings.include_imagej_legacy,
+    }
+    return init_settings
+
+
+def _validate_imagej(ij: "jc.ImageJ") -> None:
     """
     Ensures ij is suitable for use within napari-imagej.
     Critical errors result in an exception being thrown by this function.
-    Noncritical errors (warnings) are described in the returned list of strings.
+    Non-critical errors (i.e. warnings) are logged.
     """
 
     # If we want to require a minimum version for a java component, we need to
@@ -140,34 +170,6 @@ def validate_imagej(ij: "jc.ImageJ") -> None:
                 f"{component} version {recommended_version} "
                 f"(Installed: {component_version})"
             )
-
-
-# -- Private functions -- #
-
-
-def _configure_imagej() -> Dict[str, Any]:
-    """
-    Configure scyjava and pyimagej.
-    This function returns the settings that must be passed in the
-    actual initialization call.
-
-    :return: kwargs that should be passed to imagej.init()
-    """
-    # ScyJava configuration
-    config.add_option(f"-Dimagej2.dir={settings.basedir()}")
-
-    # Append napari-imagej-specific cli arguments
-    cli_args = settings.jvm_command_line_arguments
-    if cli_args:
-        config.add_option(cli_args)
-
-    # PyImageJ configuration
-    init_settings = {
-        "ij_dir_or_version_or_endpoint": settings.endpoint(),
-        "mode": settings.jvm_mode(),
-        "add_legacy": settings.include_imagej_legacy,
-    }
-    return init_settings
 
 
 def _optional_requirements(ij: "jc.ImageJ"):

@@ -35,20 +35,14 @@ jvm_command_line_arguments: str = ""
     Additional command line arguments to pass to the Java Virtual Machine (JVM).
     For example, "-Xmx4g" to allow Java to use up to 4 GB of memory.
     By default, no arguments are passed.
-
-display_imagej_initialization_warnings: bool = True
-    When napari-imagej encounters a warnable issue pertaining to Java components
-    it will display the warnings iff this flag is true.
-    Defaults to True.
 """
 
 import os
 import sys
+from logging import DEBUG, getLogger
 from typing import Any, Callable, Dict, Optional
 
 import confuse
-
-from napari_imagej.utilities.logging import log_debug, warn
 
 # -- Constants --
 
@@ -61,7 +55,6 @@ defaults = {
     "include_imagej_legacy": True,
     "enable_imagej_gui": True,
     "jvm_command_line_arguments": "",
-    "display_java_warnings": True,
 }
 
 # -- Configuration options --
@@ -71,9 +64,9 @@ imagej_base_directory: str = defaults["imagej_base_directory"]
 include_imagej_legacy: bool = defaults["include_imagej_legacy"]
 enable_imagej_gui: bool = defaults["enable_imagej_gui"]
 jvm_command_line_arguments: str = defaults["jvm_command_line_arguments"]
-display_java_warnings: bool = defaults["display_java_warnings"]
 
 _test_mode = bool(os.environ.get("NAPARI_IMAGEJ_TESTING", None))
+_debug_mode = bool(os.environ.get("DEBUG", None))
 _is_macos = sys.platform == "darwin"
 
 
@@ -97,7 +90,7 @@ def basedir() -> str:
     abs_basedir = os.path.abspath(imagej_base_directory)
     if not os.path.exists(abs_basedir):
         cwd = os.getcwd()
-        warn(
+        getLogger("napari-imagej").warning(
             f"Non-existent base directory '{abs_basedir}'; "
             f"falling back to current working directory '{cwd}'"
         )
@@ -245,7 +238,7 @@ def _confuse_get(config: confuse.Configuration, name, default_value) -> Any:
     try:
         return config[name].get(type(default_value))
     except confuse.ConfigError as e:
-        log_debug(e)
+        getLogger("napari-imagej").debug(e)
         return default_value
 
 
@@ -303,3 +296,6 @@ def _copy_settings(
 # -- Initialization logic --
 
 load()
+
+if _debug_mode:
+    getLogger("napari-imagej").setLevel(DEBUG)
