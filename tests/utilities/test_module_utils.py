@@ -589,17 +589,17 @@ def test_request_values_args():
     import inspect
 
     assert "a" in args
-    assert args["a"]["annotation"] == inspect._empty
+    assert args["a"]["annotation"] is inspect._empty
     assert args["a"]["options"] == dict(tooltip="We don't use this")
     assert "value" not in args["a"]
 
     assert "b" in args
-    assert args["b"]["annotation"] == str
+    assert args["b"]["annotation"] is str
     assert "options" not in args["b"]
     assert "value" not in args["b"]
 
     assert "c" in args
-    assert args["c"]["annotation"] == Image
+    assert args["c"]["annotation"] is Image
     assert args["c"]["options"] == dict(choices=get_layers)
     assert "value" not in args["c"]
 
@@ -609,12 +609,12 @@ def test_request_values_args():
     assert "value" not in args["d"]
 
     assert "e" in args
-    assert args["e"]["annotation"] == inspect._empty
+    assert args["e"]["annotation"] is inspect._empty
     assert "options" not in args["e"]
     assert args["e"]["value"] == "default"
 
     assert "f" in args
-    assert args["f"]["annotation"] == str
+    assert args["f"]["annotation"] is str
     assert "options" not in args["f"]
     assert args["f"]["value"] == "also default"
 

@@ -22,7 +22,7 @@ PREFERENCE_FUNCTIONS = []
 
 
 def _widget_preference(
-    func: Callable[["jc.ModuleItem", Union[type, str]], Optional[str]]
+    func: Callable[["jc.ModuleItem", Union[type, str]], Optional[str]],
 ) -> Callable[["jc.ModuleItem", Union[type, str]], Optional[str]]:
     PREFERENCE_FUNCTIONS.append(func)
     return func
