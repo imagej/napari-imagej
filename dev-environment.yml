@@ -35,12 +35,6 @@ dependencies:
   - qtconsole != 5.4.2
   - typing_extensions != 4.6.0
   # Developer tools
-  - autopep8
-  - black >= 23.1.0
-  - flake8 >= 7.1.0
-  - flake8-pyproject
-  - flake8-typing-imports
-  - isort
   - myst-parser
   - pre-commit
   - pyqt5-sip
@@ -49,6 +43,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-qt
+  - ruff
   - sphinx
   - sphinx-copybutton
   - sphinx_rtd_theme

@@ -53,13 +53,7 @@ dependencies = [
 # NB: Keep this in sync with dev-environment.yml!
 # Development tools
 dev = [
-    "autopep8",
-    "black >= 23.1.0",
     "build",
-    "flake8 >= 7.1.0",
-    "flake8-pyproject",
-    "flake8-typing-imports",
-    "isort",
     "myst-parser",
     "pre-commit",
     "pyqt5",
@@ -67,6 +61,7 @@ dev = [
     "pytest-cov",
     "pytest-env",
     "pytest-qt",
+    "ruff",
     "sphinx",
     "sphinx-copybutton",
     "sphinx-rtd-theme",
@@ -91,16 +86,19 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# Thanks to Flake8-pyproject, we can configure flake8 here!
-[tool.flake8]
-exclude = ["bin", "build", "docs", "dist"]
-extend-ignore = ["E203"]
-# See https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
-max-line-length = 88
-min_python_version = "3.8"
+# ruff configuration
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py"]
+extend-exclude = ["bin", "build", "dist", "doc", "scripts"]
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+extend-ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `E402` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
+"__init__.py" = ["E402", "F401"]
 
 [tool.pytest.ini_options]
 addopts = "-s -p no:faulthandler"
