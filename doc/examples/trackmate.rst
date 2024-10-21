@@ -24,7 +24,7 @@ We can configure napari-imagej to use a `Fiji`_ installation as follows:
 
 2. Open the settings dialog by clicking the rightmost toolbar button, the gear symbol.
 
-3. Change the ``ImageJ directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to include Fiji, which bundles many popular plugins including TrackMate. This example was created using an endpoint of ``sc.fiji:fiji:2.13.1``.
+3. Change the ``ImageJ directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to include Fiji, which bundles many popular plugins including TrackMate. This example was created using an endpoint of ``sc.fiji:fiji:2.16.0``.
 
 .. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_fiji.png
 
@@ -36,8 +36,8 @@ We can configure napari-imagej to use a `Fiji`_ installation as follows:
 
 .. code-block:: python
 
-   from napari_imagej.java import _ij as ij
-   ij.app().getApps().keys()
+   from napari_imagej import nij
+   nij.ij.app().getApps().keys()
 
 And if ``Fiji`` is in the list, you're good!
 

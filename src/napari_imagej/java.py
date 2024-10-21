@@ -29,7 +29,7 @@ minimum_versions = {
     "net.imglib2:imglib2-imglyb": "1.1.0",
     "org.scijava:scijava-common": "2.95.0",
     "org.scijava:scijava-search": "2.0.2",
-    "sc.fiji:TrackMate": "7.11.0",
+    "sc.fiji:TrackMate": "7.14.0",
 }
 
 # Each component listed here should be paired with a comment describing WHY it is here
@@ -99,6 +99,9 @@ def _configure_imagej() -> Dict[str, Any]:
     """
     # ScyJava configuration
     config.add_option(f"-Dimagej2.dir={settings.basedir()}")
+    config.add_option(
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5456"
+    )
 
     # Append napari-imagej-specific cli arguments
     cli_args = settings.jvm_command_line_arguments

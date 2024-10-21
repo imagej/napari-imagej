@@ -104,10 +104,10 @@ def model_and_image_to_tracks(model: "jc.Model", imp: "jc.ImagePlus"):
     tracks = Tracks(data=spot_data, graph=graph, name=tracks_name)
     rois_name = f"{imp.getTitle()}-rois"
     java_label_img = jc.LabelImgExporter.createLabelImagePlus(
-        model, imp, False, False, False
+        model, imp, False, False, jc.LabelImgExporter.LabelIdPainting.LABEL_IS_TRACK_ID
     )
     py_label_img = nij.ij.py.from_java(java_label_img)
-    labels = Labels(data=py_label_img.data, name=rois_name)
+    labels = Labels(data=py_label_img.data.astype(np.uint64), name=rois_name)
 
     return (tracks, labels)
 
