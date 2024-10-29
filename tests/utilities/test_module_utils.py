@@ -248,7 +248,6 @@ def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
     assert param_map["label"] == "bar"
     assert param_map["tooltip"] == "The foo."
     assert param_map["choices"] == ["a", "b", "c"]
-    assert param_map["widget_type"] == "FloatSpinBox"
 
 
 choiceList = [

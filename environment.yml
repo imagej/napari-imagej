@@ -31,6 +31,7 @@ dependencies:
   - pandas
   - pyimagej >= 1.4.1
   - scyjava >= 1.8.1
+  - xarray < 2024.10.0
   # Version rules to avoid problems
   - qtconsole != 5.4.2
   - typing_extensions != 4.6.0
