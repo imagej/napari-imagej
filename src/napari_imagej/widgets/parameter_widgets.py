@@ -27,6 +27,7 @@ from napari import current_viewer
 from napari.layers import Layer
 from napari.utils._magicgui import get_layers
 from numpy import dtype
+from scyjava import numeric_bounds
 
 from napari_imagej.java import jc
 
@@ -79,6 +80,69 @@ def numeric_type_widget_for(cls: type):
             real_type = cls.newInstance()
             real_type.set(super().value)
             return real_type
+
+    return Widget
+
+
+@lru_cache(maxsize=None)
+def number_widget_for(cls: type):
+    if not issubclass(cls, jc.Number):
+        return None
+    # Sensible default for Number iface
+    if cls == jc.Number:
+        cls = jc.Double
+
+    # NB cls in this instance is jc.Byte.class_, NOT jc.Byte
+    # We want the latter for use in numeric_bounds and in the widget subclass
+    if cls == jc.Byte:
+        cls = ctor = jc.Byte
+    if cls == jc.Short:
+        cls = ctor = jc.Short
+    if cls == jc.Integer:
+        cls = ctor = jc.Integer
+    if cls == jc.Long:
+        cls = ctor = jc.Long
+    if cls == jc.Float:
+        cls = ctor = jc.Float
+    if cls == jc.Double:
+        cls = ctor = jc.Double
+    if cls == jc.BigInteger:
+        cls = jc.BigInteger
+        ctor = jc.BigInteger.valueOf
+    if cls == jc.BigDecimal:
+        cls = jc.BigDecimal
+        ctor = jc.BigDecimal.valueOf
+
+    extra_args = {}
+    # HACK: Best attempt for BigDecimal/BigInteger
+    extra_args["min"], extra_args["max"] = (
+        numeric_bounds(jc.Long)
+        if cls == jc.BigInteger
+        else numeric_bounds(jc.Double)
+        if cls == jc.BigDecimal
+        else numeric_bounds(cls)
+    )
+    # Case logic for implementation-specific attributes
+    parent = (
+        FloatSpinBox
+        if issubclass(cls, (jc.Double, jc.Float, jc.BigDecimal))
+        else SpinBox
+    )
+
+    # Define the new widget
+    class Widget(parent):
+        def __init__(self, **kwargs):
+            for k, v in extra_args.items():
+                kwargs.setdefault(k, v)
+            super().__init__(**kwargs)
+
+        @property
+        def value(self):
+            return ctor(parent.value.fget(self))
+
+        @value.setter
+        def value(self, value: Any):
+            parent.value.fset(self, value)
 
     return Widget
 

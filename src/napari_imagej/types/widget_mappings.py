@@ -15,6 +15,7 @@ from napari_imagej.java import jc
 from napari_imagej.widgets.parameter_widgets import (
     ShapeWidget,
     file_widget_for,
+    number_widget_for,
     numeric_type_widget_for,
 )
 
@@ -69,6 +70,14 @@ def _numeric_type_preference(
 ) -> Optional[Union[type, str]]:
     if issubclass(item.getType(), jc.NumericType):
         return numeric_type_widget_for(item.getType())
+
+
+@_widget_preference
+def _number_preference(
+    item: "jc.ModuleItem", type_hint: Union[type, str]
+) -> Optional[Union[type, str]]:
+    if issubclass(item.getType(), jc.Number):
+        return number_widget_for(item.getType())
 
 
 @_widget_preference

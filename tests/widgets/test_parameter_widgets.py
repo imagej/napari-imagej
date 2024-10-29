@@ -19,6 +19,7 @@ from magicgui.widgets import (
 )
 from napari import current_viewer
 from napari.layers import Image
+from scyjava import numeric_bounds
 
 from napari_imagej.widgets.parameter_widgets import (
     DirectoryWidget,
@@ -26,6 +27,7 @@ from napari_imagej.widgets.parameter_widgets import (
     OpenFileWidget,
     SaveFileWidget,
     ShapeWidget,
+    number_widget_for,
     numeric_type_widget_for,
 )
 from tests.utils import jc
@@ -162,6 +164,32 @@ def test_mutable_output_add_new_image(
     assert foo in input_widget.choices
     assert foo in output_widget.choices
     assert foo is output_widget.value
+
+
+def test_numbers(ij):
+    numbers = [
+        jc.Byte,
+        jc.Short,
+        jc.Integer,
+        jc.Long,
+        jc.Float,
+        jc.Double,
+        jc.BigInteger,
+        jc.BigDecimal,
+    ]
+    for number in numbers:
+        # NB See HACK in number_widget_for
+        if number == jc.BigInteger:
+            min_val, max_val = numeric_bounds(jc.Long)
+        elif number == jc.BigDecimal:
+            min_val, max_val = numeric_bounds(jc.Double)
+        else:
+            min_val, max_val = numeric_bounds(number)
+
+        widget = number_widget_for(number.class_)()
+        assert min_val == widget.min
+        assert max_val == widget.max
+        assert isinstance(widget.value, number)
 
 
 def test_realType():
