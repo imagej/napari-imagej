@@ -135,8 +135,8 @@ def images() -> List[TypeHint]:
 @hint_category
 def points() -> List[TypeHint]:
     return [
-        TypeHint(jc.PointMask, "napari.types.PointsData"),
-        TypeHint(jc.RealPointCollection, "napari.types.PointsData"),
+        TypeHint(jc.PointMask, "napari.layers.Points"),
+        TypeHint(jc.RealPointCollection, "napari.layers.Points"),
     ]
 
 
@@ -154,7 +154,7 @@ def shapes() -> List[TypeHint]:
 
 @hint_category
 def surfaces() -> List[TypeHint]:
-    return [TypeHint(jc.Mesh, "napari.types.SurfaceData")]
+    return [TypeHint(jc.Mesh, "napari.layers.Surface")]
 
 
 @hint_category

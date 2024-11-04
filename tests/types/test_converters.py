@@ -582,21 +582,23 @@ def test_realpointcollection_to_points(ij, real_point_collection):
     assert isinstance(py_mask, Points)
     data = py_mask.data
     assert len(data) == 3
+    # NB dimensions are permuted across langauge barrier
     assert np.array_equal(data[0], np.array([0, 0]))
     assert np.array_equal(data[1], np.array([1, 1]))
-    assert np.array_equal(data[2], np.array([2, 0]))
+    assert np.array_equal(data[2], np.array([0, 2]))
 
 
 def test_points_to_realpointcollection(ij, points):
     # Assert shapes conversion to ellipse
     collection = ij.py.to_java(points)
     assert isinstance(collection, jc.RealPointCollection)
+    # NB dimensions are permuted across langauge barrier
     p1 = JArray(JDouble)(2)
     p1[:] = [0, 0]
     p2 = JArray(JDouble)(2)
-    p2[:] = [4, -4]
+    p2[:] = [-4, 4]
     p3 = JArray(JDouble)(2)
-    p3[:] = [8, 0]
+    p3[:] = [0, 8]
     pts = [jc.RealPoint(p) for p in [p1, p2, p3]]
     for e, a in zip(pts, collection.points()):
         assert e == a

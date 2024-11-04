@@ -34,7 +34,16 @@ def realPoint_from(coords: np.ndarray):
 )
 def _points_to_realpointcollection(points: Points) -> "jc.RealPointCollection":
     """Converts a napari Points into an ImageJ2 RealPointCollection"""
-    pts = [realPoint_from(x) for x in points.data]
+    data = points.data
+    n = data.shape[1]
+    # Reshape data to align with language conventions
+    if n == 2:
+        data = data[:, [1, 0]]  # (Y, X) in Python --> (X, Y) in Java
+    elif n == 3:
+        data = data[:, [2, 1, 0]]  # (Z, Y, X) in Python --> (X, Y, Z) in Java
+    else:
+        raise ValueError(f"Do not know how to translate point of {n} dimensions")
+    pts = [realPoint_from(x) for x in data]
     ptList = jc.ArrayList(pts)
     return jc.DefaultWritableRealPointCollection(ptList)
 
@@ -56,4 +65,12 @@ def _realpointcollection_to_points(collection: "jc.RealPointCollection") -> Poin
     for i, pt in enumerate(collection.points()):
         pt.localize(tmp_arr)
         data[i, :] = tmp_arr
+    # Reshape data to align with language conventions
+    n = data.shape[1]
+    if n == 2:
+        data = data[:, [1, 0]]  # (X, Y) in Java --> (Y, X) in Python
+    elif n == 3:
+        data = data[:, [2, 1, 0]]  # (X, Y, Z) in Java --> (Z, Y, X) in Python
+    else:
+        raise ValueError(f"Do not know how to translate point of {n} dimensions")
     return Points(data=data)
