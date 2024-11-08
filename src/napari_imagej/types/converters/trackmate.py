@@ -22,7 +22,7 @@ def trackmate_present():
         return True
     # Step 2 - check the jar directory
     elif isdir(join(endpoint, "jars")):
-        for fname in listdir(join([endpoint, "jars"])):
+        for fname in listdir(join(endpoint, "jars")):
             if match("TrackMate-\d.*\.jar", fname):  # noqa
                 return True
     return False
