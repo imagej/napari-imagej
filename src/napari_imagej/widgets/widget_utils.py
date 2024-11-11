@@ -31,6 +31,17 @@ from napari_imagej.utilities._module_utils import (
     info_for,
 )
 
+# Generally, Python libraries treat the dimensions i of an array with n
+# dimensions as the CONVENTIONAL_DIMS[n][i] axis
+CONVENTIONAL_DIMS = [
+    [],
+    ["X"],
+    ["Y", "X"],
+    ["Z", "Y", "X"],
+    ["Time", "Y", "X", "Channel"],
+    ["Time", "Z", "Y", "X", "Channel"],
+]
+
 
 def python_actions_for(
     result: "jc.SearchResult", output_signal: Signal, parent_widget: QWidget = None
@@ -168,16 +179,6 @@ class LayerComboBox(QWidget):
 class DimsComboBox(QFrame):
     """A QFrame used to map the axes of a Layer to dimension labels"""
 
-    # NB: Strings correspond to supported net.imagej.axis.Axes types
-    dims = [
-        [],
-        ["X"],
-        ["Y", "X"],
-        ["Z", "Y", "X"],
-        ["Time", "Y", "X", "Channel"],
-        ["Time", "Z", "Y", "X", "Channel"],
-    ]
-
     def __init__(self, combo_box: LayerComboBox):
         super().__init__()
         self.selection_box: LayerComboBox = combo_box
@@ -202,10 +203,10 @@ class DimsComboBox(QFrame):
         # Guess dimension labels for the selection
         ndim = len(selected.data.shape)
         if isinstance(selected, Image) and selected.rgb:
-            guess = list(self.dims[ndim - 1])
+            guess = list(CONVENTIONAL_DIMS[ndim - 1])
             guess.append("Channel")
         else:
-            guess = self.dims[ndim]
+            guess = CONVENTIONAL_DIMS[ndim]
         # Create dimension selectors for each dimension of the selection.
         for i, g in enumerate(guess):
             self.layout().addWidget(

@@ -3,10 +3,12 @@ A collection of QWidgets, each designed to conveniently harvest a particular inp
 They should align with a SciJava ModuleItem that satisfies some set of conditions.
 """
 
+from __future__ import annotations
+
 import importlib
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from imagej.images import _imglib2_types
 from jpype import JArray, JClass, JInt, JLong
@@ -24,12 +26,28 @@ from magicgui.widgets import (
     request_values,
 )
 from napari import current_viewer
-from napari.layers import Layer
+from napari.layers import Layer, Image
 from napari.utils._magicgui import get_layers
 from numpy import dtype
 from scyjava import numeric_bounds
 
 from napari_imagej.java import jc
+
+if TYPE_CHECKING:
+    from typing import Sequence
+
+
+# Generally, Python libraries treat the dimensions i of an array with n
+# dimensions as the CONVENTIONAL_DIMS[n][i] axis
+# FIXME: Also in widget_utils.py
+CONVENTIONAL_DIMS = [
+    [],
+    ["X"],
+    ["Y", "X"],
+    ["Z", "Y", "X"],
+    ["T", "Y", "X", "C"],
+    ["T", "Z", "Y", "X", "C"],
+]
 
 
 def widget_supported_java_types() -> List[JClass]:
@@ -147,6 +165,40 @@ def number_widget_for(cls: type):
     return Widget
 
 
+class MutableDimWidget(Container):
+    def __init__(
+        self,
+        val: int = 256,
+        idx: int = 0,
+        **kwargs,
+    ):
+        layer_tooltip = f"Parameters for the dimension of index {idx}"
+        self.size_spin = SpinBox(value=val, min=1)
+        choices = ["X", "Y", "Z", "C", "T"]
+        layer_kwargs = kwargs.copy()
+        layer_kwargs["nullable"] = True
+        self.layer_select = ComboBox(
+            choices=choices, tooltip=layer_tooltip, **layer_kwargs
+        )
+        self._nullable = True
+        kwargs["widgets"] = [self.size_spin, self.layer_select]
+        kwargs["labels"] = False
+        kwargs["layout"] = "horizontal"
+        kwargs.pop("value")
+        kwargs.pop("nullable")
+        super().__init__(**kwargs)
+        self.margins = (0, 0, 0, 0)
+
+    @property
+    def value(self) -> tuple[int, str]:
+        return (self.size_spin.value, self.layer_select.value)
+
+    @value.setter
+    def value(self, v: tuple[int, str]) -> None:
+        self.size_spin.value = v[0]
+        self.layer_select.value = v[1]
+
+
 class MutableOutputWidget(Container):
     """
     A ComboBox widget combined with a button that creates new layers.
@@ -205,12 +257,23 @@ class MutableOutputWidget(Container):
                 selection_name = widget.current_choice
                 if selection_name != "":
                     return current_viewer().layers[selection_name]
+        return None
 
-    def _default_new_shape(self):
+    def _default_new_shape(self) -> Sequence[tuple[int, str]]:
         guess = self._default_layer()
         if guess:
-            return guess.data.shape
-        return [512, 512]
+            data = guess.data
+            # xarray has dims, otherwise use conventions
+            if hasattr(data, "dims"):
+                dims = data.dims
+            # Special case: RGB
+            elif isinstance(guess, Image) and guess.rgb:
+                dims = list(CONVENTIONAL_DIMS[len(data.shape) - 1])
+                dims.append("C")
+            else:
+                dims = list(CONVENTIONAL_DIMS[len(data.shape)])
+            return [t for t in zip(data.shape, dims)]
+        return [(512, "Y"), (512, "X")]
 
     def _default_new_type(self) -> str:
         """
@@ -237,12 +300,10 @@ class MutableOutputWidget(Container):
         """
 
         # Array types that are always included
-        backing_choices = ["NumPy"]
+        backing_choices = ["xarray", "NumPy"]
         # Array types that may be present
         if importlib.util.find_spec("zarr"):
             backing_choices.append("Zarr")
-        if importlib.util.find_spec("xarray"):
-            backing_choices.append("xarray")
 
         # Define the magicgui widget for parameter harvesting
         params = request_values(
@@ -253,16 +314,19 @@ class MutableOutputWidget(Container):
                 options=dict(tooltip="If blank, a name will be generated"),
             ),
             shape=dict(
-                annotation=List[int],
+                annotation=List[MutableDimWidget],
                 value=self._default_new_shape(),
                 options=dict(
-                    tooltip="By default, the shape of the first Layer input",
-                    options=dict(min=0, max=2**31 - 10),
+                    layout="vertical",
+                    options=dict(
+                        widget_type=MutableDimWidget,
+                    ),
+                    tooltip="The size of each image axis",
                 ),
             ),
             array_type=dict(
                 annotation=str,
-                value="NumPy",
+                value="xarray",
                 options=dict(
                     tooltip="The backing data array implementation",
                     choices=backing_choices,
@@ -295,7 +359,7 @@ class MutableOutputWidget(Container):
             import numpy as np
 
             data = np.full(
-                shape=tuple(params["shape"]),
+                shape=tuple(p[0] for p in params["shape"]),
                 fill_value=params["fill_value"],
                 dtype=params["data_type"],
             )
@@ -305,7 +369,7 @@ class MutableOutputWidget(Container):
             import zarr
 
             data = zarr.full(
-                shape=params["shape"],
+                shape=tuple(p[0] for p in params["shape"]),
                 fill_value=params["fill_value"],
                 dtype=params["data_type"],
             )
@@ -317,10 +381,11 @@ class MutableOutputWidget(Container):
 
             data = xarray.DataArray(
                 data=np.full(
-                    shape=tuple(params["shape"]),
+                    shape=tuple(p[0] for p in params["shape"]),
                     fill_value=params["fill_value"],
                     dtype=params["data_type"],
-                )
+                ),
+                dims=tuple(p[1] for p in params["shape"]),
             )
 
         # give the data array to the viewer.
