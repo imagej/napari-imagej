@@ -3,12 +3,22 @@ Using BoneJ2
 
 Here we adapt a workflow from `the BoneJ2 paper <https://wellcomeopenresearch.org/articles/6-37>`_ for use with napari-imagej.
 
+.. important::
+
+    This Use Case was run with the following Mamba environment::
+
+        mamba env create -n ex-bonej -y -c conda-forge python=3.10 openjdk=11.0 napari=0.5.0 napari-imagej=0.2.0 napari-segment-blobs-and-things-with-membranes=0.3.11
+
+    and napari-imagej was configured to use the following endpoint::
+        
+        sc.fiji:fiji:2.15.0+org.bonej:bonej-ops:MANAGED+org.bonej:bonej-plugins:MANAGED+org.bonej:bonej-utilities:MANAGED
+
 napari Setup
 ------------
 
 We will install one additional napari plugin, `napari-segment-blobs-and-things-with-membranes <https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes>`_, to support this use case. Instructions for finding and installing a napari plugin are `here <https://napari.org/stable/plugins/find_and_install_plugin.html>`__
 
-To install ``napari-segment-blobs-and-things-with-membranes``, simply ensure that your napari environment is active and paste the following into your terminal:
+If you did not use the above Mamba environment, you can install ``napari-segment-blobs-and-things-with-membranes`` by ensuring that your napari environment is active and pasting the following into your terminal:
 
 .. code-block:: bash
 
@@ -19,13 +29,13 @@ Once the plugin has been installed correctly, ``napari-segment-blobs-and-things-
 BoneJ2 Setup
 ------------
 
-We need to first specify the endpoint that we will use to access BoneJ2.
+We now need to first specify the endpoint that we will use to access BoneJ2.
 
-We can configure napari-imagej to use BoneJ2 by opening the settings dialog and changing the ``imagej directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`__). Within the napari-imagej settings dialog, paste the following into the ``imagej directory or endpoint`` field, and click ``OK``:
+We can configure napari-imagej to use BoneJ2 by opening the settings dialog and changing the ``imagej directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`__). Within the napari-imagej settings dialog paste the following into the ``imagej directory or endpoint`` field, and click ``OK``:
 
 .. code-block::
 
-    sc.fiji:fiji:2.13.0+org.bonej:bonej-ops:MANAGED+org.bonej:bonej-plugins:MANAGED+org.bonej:bonej-utilities:MANAGED
+    sc.fiji:fiji:2.15.0+org.bonej:bonej-ops:MANAGED+org.bonej:bonej-plugins:MANAGED+org.bonej:bonej-utilities:MANAGED
 
 
 **Note that napari must be restarted for these changes to take effect!**
@@ -125,6 +135,10 @@ This will output the fractal dimension of the image.
 .. figure:: https://media.imagej.net/napari-imagej/0.2.0/bonej2_fractal_dimension.png
 
             Setting the parameters of BoneJ2's fractal dimension command.
+
+.. note::
+
+    If you make any mistakes in executing these commands, including passing the wrong image, the results table will record additional rows. When this happens, know that the lowest non- ``nan`` row has the correct output. See the issue on GitHub `here <https://github.com/imagej/napari-imagej/issues/310>`_\.
 
 
 **Calculating the surface area:**
