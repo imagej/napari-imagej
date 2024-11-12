@@ -168,13 +168,14 @@ class LayerComboBox(QWidget):
 class DimsComboBox(QFrame):
     """A QFrame used to map the axes of a Layer to dimension labels"""
 
+    # NB: Strings correspond to supported net.imagej.axis.Axes types
     dims = [
         [],
         ["X"],
         ["Y", "X"],
         ["Z", "Y", "X"],
-        ["T", "Y", "X", "C"],
-        ["T", "Z", "Y", "X", "C"],
+        ["Time", "Y", "X", "Channel"],
+        ["Time", "Z", "Y", "X", "Channel"],
     ]
 
     def __init__(self, combo_box: LayerComboBox):
@@ -199,7 +200,12 @@ class DimsComboBox(QFrame):
         # Determine the selected layer
         selected = self.selection_box.combo.itemData(index)
         # Guess dimension labels for the selection
-        guess = self.dims[len(selected.data.shape)]
+        ndim = len(selected.data.shape)
+        if isinstance(selected, Image) and selected.rgb:
+            guess = list(self.dims[ndim - 1])
+            guess.append("Channel")
+        else:
+            guess = self.dims[ndim]
         # Create dimension selectors for each dimension of the selection.
         for i, g in enumerate(guess):
             self.layout().addWidget(
@@ -220,7 +226,8 @@ class DimsComboBox(QFrame):
     class DimSelector(QWidget):
         """A QWidget providing potential labels for each dimension"""
 
-        choices = ["X", "Y", "Z", "T", "C", "Unspecified"]
+        # NB: Strings correspond to supported net.imagej.axis.Axes types
+        choices = ["X", "Y", "Z", "Time", "Channel", "Unspecified"]
 
         def __init__(self, title: str, guess: str):
             # Define widget layout

@@ -10,7 +10,7 @@ from imagej.convert import java_to_xarray
 from jpype import JArray, JByte
 from napari.layers import Image
 from napari.utils.colormaps import Colormap
-from numpy import ones
+from numpy import ones, uint8
 from scyjava import Priority
 from xarray import DataArray
 
@@ -59,6 +59,16 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     :param image: a napari Image layer
     :return: a Dataset
     """
+    # Define dimension order if necessary
+    if "dim_order" not in kwargs:
+        # NB "dim_i"s will be overwritten later
+        dim_order = [f"dim_{i}" for i in range(len(image.data.shape))]
+        # if RGB, last dimension is Channel
+        if image.rgb:
+            dim_order[-1] = "Channel"
+
+        kwargs["dim_order"] = dim_order
+
     # Construct a dataset from the data
     dataset: "jc.Dataset" = nij.ij.py.to_dataset(image.data, **kwargs)
 
@@ -86,8 +96,16 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
 
     # Add name
     dataset.setName(image.name)
-    # Add color table, if the image uses a custom colormap
-    if image.colormap.name != "gray":
+
+    # Set RGB
+    if (
+        image.rgb
+        and dataset.dimensionIndex(jc.Axes.CHANNEL) > -1
+        and image.dtype == uint8
+    ):
+        dataset.setRGBMerged(True)
+    # or add color table, if the image uses a custom colormap
+    elif image.colormap.name != "gray":
         color_table = _colormap_to_color_table(image.colormap)
         dataset.initializeColorTables(1)
         dataset.setColorTable(color_table, 0)

@@ -328,9 +328,10 @@ def test_advanced_data_transfer(
     assert not button.isEnabled()
 
     # Add an image to the viewer
-    sample_data = numpy.ones((100, 100, 3))
+    sample_data = numpy.ones((100, 100, 3), dtype=numpy.uint8)
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
+    assert image.rgb
     asserter(lambda: button.isEnabled())
 
     # Add some rois to the viewer
@@ -373,6 +374,8 @@ def test_advanced_data_transfer(
             return False
         dataset = ij.display().getActiveDisplay().getActiveView().getData()
         if not dataset.getName() == "test_to":
+            return False
+        if not dataset.isRGBMerged():
             return False
         rois = dataset.getProperties().get("rois")
         return rois is not None
@@ -447,7 +450,7 @@ def test_modification_in_imagej(asserter, qtbot, ij, gui_widget: NapariImageJMen
 
     # Add some data to the viewer
     sample_data = numpy.ones((100, 100, 3), dtype=numpy.uint8)
-    image: Image = Image(data=sample_data, name="test_to")
+    image: Image = Image(data=sample_data, name="test_to", rgb=False)
     current_viewer().add_layer(image)
 
     # Press the button, handle the Dialog
