@@ -3,6 +3,16 @@ Image Processing with ImageJ Ops (headless)
 
 The `ImageJ Ops`_ project contains hundreds of algorithms for module image processing, and is shipped with every ImageJ2 installation. This document explains how to use ImageJ Ops from the napari interface.
 
+.. important::
+
+    This Use Case was run with the following Mamba environment::
+
+        mamba env create -n ex-ops -y -c conda-forge python=3.11 openjdk=11.0 napari=0.5.0 napari-imagej=0.2.0
+
+    and napari-imagej was configured to use the following endpoint::
+        
+        net.imagej:imagej:2.15.0
+
 Ops, explained
 --------------
 
