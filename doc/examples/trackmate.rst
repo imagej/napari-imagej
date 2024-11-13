@@ -11,6 +11,16 @@ For this use case we will analyze `live cell wide-field microscopy data of HeLa 
 
 |
 
+.. important::
+
+    This Use Case was run with the following Mamba environment::
+
+        mamba env create -n ex-tracking -y -c conda-forge python=3.11 openjdk=11.0 napari=0.5.0 napari-imagej=0.2.0 napari-stracking=0.1.9
+
+    and napari-imagej was configured to use the following endpoint::
+        
+        sc.fiji:fiji:2.15.0
+
 TrackMate Setup
 ---------------
 
@@ -24,7 +34,7 @@ We can configure napari-imagej to use a `Fiji`_ installation as follows:
 
 2. Open the settings dialog by clicking the rightmost toolbar button, the gear symbol.
 
-3. Change the ``ImageJ directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to include Fiji, which bundles many popular plugins including TrackMate. This example was created using an endpoint of ``sc.fiji:fiji:2.13.1``.
+3. Change the ``ImageJ directory or endpoint`` (described `here <../Configuration.html#imagej-directory-or-endpoint>`_) to include Fiji, which bundles many popular plugins including TrackMate. Change this setting to the napari-imagej endpoint listed above.
 
 .. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_fiji.png
 
@@ -98,7 +108,7 @@ Once the spots and tracks have been generated, you can return to napari and use 
 Processing tracks with napari-stracking
 ---------------------------------------
 
-While the `napari-stracking`_ plugin is capable of performing its own particle tracking, it also comes with some track processing tools. We can install ``napari-stracking`` through the following steps:
+While the `napari-stracking`_ plugin is capable of performing its own particle tracking, it also comes with some track processing tools. If you did not install ``napari-stracking`` while setting up your environment, you can install ``napari-stracking`` through the following steps:
 
 1. Open the plugin installation window by selecting ``Plugins>Install/Uninstall Plugins...`` from the napari menu
 
