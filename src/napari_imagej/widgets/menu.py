@@ -3,7 +3,7 @@ The top-level menu for the napari-imagej widget.
 """
 
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional, Tuple
 
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -209,18 +209,26 @@ class FromIJButton(IJMenuButton):
     def _add_layer(self, view):
         # Convert the object into Python
         py_image = nij.ij.py.from_java(view)
-        # Create and add the layer
-        if isinstance(py_image, Layer):
-            self.viewer.add_layer(py_image)
+
+        def add_layer(layer: Layer) -> None:
+            self.viewer.add_layer(layer)
             # Check the metadata for additonal layers, like
             # Shapes/Tracks/Points
-            for _, v in py_image.metadata.items():
+            for _, v in layer.metadata.items():
                 if isinstance(v, Layer):
                     self.viewer.add_layer(v)
                 elif isinstance(v, Iterable):
                     for itm in v:
                         if isinstance(itm, Layer):
                             self.viewer.add_layer(itm)
+
+        # Create and add the layer
+        if isinstance(py_image, Layer):
+            add_layer(py_image)
+        elif isinstance(py_image, (Tuple, List)):
+            for image in py_image:
+                if isinstance(image, Layer):
+                    add_layer(image)
         # Other
         elif is_arraylike(py_image):
             name = nij.ij.object().getName(view)

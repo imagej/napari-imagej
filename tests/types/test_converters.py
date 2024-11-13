@@ -756,6 +756,20 @@ def test_dataset(ij) -> "jc.Dataset":
 
 
 @pytest.fixture
+def test_multichannel_dataset(ij) -> "jc.Dataset":
+    dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((2, 10, 10))))
+    dataset.setAxis(jc.DefaultLinearAxis(jc.Axes.CHANNEL, 1, 0), 2)
+    return dataset
+
+
+@pytest.fixture
+def test_rgb_dataset(ij) -> "jc.Dataset":
+    dataset: jc.Dataset = ij.dataset().create(ij.py.to_java(np.ones((3, 10, 10))))
+    dataset.setAxis(jc.DefaultLinearAxis(jc.Axes.CHANNEL, 1, 0), 2)
+    return dataset
+
+
+@pytest.fixture
 def test_dataset_view(ij, test_dataset) -> "jc.DatasetView":
     view: jc.DatasetView = ij.get(
         "net.imagej.display.ImageDisplayService"
@@ -840,8 +854,27 @@ def test_colormap_dataset_to_image_layer(ij, test_dataset):
     p_img = ij.py.from_java(test_dataset)
     assert isinstance(p_img, Image)
     assert test_dataset.getName() == p_img.name
-    assert "gray" != p_img.colormap.name
+    assert "cyan" == p_img.colormap.name
     _assert_equal_color_maps(test_dataset.getColorTable(0), p_img.colormap)
+
+
+def test_multichannel_dataset_to_image_layers(ij, test_multichannel_dataset):
+    test_multichannel_dataset.initializeColorTables(2)
+    test_multichannel_dataset.setColorTable(jc.ColorTables.CYAN, 0)
+    test_multichannel_dataset.setColorTable(jc.ColorTables.MAGENTA, 1)
+    p_imgs = ij.py.from_java(test_multichannel_dataset)
+    assert isinstance(p_imgs, List)
+    assert isinstance(p_imgs[0], Image)
+    assert "cyan" == p_imgs[0].colormap.name
+    assert isinstance(p_imgs[1], Image)
+    assert "magenta" == p_imgs[1].colormap.name
+
+
+def test_dataset_rgb_to_image_layer(ij, test_rgb_dataset):
+    """Test conversion of a Dataset with no colormap"""
+    p_img = ij.py.from_java(test_rgb_dataset)
+    assert isinstance(p_img, Image)
+    assert p_img.rgb
 
 
 def test_dataset_view_to_image_layer(ij, test_dataset_view):
@@ -858,5 +891,5 @@ def test_colormap_dataset_view_to_image_layer(ij, test_dataset_view):
     p_img = ij.py.from_java(test_dataset_view)
     assert isinstance(p_img, Image)
     assert test_dataset_view.getData().getName() == p_img.name
-    assert "gray" != p_img.colormap.name
+    assert "cyan" == p_img.colormap.name
     _assert_equal_color_maps(test_dataset_view.getColorTables().get(0), p_img.colormap)
