@@ -9,12 +9,22 @@ For this example, we translated PyImageJ's `Puncta Segmentation`_ into a SciJava
 
 For more information on the use case itself, please see the original PyImageJ Puncta Segmentation example.
 
+.. important::
+
+    This Use Case was run with the following Mamba environment::
+
+        mamba env create -n ex-segment -y -c conda-forge python=3.11 openjdk=11.0 napari=0.5.0 napari-imagej=0.2.0
+
+    and napari-imagej was configured to use the following endpoint::
+        
+        net.imagej:imagej:2.15.0
+
 Configuration
 -------------
 
 To run this use case, the following settings were used. For information on configuring napari-imagej, please see `here <../Configuration.html>`__.
 
-.. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_fiji.png
+.. figure:: https://media.imagej.net/napari-imagej/0.2.0/settings_imagej_2.15.0.png
 
     Configuration for the Puncta Segmentation use case
 
@@ -112,7 +122,7 @@ The second step is to find our script within napari-imagej. Discovered SciJava S
 
 .. figure:: https://media.imagej.net/napari-imagej/0.2.0/puncta_search.png
     
-    ``Puncta_Segmentation.py`` exposed within the napari-imagej searchbar as ``PunctaSegmentation``.
+    ``Puncta_Segmentation.py`` exposed within the napari-imagej searchbar as ``Puncta Segmentation``.
 
 Double-clicking on ``PunctaSegmentation`` will bring a modal dialog, prompting the user for input data. The dialog also offers to display the resulting table in a new window, which may be preferred for large result tables.
 
