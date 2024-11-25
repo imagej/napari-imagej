@@ -202,7 +202,9 @@ class DimsComboBox(QFrame):
         selected = self.selection_box.combo.itemData(index)
         # Guess dimension labels for the selection
         ndim = len(selected.data.shape)
-        if isinstance(selected, Image) and selected.rgb:
+        if (dims := getattr(selected.data, "dims", None)) is not None:
+            guess = dims
+        elif isinstance(selected, Image) and selected.rgb:
             guess = list(CONVENTIONAL_DIMS[ndim - 1])
             guess.append("Channel")
         else:
