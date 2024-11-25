@@ -174,6 +174,23 @@ def test_mutable_output_add_new_image(
     assert foo is output_widget.value
 
 
+def test_mutable_output_add_new_image_dims_repeats(output_widget: MutableOutputWidget):
+    """Tests that MutableOutputWidget can add a new image from params"""
+
+    params = {
+        "name": "foo",
+        "array_type": "xarray",
+        "shape": ((100, "Y"), (100, "Y"), (3, "C")),
+        "fill_value": 3.0,
+        "data_type": np.int32,
+    }
+
+    with pytest.raises(ValueError):
+        output_widget._add_new_image(params)
+
+    assert "foo" not in current_viewer().layers
+
+
 def test_numbers(ij):
     numbers = [
         jc.Byte,

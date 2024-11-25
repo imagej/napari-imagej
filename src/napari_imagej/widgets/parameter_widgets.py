@@ -379,6 +379,12 @@ class MutableOutputWidget(Container):
             import numpy as np
             import xarray
 
+            dims = tuple(p[1] for p in params["shape"])
+            # Ensure every dimension is unique
+            if len(dims) != len(set(dims)):
+                # TODO: Ideally this would be prevented in the widget
+                raise ValueError("Cannot have repeated dimensions")
+
             data = xarray.DataArray(
                 data=np.full(
                     shape=tuple(p[0] for p in params["shape"]),
