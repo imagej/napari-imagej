@@ -45,8 +45,8 @@ CONVENTIONAL_DIMS = [
     ["X"],
     ["Y", "X"],
     ["Z", "Y", "X"],
-    ["T", "Y", "X", "C"],
-    ["T", "Z", "Y", "X", "C"],
+    ["Time", "Y", "X", "Channel"],
+    ["Time", "Z", "Y", "X", "Channel"],
 ]
 
 
