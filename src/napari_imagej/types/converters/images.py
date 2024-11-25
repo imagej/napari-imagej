@@ -78,10 +78,19 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     :param image: a napari Image layer
     :return: a Dataset
     """
+    # Redefine dimension order if necessary
+    data = image.data
+    if hasattr(data, "dims"):
+        if "dim_order" in kwargs:
+            dim_remapping = {
+                old: new for old, new in zip(data.dims, kwargs["dim_order"])
+            }
+            data = data.rename(dim_remapping)
+            kwargs.pop("dim_order")
     # Define dimension order if necessary
-    if "dim_order" not in kwargs:
+    elif "dim_order" not in kwargs:
         # NB "dim_i"s will be overwritten later
-        dim_order = [f"dim_{i}" for i in range(len(image.data.shape))]
+        dim_order = [f"dim_{i}" for i in range(len(data.shape))]
         # if RGB, last dimension is Channel
         if image.rgb:
             dim_order[-1] = "Channel"
@@ -89,7 +98,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
         kwargs["dim_order"] = dim_order
 
     # Construct a dataset from the data
-    dataset: "jc.Dataset" = nij.ij.py.to_dataset(image.data, **kwargs)
+    dataset: "jc.Dataset" = nij.ij.py.to_dataset(data, **kwargs)
 
     # Clean up the axes
     axes = [

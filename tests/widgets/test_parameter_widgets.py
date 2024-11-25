@@ -20,6 +20,7 @@ from magicgui.widgets import (
 from napari import current_viewer
 from napari.layers import Image
 from scyjava import numeric_bounds
+from xarray import DataArray
 
 from napari_imagej.widgets.parameter_widgets import (
     DirectoryWidget,
@@ -98,17 +99,27 @@ def test_mutable_output_default_parameters(
 
     # Assert when no selection, output shape is default
     assert input_widget.current_choice == ""
-    assert output_widget._default_new_shape() == [512, 512]
+    assert output_widget._default_new_shape() == [(512, "Y"), (512, "X")]
     assert output_widget._default_new_type() == "float64"
 
-    # Add new image
+    # Add new Z-stack
+    shape = (3, 128, 128)
+    import numpy as np
+
+    current_viewer().add_image(data=np.ones(shape, dtype=np.int32), name="Z")
+    assert input_widget.current_choice == "Z"
+    assert output_widget._default_new_shape() == [(3, "Z"), (128, "Y"), (128, "X")]
+    assert output_widget._default_new_type() == "int32"
+
+    # Add new RGB image
     shape = (128, 128, 3)
     import numpy as np
 
-    current_viewer().add_image(data=np.ones(shape, dtype=np.int32), name="img")
-    assert input_widget.current_choice == "img"
-    assert output_widget._default_new_shape() == shape
-    assert output_widget._default_new_type() == "int32"
+    current_viewer().layers.clear()
+    current_viewer().add_image(data=np.ones(shape, dtype=np.int16), name="RGB")
+    assert input_widget.current_choice == "RGB"
+    assert output_widget._default_new_shape() == [(128, "Y"), (128, "X"), (3, "C")]
+    assert output_widget._default_new_type() == "int16"
 
 
 def test_mutable_output_dtype_choices(
@@ -126,16 +137,13 @@ def test_mutable_output_dtype_choices(
 # these types are always included
 backing_types = [
     ("NumPy", np.ndarray),
+    ("xarray", DataArray),
 ]
 # these types are sometimes included
 if importlib.util.find_spec("zarr"):
     from zarr.core import Array
 
     backing_types.append(("Zarr", Array))
-if importlib.util.find_spec("xarray"):
-    from xarray import DataArray
-
-    backing_types.append(("xarray", DataArray))
 
 
 @pytest.mark.parametrize(argnames=["choice", "type"], argvalues=backing_types)
@@ -147,7 +155,7 @@ def test_mutable_output_add_new_image(
     params = {
         "name": "foo",
         "array_type": choice,
-        "shape": (100, 100, 3),
+        "shape": ((100, "Y"), (100, "X"), (3, "C")),
         "fill_value": 3.0,
         "data_type": np.int32,
     }
@@ -164,6 +172,23 @@ def test_mutable_output_add_new_image(
     assert foo in input_widget.choices
     assert foo in output_widget.choices
     assert foo is output_widget.value
+
+
+def test_mutable_output_add_new_image_dims_repeats(output_widget: MutableOutputWidget):
+    """Tests that MutableOutputWidget can add a new image from params"""
+
+    params = {
+        "name": "foo",
+        "array_type": "xarray",
+        "shape": ((100, "Y"), (100, "Y"), (3, "C")),
+        "fill_value": 3.0,
+        "data_type": np.int32,
+    }
+
+    with pytest.raises(ValueError):
+        output_widget._add_new_image(params)
+
+    assert "foo" not in current_viewer().layers
 
 
 def test_numbers(ij):

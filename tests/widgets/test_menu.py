@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
 )
+from xarray import DataArray
 
 from napari_imagej import settings
 from napari_imagej.resources import resource_path
@@ -328,10 +329,12 @@ def test_advanced_data_transfer(
     assert not button.isEnabled()
 
     # Add an image to the viewer
-    sample_data = numpy.ones((100, 100, 3), dtype=numpy.uint8)
+    sample_data = numpy.ones((50, 100, 3), dtype=numpy.uint8)
+    # NB: Unnatural data order used for testing in handler
+    dims = ("X", "Y", "Z")
+    sample_data = DataArray(data=sample_data, dims=dims)
     image: Image = Image(data=sample_data, name="test_to")
     current_viewer().add_layer(image)
-    assert image.rgb
     asserter(lambda: button.isEnabled())
 
     # Add some rois to the viewer
@@ -361,6 +364,9 @@ def test_advanced_data_transfer(
         if not len(dim_bars) == 3:
             print("Expected more dimension comboboxes")
             return False
+        for i, e in enumerate(dims):
+            if e != dim_bars[i].combo.currentText():
+                return False
 
         ok_button = widget.buttons.button(QDialogButtonBox.Ok)
         ok_button.clicked.emit()
@@ -375,10 +381,16 @@ def test_advanced_data_transfer(
         dataset = ij.display().getActiveDisplay().getActiveView().getData()
         if not dataset.getName() == "test_to":
             return False
-        if not dataset.isRGBMerged():
+        if dataset.getProperties().get("rois") is None:
             return False
-        rois = dataset.getProperties().get("rois")
-        return rois is not None
+        if dataset.dimension(jc.Axes.X) != 50:
+            return False
+        if dataset.dimension(jc.Axes.Y) != 100:
+            return False
+        if dataset.dimension(jc.Axes.Z) != 3:
+            return False
+
+        return True
 
     asserter(check_active_display)
 
