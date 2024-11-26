@@ -44,6 +44,7 @@ dependencies = [
     "pandas",
     "pyimagej >= 1.4.1",
     "scyjava >= 1.9.1",
+    "superqt >= 0.7.0",
     "xarray < 2024.10.0",
     # Version rules to avoid problems
     "qtconsole != 5.4.2", # https://github.com/napari/napari/issues/5700
