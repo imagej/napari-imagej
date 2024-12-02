@@ -7,16 +7,31 @@ SearchResults are grouped by the SciJava Searcher that created them.
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
 
-from qtpy.QtCore import Qt, Signal
-from qtpy.QtGui import QStandardItem, QStandardItemModel
-from qtpy.QtWidgets import QAction, QMenu, QTreeView
+from qtpy.QtCore import QRectF, Qt, Signal, QSize
+from qtpy.QtGui import QStandardItem, QStandardItemModel, QTextDocument
+from qtpy.QtWidgets import (
+    QAction,
+    QMenu,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTreeView,
+)
 from scyjava import Priority
 
 from napari_imagej import nij
 from napari_imagej.java import jc
 from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
+
+if TYPE_CHECKING:
+    from qtpy.QtCore import QModelIndex
+
+
+# FIXME: Ideally we'd use something from the palette
+# but there's no good options
+HIGHLIGHT = "#8C745E"
 
 
 class SearcherTreeView(QTreeView):
@@ -31,6 +46,7 @@ class SearcherTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._create_custom_menu)
         self.model().rowsInserted.connect(self.expand_searchers)
+        self.setItemDelegate(HTMLItemDelegate())
 
     def search(self, text: str):
         """Convenience method for calling self.model().search()"""
@@ -104,13 +120,62 @@ class SearcherItem(QStandardItem):
 
 class SearchResultItem(QStandardItem):
     def __init__(self, result: "jc.SearchResult"):
-        super().__init__(str(result.name()))
+        props = result.properties()
+        text = str(result.name())
+        # Wrap up the icon path in "highlight text"
+        if "Menu path" in props:
+            text += f" <span style=\"color:{HIGHLIGHT};\">{props['Menu path']}</span>"
+        super().__init__(text)
         self.result = result
 
         # Set QtPy properties
         self.setEditable(False)
         if icon := _get_icon(str(result.iconPath()), result.getClass()):
             self.setIcon(icon)
+
+
+class HTMLItemDelegate(QStyledItemDelegate):
+    """A QStyledItemDelegate that can handle HTML in provided text"""
+
+    def paint(self, painter, option, index: QModelIndex):
+        options = QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        rich_text = options.text
+
+        # "clear" the item using "normal" behavior.
+        # mimics qt source code.
+        options.text = ""
+        style = options.widget.style()
+        style.drawControl(QStyle.CE_ItemViewItem, options, painter, options.widget)
+
+        # paint the HTML text
+        doc = QTextDocument()
+        text_color = options.palette.text().color().name()
+        rich_text = f'<span style="color:{text_color};">{rich_text}</span>'
+        doc.setHtml(rich_text)
+
+        painter.save()
+        painter.setClipRect(options.rect)
+
+        # NB: Unsure why we can't pass subElementRect output to drawContents...
+        text_offset = style.subElementRect(
+            QStyle.SE_ItemViewItemText, options, options.widget
+        ).x()
+        painter.translate(text_offset, options.rect.top())
+        rect = QRectF(0, 0, options.rect.width(), options.rect.height())
+        doc.drawContents(painter, rect)
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        options = QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+
+        doc = QTextDocument()
+        doc.setHtml(options.text)
+        doc.setTextWidth(options.rect.width())
+        size = QSize(int(doc.idealWidth()), int(doc.size().height()))
+        return size
 
 
 class SearchResultModel(QStandardItemModel):
@@ -186,7 +251,8 @@ class SearchResultModel(QStandardItemModel):
         if isinstance(item, SearcherItem):
             if item.hasChildren():
                 item.setData(
-                    f"{item.searcher.title()} ({item.rowCount()})", Qt.DisplayRole
+                    f'{item.searcher.title()} <span style="color:{HIGHLIGHT};">({item.rowCount()})</span>',
+                    Qt.DisplayRole,
                 )
             else:
                 item.setData(str(item.searcher.title()), Qt.DisplayRole)

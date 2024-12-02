@@ -2,12 +2,17 @@
 A module containing testing utilities
 """
 
-from typing import List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from jpype import JImplements, JOverride
 from scyjava import JavaClasses
 
 from napari_imagej.java import NijJavaClasses
+
+if TYPE_CHECKING:
+    from typing import Dict, List
 
 
 class JavaClassesTest(NijJavaClasses):
@@ -170,8 +175,9 @@ class DummySearchEvent:
 
 
 class DummySearchResult(object):
-    def __init__(self, info: "jc.ModuleInfo" = None):
+    def __init__(self, info: "jc.ModuleInfo" = None, properties: Dict = {}):
         self._info = info
+        self._properties = properties
 
     def name(self):
         return "This is not a Search Result"
@@ -184,6 +190,12 @@ class DummySearchResult(object):
 
     def getClass(self):
         return None
+
+    def properties(self):
+        return self._properties
+
+    def set_properties(self, props: Dict):
+        self._properties = props
 
 
 class DummyModuleInfo:

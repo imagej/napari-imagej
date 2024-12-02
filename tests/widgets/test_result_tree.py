@@ -49,11 +49,17 @@ def test_searchers_persist(fixed_tree: SearcherTreeView, asserter):
     asserter(lambda: fixed_tree.model().invisibleRootItem().rowCount() == 2)
 
 
-def test_resultTreeItem_regression():
+def test_resultTreeItem_regression(ij):
     dummy = DummySearchResult()
     item = SearchResultItem(dummy)
     assert item.result == dummy
     assert item.data(0) == dummy.name()
+
+    dummy = DummySearchResult(properties={"Menu path": "foo > bar > baz"})
+    item = SearchResultItem(dummy)
+    assert item.result == dummy
+    data = f'{dummy.name()} <span style="color:#8C745E;">foo > bar > baz</span>'
+    assert item.data(0) == data
 
 
 def test_searcherTreeItem_regression():
@@ -87,7 +93,8 @@ def test_search_tree_disable(fixed_tree: SearcherTreeView, asserter):
     # Grab an arbitratry enabled Searcher
     item = fixed_tree.model().invisibleRootItem().child(1, 0)
     # Assert GUI start
-    asserter(lambda: item.data(0) == "Test2 (3)")
+    data = 'Test2 <span style="color:#8C745E;">(3)</span>'
+    asserter(lambda: item.data(0) == data)
     asserter(lambda: item.checkState() == Qt.Checked)
 
     # Disable the searcher, assert the proper GUI response

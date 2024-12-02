@@ -44,7 +44,12 @@ def _populate_tree(tree: SearcherTreeView, asserter):
     )
 
     # Wait for the tree to populate
-    asserter(lambda: root.child(0, 0).rowCount() == 2)
-    asserter(lambda: root.child(0, 0).data(0) == "Test1 (2)")
-    asserter(lambda: root.child(1, 0).rowCount() == 3)
-    asserter(lambda: root.child(1, 0).data(0) == "Test2 (3)")
+    count = 2
+    asserter(lambda: root.child(0, 0).rowCount() == count)
+    data = f'Test1 <span style="color:#8C745E;">({count})</span>'
+    asserter(lambda: root.child(0, 0).data(0) == data)
+
+    count = 3
+    asserter(lambda: root.child(1, 0).rowCount() == count)
+    data = f'Test2 <span style="color:#8C745E;">({count})</span>'
+    asserter(lambda: root.child(1, 0).data(0) == data)
