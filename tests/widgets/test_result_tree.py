@@ -6,7 +6,7 @@ import pytest
 from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtWidgets import QApplication, QMenu
 
-from napari_imagej.java import init_ij
+from napari_imagej import nij
 from napari_imagej.widgets.result_tree import (
     SearcherItem,
     SearcherTreeView,
@@ -23,7 +23,7 @@ def results_tree():
 
 
 @pytest.fixture
-def fixed_tree(ij, asserter):
+def fixed_tree(asserter):
     """Creates a "fake" ResultsTree with deterministic results"""
     # Create a default SearchResultTree
     tree = SearcherTreeView(None)
@@ -49,7 +49,12 @@ def test_searchers_persist(fixed_tree: SearcherTreeView, asserter):
     asserter(lambda: fixed_tree.model().invisibleRootItem().rowCount() == 2)
 
 
-def test_resultTreeItem_regression(ij):
+def test_regression():
+    """Tests SearchResultItems, SearcherItems display as expected."""
+    # SearchResultItems wrap SciJava SearchResults, so they expect a running JVM
+    nij.ij
+
+    # Phase 1: Search Results
     dummy = DummySearchResult()
     item = SearchResultItem(dummy)
     assert item.result == dummy
@@ -61,9 +66,7 @@ def test_resultTreeItem_regression(ij):
     data = f'{dummy.name()} <span style="color:#8C745E;">foo > bar > baz</span>'
     assert item.data(0) == data
 
-
-def test_searcherTreeItem_regression():
-    init_ij()
+    # Phase 2: Searchers
     dummy = DummySearcher("This is not a Searcher")
     item = SearcherItem(dummy)
     assert item.searcher == dummy
@@ -78,7 +81,7 @@ def test_searcherTreeItem_regression():
     assert item.data(0) == dummy.title()
 
 
-def test_key_return_expansion(fixed_tree: SearcherTreeView, qtbot, asserter):
+def test_key_return_expansion(fixed_tree: SearcherTreeView, qtbot):
     idx = fixed_tree.model().index(0, 0)
     fixed_tree.setCurrentIndex(idx)
     expanded = fixed_tree.isExpanded(idx)

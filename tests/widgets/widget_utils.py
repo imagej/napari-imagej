@@ -6,6 +6,7 @@ from typing import Optional
 
 from qtpy.QtCore import Qt
 
+from napari_imagej import nij
 from napari_imagej.widgets.result_tree import SearcherItem, SearcherTreeView
 from tests.utils import DummySearcher, DummySearchEvent, jc
 
@@ -19,6 +20,9 @@ def _searcher_tree_named(tree: SearcherTreeView, name: str) -> Optional[Searcher
 
 
 def _populate_tree(tree: SearcherTreeView, asserter):
+    # DummySearchers are SciJava Searchers - we need a JVM
+    nij.ij
+
     root = tree.model().invisibleRootItem()
     asserter(lambda: root.rowCount() == 0)
     # Add two searchers

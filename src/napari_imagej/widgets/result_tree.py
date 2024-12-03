@@ -7,7 +7,7 @@ SearchResults are grouped by the SciJava Searcher that created them.
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from qtpy.QtCore import QRectF, Qt, Signal, QSize
 from qtpy.QtGui import QStandardItem, QStandardItemModel, QTextDocument
@@ -28,9 +28,10 @@ from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
 if TYPE_CHECKING:
     from qtpy.QtCore import QModelIndex
 
+    from typing import Dict, List
 
-# FIXME: Ideally we'd use something from the palette
-# but there's no good options
+
+# Color used for additional information in the QTreeView
 HIGHLIGHT = "#8C745E"
 
 
@@ -155,13 +156,13 @@ class HTMLItemDelegate(QStyledItemDelegate):
         doc.setHtml(rich_text)
 
         painter.save()
-        painter.setClipRect(options.rect)
-
-        # NB: Unsure why we can't pass subElementRect output to drawContents...
+        # Translate the painter to the correct item
+        # NB offset is necessary to account for checkbox, icon
         text_offset = style.subElementRect(
             QStyle.SE_ItemViewItemText, options, options.widget
         ).x()
         painter.translate(text_offset, options.rect.top())
+        # Paint the rich text
         rect = QRectF(0, 0, options.rect.width(), options.rect.height())
         doc.drawContents(painter, rect)
 
@@ -171,6 +172,7 @@ class HTMLItemDelegate(QStyledItemDelegate):
         options = QStyleOptionViewItem(option)
         self.initStyleOption(options, index)
 
+        # size hint is the size of the rendered HTML
         doc = QTextDocument()
         doc.setHtml(options.text)
         doc.setTextWidth(options.rect.width())
@@ -251,6 +253,7 @@ class SearchResultModel(QStandardItemModel):
         if isinstance(item, SearcherItem):
             if item.hasChildren():
                 item.setData(
+                    # Write the number of results in "highlight text"
                     f'{item.searcher.title()} <span style="color:{HIGHLIGHT};">({item.rowCount()})</span>',
                     Qt.DisplayRole,
                 )

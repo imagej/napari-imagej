@@ -3,6 +3,7 @@ from logging import getLogger
 from typing import List
 
 from jpype import JArray, JByte
+from scyjava import jvm_started
 from magicgui import magicgui
 from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
@@ -315,7 +316,8 @@ def _get_icon(path: str, cls: "jc.Class" = None):
         # TODO: Add icons from web
         return
     # Java Resources
-    elif isinstance(cls, jc.Class):
+    # NB: Use java only if JVM started
+    elif jvm_started() and isinstance(cls, jc.Class):
         stream = cls.getResourceAsStream(path)
         # Ignore falsy streams
         if not stream:
