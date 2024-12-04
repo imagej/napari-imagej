@@ -27,12 +27,12 @@ def napari_get_reader(path):
     if not path.endswith(".xml"):
         return None
 
-    # Determine whether TrackMate available
-    if not trackmate_present():
-        return None
-
     # Ensure that the xml file is a TrackMate file
     if not ET.parse(path).getroot().tag == "TrackMate":
+        return None
+
+    # Ensure TrackMate available
+    if not trackmate_present():
         return None
 
     # otherwise we return the *function* that can read ``path``.
