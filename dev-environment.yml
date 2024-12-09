@@ -18,7 +18,7 @@ name: napari-imagej-dev
 channels:
   - conda-forge
 dependencies:
-  - python >= 3.8, < 3.13
+  - python >= 3.9, < 3.13
   # Project dependencies
   - confuse >= 2.0.0
   - imglyb >= 2.1.0

@@ -16,10 +16,10 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Framework :: napari",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: Unix",
     "Operating System :: MacOS",
@@ -32,7 +32,7 @@ classifiers = [
 ]
 
 # NB: Keep this in sync with environment.yml AND dev-environment.yml!
-requires-python = ">=3.8, <3.13"
+requires-python = ">=3.9, <3.13"
 dependencies = [
     "confuse >= 2.0.0",
     "imglyb >= 2.1.0",
