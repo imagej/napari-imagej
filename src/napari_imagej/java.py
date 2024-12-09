@@ -311,6 +311,10 @@ class NijJavaClasses(JavaClasses):
         return "java.nio.file.Path"
 
     @JavaClasses.java_import
+    def Thread(self):
+        return "java.lang.Thread"
+
+    @JavaClasses.java_import
     def Window(self):
         return "java.awt.Window"
 
