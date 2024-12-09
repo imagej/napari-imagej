@@ -37,9 +37,9 @@ recommended_versions = {
     # Versions above are easier for inclusion of scifio-labeling
     # https://github.com/imagej/pyimagej/issues/280
     "net.imagej:imagej": "2.10.0",
-    # Enable visualizing Datasets with DefaultROITrees
-    # https://github.com/imagej/imagej-legacy/pull/300
-    "net.imagej:imagej-legacy": "1.2.1",
+    # Removes ClassCastExceptions in Point layer translation
+    # https://github.com/imagej/imagej-legacy/pull/310
+    "net.imagej:imagej-legacy": "2.0.0",
     # Enables threshold Ops to return Images of BooleanTypes
     # https://github.com/imagej/imagej-ops/pull/651
     "net.imagej:imagej-ops": "2.0.1",
