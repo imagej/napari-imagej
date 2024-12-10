@@ -18,12 +18,13 @@ env:
 
 jobs:
   test-pip:
-    name: ${{ matrix.platform }} (python ${{ matrix.python-version }})
+    name: ${{ matrix.platform }} (python ${{ matrix.python-version }}, java ${{matrix.java-version}})
     runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
         platform: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.12']
+        java-version: ['8', '21']
 
     steps:
       - uses: actions/checkout@v2
@@ -33,10 +34,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up Java 8
+      - name: Set up Java ${{ matrix.java-version }}
         uses: actions/setup-java@v3
         with:
-          java-version: '8'
+          java-version: ${{matrix.java-version}}
           distribution: 'zulu'
 
       - name: Setup Qt libraries
