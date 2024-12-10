@@ -16,7 +16,7 @@ from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QModelIndex, QThread, Signal, Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
-from scyjava import jstacktrace, when_jvm_stops
+from scyjava import jstacktrace, when_jvm_stops, jvm_started
 
 from napari_imagej import nij
 from napari_imagej.java import jc
@@ -248,10 +248,17 @@ class ImageJInitializer(QThread):
             self._finalize_info_bar()
             # Finalize EventSubscribers
             self._finalize_subscribers()
+            # jc.Thread.detach()
         except Exception as e:
             # Handle the exception on the GUI thread
             self.widget.ij_error_handler.emit(e)
             return
+        finally:
+            # Detach JPype thread
+            # NB Java must NOT be touched on this thread after this call. See
+            # https://jpype.readthedocs.io/en/v1.5.0/userguide.html#python-threads
+            if jvm_started() and jc.Thread.isAttached():
+                jc.Thread.detach()
 
     def _finalize_results_tree(self):
         """
