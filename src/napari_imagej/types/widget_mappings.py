@@ -9,6 +9,7 @@ Notable functions included in the module:
 
 from typing import Callable, Dict, Optional, Union, get_args, get_origin
 
+from jpype import JByte, JDouble, JFloat, JInt, JLong, JShort
 from napari.layers import Image
 
 from napari_imagej.java import jc
@@ -70,14 +71,31 @@ def _numeric_type_preference(
 ) -> Optional[Union[type, str]]:
     if issubclass(item.getType(), jc.NumericType):
         return numeric_type_widget_for(item.getType())
+    return None
 
 
 @_widget_preference
 def _number_preference(
     item: "jc.ModuleItem", type_hint: Union[type, str]
 ) -> Optional[Union[type, str]]:
+    # Primitives
+    if item.getType() == JByte:
+        return number_widget_for(jc.Byte)
+    if item.getType() == JShort:
+        return number_widget_for(jc.Short)
+    if item.getType() == JInt:
+        return number_widget_for(jc.Integer)
+    if item.getType() == JLong:
+        return number_widget_for(jc.Long)
+    if item.getType() == JFloat:
+        return number_widget_for(jc.Float)
+    if item.getType() == JDouble:
+        return number_widget_for(jc.Double)
+
+    # Boxed primitives
     if issubclass(item.getType(), jc.Number):
         return number_widget_for(item.getType())
+    return None
 
 
 @_widget_preference
