@@ -4,6 +4,7 @@ A module testing napari_imagej.widgets.parameter_widgets
 
 import importlib
 
+from jpype import JByte, JDouble, JFloat, JInt, JLong, JShort
 import napari
 import numpy as np
 import pytest
@@ -192,24 +193,30 @@ def test_mutable_output_add_new_image_dims_repeats(output_widget: MutableOutputW
 
 
 def test_numbers(ij):
+    # NB See HACK for bounds number_widget_for
     numbers = [
-        jc.Byte,
-        jc.Short,
-        jc.Integer,
-        jc.Long,
-        jc.Float,
-        jc.Double,
-        jc.BigInteger,
-        jc.BigDecimal,
+        (jc.Byte, jc.Byte),
+        (jc.Short, jc.Short),
+        (jc.Integer, jc.Integer),
+        (jc.Long, jc.Long),
+        (jc.Float, jc.Float),
+        (jc.Double, jc.Double),
+        (jc.BigInteger, jc.BigInteger),
+        (jc.BigDecimal, jc.BigDecimal),
+        (JByte, jc.Byte),
+        (JShort, jc.Short),
+        (JInt, jc.Integer),
+        (JLong, jc.Long),
+        (JFloat, jc.Float),
+        (JDouble, jc.Double),
     ]
-    for number in numbers:
-        # NB See HACK in number_widget_for
+    for number, bound_cls in numbers:
         if number == jc.BigInteger:
             min_val, max_val = numeric_bounds(jc.Long)
         elif number == jc.BigDecimal:
             min_val, max_val = numeric_bounds(jc.Double)
         else:
-            min_val, max_val = numeric_bounds(number)
+            min_val, max_val = numeric_bounds(bound_cls)
 
         widget = number_widget_for(number.class_)()
         assert min_val == widget.min

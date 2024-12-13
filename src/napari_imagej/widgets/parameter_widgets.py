@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from imagej.images import _imglib2_types
-from jpype import JArray, JClass, JInt, JLong
+from jpype import JArray, JByte, JClass, JDouble, JFloat, JInt, JLong, JShort
 from magicgui.types import ChoicesType
 from magicgui.widgets import (
     CheckBox,
@@ -104,7 +104,10 @@ def numeric_type_widget_for(cls: type):
 
 @lru_cache(maxsize=None)
 def number_widget_for(cls: type):
-    if not issubclass(cls, jc.Number):
+    if not (
+        cls in [JByte, JShort, JInt, JLong, JFloat, JDouble]
+        or issubclass(cls, jc.Number)
+    ):
         return None
     # Sensible default for Number iface
     if cls == jc.Number:
@@ -114,20 +117,32 @@ def number_widget_for(cls: type):
     # We want the latter for use in numeric_bounds and in the widget subclass
     if cls == jc.Byte:
         cls = ctor = jc.Byte
-    if cls == jc.Short:
+    elif cls == jc.Short:
         cls = ctor = jc.Short
-    if cls == jc.Integer:
+    elif cls == jc.Integer:
         cls = ctor = jc.Integer
-    if cls == jc.Long:
+    elif cls == jc.Long:
         cls = ctor = jc.Long
-    if cls == jc.Float:
+    elif cls == jc.Float:
         cls = ctor = jc.Float
-    if cls == jc.Double:
+    elif cls == jc.Double:
         cls = ctor = jc.Double
-    if cls == jc.BigInteger:
+    elif cls == JByte:
+        cls, ctor = jc.Byte, JByte
+    elif cls == JShort:
+        cls, ctor = jc.Short, JShort
+    elif cls == JInt:
+        cls, ctor = jc.Integer, JInt
+    elif cls == JLong:
+        cls, ctor = jc.Long, JLong
+    elif cls == JFloat:
+        cls, ctor = jc.Float, JFloat
+    elif cls == JDouble:
+        cls, ctor = jc.Double, JDouble
+    elif cls == jc.BigInteger:
         cls = jc.BigInteger
         ctor = jc.BigInteger.valueOf
-    if cls == jc.BigDecimal:
+    elif cls == jc.BigDecimal:
         cls = jc.BigDecimal
         ctor = jc.BigDecimal.valueOf
 

@@ -23,10 +23,10 @@ jc = JavaClassesTest()
 
 def test_example_script_exists(ij):
     """
-    Asserts that Example_Script.js in the local scripts/examples directory can be found
+    Asserts that Example_Script.py in the local scripts/examples directory can be found
     from the module service, AND that it can be converted into a magicgui widget.
     """
-    module_info = ij.module().getModuleById("script:examples/Example_Script.js")
+    module_info = ij.module().getModuleById("script:examples/Example_Script.py")
     assert module_info is not None
 
     module = ij.module().createModule(module_info)
