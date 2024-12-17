@@ -2,9 +2,12 @@
 A module testing napari_imagej.widgets.result_runner
 """
 
+from __future__ import annotations
+
 import pytest
-from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 from scyjava import JavaClasses
+from superqt import QElidingLabel
 
 from napari_imagej.widgets.layouts import QFlowLayout
 from napari_imagej.widgets.result_runner import ResultRunner
@@ -32,10 +35,27 @@ def test_result_runner(result_runner):
     # The layout
     assert isinstance(subwidgets[0], QVBoxLayout)
     # The label describing the selected module
-    assert isinstance(subwidgets[1], QLabel)
+    assert isinstance(subwidgets[1], QElidingLabel)
     # The button Container
     assert isinstance(subwidgets[2], QWidget)
     assert isinstance(subwidgets[2].layout(), QFlowLayout)
+
+
+def test_result_runner_size_hints(result_runner: ResultRunner):
+    """Ensuring the widget doesn't grow when text is set."""
+    # The problem we want to safeguard against here is ensuring the minimum
+    # size hint doesn't change - this is what causes issues like
+    # https://github.com/imagej/napari-imagej/issues/273
+
+    # Capture size hint
+    hint = result_runner.minimumSizeHint()
+    width_hint, height_hint = hint.width(), hint.height()
+    # Resize result_runner
+    result_runner._setText("o" * 50)
+    # Assert size hint did not change
+    hint = result_runner.minimumSizeHint()
+    assert width_hint == hint.width()
+    assert height_hint == hint.height()
 
 
 @pytest.fixture
