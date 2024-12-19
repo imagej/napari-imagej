@@ -460,36 +460,6 @@ class MutableOutputWidget(Container):
         """
         self.layer_select.reset_choices()
 
-    @property
-    def current_choice(self) -> str:
-        """Return the text of the currently selected choice."""
-        return self.layer_select.current_choice
-
-    def __len__(self) -> int:
-        """Return the number of choices."""
-        return self.layer_select.__len__()
-
-    def get_choice(self, choice_name: str):
-        """Get data for the provided ``choice_name``."""
-        return self.layer_select.get_choice(choice_name)
-
-    def set_choice(self, choice_name: str, data: Any = None):
-        """Set data for the provided ``choice_name``."""
-        return self.layer_select.set_choice(choice_name, data)
-
-    def del_choice(self, choice_name: str):
-        """Delete the provided ``choice_name`` and associated data."""
-        return self.layer_select.del_choice(choice_name)
-
-    @property
-    def choices(self):
-        """Available value choices for this widget."""
-        return self.layer_select.choices
-
-    @choices.setter
-    def choices(self, choices: ChoicesType):
-        self.layer_select.choices = choices
-
 
 # -- FILE WIDGETS -- #
 
