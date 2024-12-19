@@ -299,7 +299,13 @@ class DetailExportDialog(QDialog):
                 img, dim_order=self.dims_container.provided_labels()
             )
             if roi:
-                j_img.getProperties().put("rois", nij.ij.py.to_java(roi))
+                if isinstance(roi, Points):
+                    j_point = nij.ij.py.to_java(roi)
+                    j_roi = jc.DefaultROITree()
+                    j_roi.addROIs(jc.ArrayList([j_point]))
+                else:
+                    j_roi = nij.ij.py.to_java(roi)
+                j_img.getProperties().put("rois", j_roi)
             # Show the resulting image
             nij.ij.ui().show(j_img)
 
