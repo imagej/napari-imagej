@@ -146,7 +146,6 @@ class NapariImageJWidget(QWidget):
 
     @Slot(object)
     def _handle_output(self, data):
-        print(f"handling {data}")
         if isinstance(data, Layer):
             self.napari_viewer.add_layer(data)
         elif isinstance(data, dict):
