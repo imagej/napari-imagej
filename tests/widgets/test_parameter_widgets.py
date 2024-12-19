@@ -74,20 +74,25 @@ def input_widget(mutable_output_widget):
     return widget
 
 
-def test_mutable_output_widget_layout(output_widget):
-    children = [w for w in output_widget]
-    assert len(children) == 2
-    assert isinstance(children[0], PushButton)
-    assert isinstance(children[1], ComboBox)
-    assert children[0].tooltip == "Create a new output container"
-    assert children[0].max_width == 53
-    assert (
-        children[1].tooltip
-        == "Optional - produces a new layer unless an output container is provided"
-    )
-    assert output_widget.current_choice == ""
+def test_mutable_output_widget_layout(output_widget: MutableOutputWidget):
+    assert output_widget.value is None
     assert output_widget.layout == "horizontal"
     assert output_widget.margins == (0, 0, 0, 0)
+
+    children = [w for w in output_widget]
+    assert len(children) == 2
+
+    assert isinstance(children[0], ComboBox)
+    assert (
+        children[0].tooltip
+        == "Optional - produces a new layer unless an output container is provided"
+    )
+    # Current value is None - text should be empty
+    assert children[0].current_choice == ""
+
+    assert isinstance(children[1], PushButton)
+    assert children[1].tooltip == "Create a new output container"
+    assert children[1].max_width == 53
 
 
 def test_mutable_output_default_parameters(
@@ -171,7 +176,7 @@ def test_mutable_output_add_new_image(
     assert (3) == np.unique(foo.data)
 
     assert foo in input_widget.choices
-    assert foo in output_widget.choices
+    assert foo in output_widget.layer_select.choices
     assert foo is output_widget.value
 
 
