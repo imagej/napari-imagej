@@ -9,7 +9,8 @@ from typing import Callable, Dict, List, Union
 
 from napari import Viewer
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+from superqt import QElidingLabel
 
 from napari_imagej.java import jc
 from napari_imagej.widgets.layouts import QFlowLayout
@@ -46,7 +47,7 @@ class ResultRunner(QWidget):
 
         self.setLayout(QVBoxLayout())
 
-        self.selected_module_label = QLabel()
+        self.selected_module_label = QElidingLabel()
         self.layout().addWidget(self.selected_module_label)
         self.button_pane = QWidget()
         self.button_pane.setLayout(QFlowLayout())
