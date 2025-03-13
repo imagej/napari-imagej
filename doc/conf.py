@@ -31,5 +31,16 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 
 
 # -- Options for HTML output -------------------------------------------------
+
+# Always show the Edit on GitHub buttons
+# Set the correct path for Edit on GitHub
+html_context = {
+    'display_github': True,
+    'github_user': 'imagej',
+    'github_repo': 'napari-imagej',
+    'github_version': 'main/doc/',
+}
+
+
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 html_theme = "sphinx_rtd_theme"
