@@ -42,7 +42,7 @@ dependencies = [
     "napari >= 0.4.17",
     "numpy",
     "pandas",
-    "pyimagej >= 1.4.1",
+    "pyimagej >= 1.5.0",
     "scyjava >= 1.9.1",
     "superqt >= 0.7.0",
     "xarray < 2024.10.0",

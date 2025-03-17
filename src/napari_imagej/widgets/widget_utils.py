@@ -2,6 +2,7 @@ from functools import lru_cache
 from logging import getLogger
 from typing import List
 
+from imagej.convert import index_img_to_roi_tree
 from jpype import JArray, JByte
 from scyjava import jvm_started
 from magicgui import magicgui
@@ -156,7 +157,7 @@ class JavaErrorMessageBox(QDialog):
 
 
 _IMAGE_LAYER_TYPES = (Image, Labels)
-_ROI_LAYER_TYPES = (Points, Shapes)
+_ROI_LAYER_TYPES = (Labels, Points, Shapes)
 
 
 class LayerComboBox(QWidget):
@@ -261,7 +262,7 @@ class DetailExportDialog(QDialog):
         for layer in viewer.layers:
             if isinstance(layer, _IMAGE_LAYER_TYPES):
                 self.imgs.append(layer)
-            elif isinstance(layer, _ROI_LAYER_TYPES):
+            if isinstance(layer, _ROI_LAYER_TYPES):
                 self.rois.append(layer)
 
         # Add combo boxes
@@ -298,11 +299,17 @@ class DetailExportDialog(QDialog):
             j_img = nij.ij.py.to_java(
                 img, dim_order=self.dims_container.provided_labels()
             )
+            # Labels layers should display the index image
+            if isinstance(j_img, jc.ImgLabeling):
+                j_img = j_img.getIndexImg()
             if roi:
                 if isinstance(roi, Points):
                     j_point = nij.ij.py.to_java(roi)
                     j_roi = jc.DefaultROITree()
                     j_roi.addROIs(jc.ArrayList([j_point]))
+                elif isinstance(roi, Labels):
+                    j_label = nij.ij.py.to_java(roi)
+                    j_roi = index_img_to_roi_tree(nij.ij, j_label.getIndexImg())
                 else:
                     j_roi = nij.ij.py.to_java(roi)
                 j_img.getProperties().put("rois", j_roi)
