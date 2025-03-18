@@ -25,6 +25,7 @@ jobs:
         platform: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.12']
         java-version: ['8', '21']
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v2
@@ -130,6 +131,18 @@ jobs:
         with:
           run: |
             conda run -n napari-imagej-dev --no-capture-output python -m pytest -s -p no:faulthandler --color=yes --cov-report=xml --cov=.
+
+      - name: Display error log content
+        if: always()
+        run: |
+          for file in ${{ github.workspace }}/hs_err_pid*.log; do
+            if [ -f "$file" ]; then
+              echo "=== Contents of $file ==="
+              cat "$file"
+              echo "=== End of $file ==="
+            fi
+          done
+        continue-on-error: true
 
       # We could do this in its own action, but we'd have to setup the environment again.
       - name: Upload Coverage to Codecov

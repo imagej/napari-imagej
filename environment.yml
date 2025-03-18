@@ -22,14 +22,15 @@ dependencies:
   # Project depenencies
   - confuse >= 2.0.0
   - imglyb >= 2.1.0
-  - jpype1 >= 1.4.1
+  - jpype1 == 1.4.1, <= 1.5.0
   - labeling >= 0.1.12
   - magicgui >= 0.5.1
-  - napari >= 0.4.17
+  - napari >= 0.4.17, <= 0.5.5
   - numpy
   - openjdk=11
   - pandas
   - pyimagej >= 1.4.1
+  - pyqt5 == 5.15.9
   - scyjava >= 1.9.1
   - superqt >= 0.7.0
   - xarray < 2024.10.0
@@ -40,4 +41,5 @@ dependencies:
   - pip
   - pip:
     - validate-pyproject[all]
+    # - napari@git+https://github.com/napari/napari.git@876965fa0598551b745d4181764463398b8c564a
     - '.'
