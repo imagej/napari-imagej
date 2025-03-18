@@ -25,6 +25,7 @@ jobs:
         platform: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.12']
         java-version: ['8', '21']
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v2
