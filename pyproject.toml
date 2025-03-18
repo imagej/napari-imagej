@@ -36,7 +36,7 @@ requires-python = ">=3.9, <3.13"
 dependencies = [
     "confuse >= 2.0.0",
     "imglyb >= 2.1.0",
-    "jpype1 >= 1.4.1",
+    "jpype1 >= 1.4.1, <=1.5.0",
     "labeling >= 0.1.12",
     "magicgui >= 0.5.1",
     "napari@git+https://github.com/napari/napari.git@876965fa0598551b745d4181764463398b8c564a",
