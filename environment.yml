@@ -30,6 +30,7 @@ dependencies:
   - openjdk=11
   - pandas
   - pyimagej >= 1.4.1
+  - pyqt5 == 5.15.9
   - scyjava >= 1.9.1
   - superqt >= 0.7.0
   - xarray < 2024.10.0
