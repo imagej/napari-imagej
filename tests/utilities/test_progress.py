@@ -28,67 +28,67 @@ def test_progress(ij, example_module):
     assert example_module not in pm.prog_bars
 
 
-# def test_progress_update_via_events(imagej_widget, ij, example_module, asserter):
-#     pm.init_progress(example_module)
-#     asserter(lambda: example_module in pm.prog_bars)
-#     pbr = pm.prog_bars[example_module]
-#     asserter(lambda: pbr.n == 0)
+def test_progress_update_via_events(imagej_widget, ij, example_module, asserter):
+    pm.init_progress(example_module)
+    asserter(lambda: example_module in pm.prog_bars)
+    pbr = pm.prog_bars[example_module]
+    asserter(lambda: pbr.n == 0)
 
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
-#     asserter(lambda: pbr.n == 1)
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
+    asserter(lambda: pbr.n == 1)
 
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
-#     asserter(lambda: pbr.n == 2)
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
+    asserter(lambda: pbr.n == 2)
 
-#     imagej_widget.progress_handler.emit(jc.ModuleFinishedEvent(example_module))
-#     asserter(lambda: pbr.n == 3)
-#     asserter(lambda: example_module not in pm.prog_bars)
-
-
-# def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter):
-#     pm.init_progress(example_module)
-#     asserter(lambda: example_module in pm.prog_bars)
-#     pbr = pm.prog_bars[example_module]
-#     asserter(lambda: pbr.n == 0)
-
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
-#     asserter(lambda: pbr.n == 1)
-
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
-#     asserter(lambda: pbr.n == 2)
-
-#     imagej_widget.progress_handler.emit(jc.ModuleCanceledEvent(example_module))
-#     asserter(lambda: example_module not in pm.prog_bars)
+    imagej_widget.progress_handler.emit(jc.ModuleFinishedEvent(example_module))
+    asserter(lambda: pbr.n == 3)
+    asserter(lambda: example_module not in pm.prog_bars)
 
 
-# def test_progress_error_via_events(imagej_widget, ij, example_module, asserter, qtbot):
-#     pm.init_progress(example_module)
-#     asserter(lambda: example_module in pm.prog_bars)
-#     pbr = pm.prog_bars[example_module]
-#     asserter(lambda: pbr.n == 0)
+def test_progress_cancel_via_events(imagej_widget, ij, example_module, asserter):
+    pm.init_progress(example_module)
+    asserter(lambda: example_module in pm.prog_bars)
+    pbr = pm.prog_bars[example_module]
+    asserter(lambda: pbr.n == 0)
 
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
-#     asserter(lambda: pbr.n == 1)
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
+    asserter(lambda: pbr.n == 1)
 
-#     imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
-#     asserter(lambda: pbr.n == 2)
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
+    asserter(lambda: pbr.n == 2)
 
-#     # Mock the Constructor for the JavaErrorMessageBox
-#     errored = False
-#     old = JavaErrorMessageBox.exec
+    imagej_widget.progress_handler.emit(jc.ModuleCanceledEvent(example_module))
+    asserter(lambda: example_module not in pm.prog_bars)
 
-#     def _new_exec(self):
-#         nonlocal errored
-#         errored = True
 
-#     JavaErrorMessageBox.exec = _new_exec
+def test_progress_error_via_events(imagej_widget, ij, example_module, asserter, qtbot):
+    pm.init_progress(example_module)
+    asserter(lambda: example_module in pm.prog_bars)
+    pbr = pm.prog_bars[example_module]
+    asserter(lambda: pbr.n == 0)
 
-#     # Assert emitting a ModuleErroredEvent causes
-#     # JavaErrorMessageBox.exec to be called
-#     exception = jc.IllegalArgumentException("Yay")
-#     imagej_widget.progress_handler.emit(
-#         jc.ModuleErroredEvent(example_module, exception)
-#     )
-#     asserter(lambda: errored)
-#     # Restore the exec method
-#     JavaErrorMessageBox.exec = old
+    imagej_widget.progress_handler.emit(jc.ModuleExecutingEvent(example_module))
+    asserter(lambda: pbr.n == 1)
+
+    imagej_widget.progress_handler.emit(jc.ModuleExecutedEvent(example_module))
+    asserter(lambda: pbr.n == 2)
+
+    # Mock the Constructor for the JavaErrorMessageBox
+    errored = False
+    old = JavaErrorMessageBox.exec
+
+    def _new_exec(self):
+        nonlocal errored
+        errored = True
+
+    JavaErrorMessageBox.exec = _new_exec
+
+    # Assert emitting a ModuleErroredEvent causes
+    # JavaErrorMessageBox.exec to be called
+    exception = jc.IllegalArgumentException("Yay")
+    imagej_widget.progress_handler.emit(
+        jc.ModuleErroredEvent(example_module, exception)
+    )
+    asserter(lambda: errored)
+    # Restore the exec method
+    JavaErrorMessageBox.exec = old

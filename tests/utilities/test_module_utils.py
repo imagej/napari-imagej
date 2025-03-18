@@ -148,10 +148,10 @@ def assert_item_annotation(jtype, ptype, isRequired):
     assert param_type == ptype
 
 
-# def test_param_annotation(imagej_widget):
-#     # -- TEST CONVERTABLE ITEM --
-#     assert_item_annotation(jc.String, str, True)
-#     assert_item_annotation(jc.String, Optional[str], False)
+def test_param_annotation(imagej_widget):
+    # -- TEST CONVERTABLE ITEM --
+    assert_item_annotation(jc.String, str, True)
+    assert_item_annotation(jc.String, Optional[str], False)
 
 
 def test_module_param():
@@ -618,60 +618,60 @@ def test_request_values_args():
     assert args["f"]["value"] == "also default"
 
 
-# @pytest.mark.skipif(
-#     condition=sys.platform == "darwin",
-#     reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
-# )
-# def test_functionify_module_execution(imagej_widget, ij, asserter):
-#     viewer: Viewer = imagej_widget.napari_viewer
-#     info = ij.module().getModuleById(
-#         "command:net.imagej.ops.commands.filter.FrangiVesselness"
-#     )
-#     func, _ = _module_utils.functionify_module_execution(
-#         lambda o: imagej_widget.output_handler.emit(o),
-#         info.createModule(),
-#         info,
-#     )
-#     params: Dict[str, Any] = dict(
-#         input=numpy.ones((100, 100)),
-#         doGauss=False,
-#         spacingString="1, 1",
-#         scaleString="2, 5",
-#     )
-#     func(*(params.values()))
-#     asserter(lambda: len(viewer.layers) == 1)
+@pytest.mark.skipif(
+    condition=sys.platform == "darwin",
+    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
+)
+def test_functionify_module_execution(imagej_widget, ij, asserter):
+    viewer: Viewer = imagej_widget.napari_viewer
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    func, _ = _module_utils.functionify_module_execution(
+        lambda o: imagej_widget.output_handler.emit(o),
+        info.createModule(),
+        info,
+    )
+    params: Dict[str, Any] = dict(
+        input=numpy.ones((100, 100)),
+        doGauss=False,
+        spacingString="1, 1",
+        scaleString="2, 5",
+    )
+    func(*(params.values()))
+    asserter(lambda: len(viewer.layers) == 1)
 
 
-# def test_functionify_module_execution_result_regression(imagej_widget, ij):
-#     info = ij.module().getModuleById(
-#         "command:net.imagej.ops.commands.filter.FrangiVesselness"
-#     )
-#     func, _ = _module_utils.functionify_module_execution(
-#         lambda o: imagej_widget.output_handler.emit(o), info.createModule(), info
-#     )
-#     sig = signature(func)
-#     expected_params = OrderedDict()
-#     expected_params["input"] = Parameter(
-#         "input", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation="napari.layers.Image"
-#     )
+def test_functionify_module_execution_result_regression(imagej_widget, ij):
+    info = ij.module().getModuleById(
+        "command:net.imagej.ops.commands.filter.FrangiVesselness"
+    )
+    func, _ = _module_utils.functionify_module_execution(
+        lambda o: imagej_widget.output_handler.emit(o), info.createModule(), info
+    )
+    sig = signature(func)
+    expected_params = OrderedDict()
+    expected_params["input"] = Parameter(
+        "input", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation="napari.layers.Image"
+    )
 
-#     expected_params["doGauss"] = Parameter(
-#         "doGauss", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=bool, default=False
-#     )
-#     expected_params["spacingString"] = Parameter(
-#         "spacingString",
-#         kind=Parameter.POSITIONAL_OR_KEYWORD,
-#         annotation=str,
-#         default="1, 1",
-#     )
-#     expected_params["scaleString"] = Parameter(
-#         "scaleString",
-#         kind=Parameter.POSITIONAL_OR_KEYWORD,
-#         annotation=str,
-#         default="2, 5",
-#     )
-#     assert expected_params == sig.parameters
-#     assert sig.return_annotation is None
+    expected_params["doGauss"] = Parameter(
+        "doGauss", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=bool, default=False
+    )
+    expected_params["spacingString"] = Parameter(
+        "spacingString",
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=str,
+        default="1, 1",
+    )
+    expected_params["scaleString"] = Parameter(
+        "scaleString",
+        kind=Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=str,
+        default="2, 5",
+    )
+    assert expected_params == sig.parameters
+    assert sig.return_annotation is None
 
 
 def test_info_for(ij):
