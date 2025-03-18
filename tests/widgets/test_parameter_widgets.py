@@ -35,166 +35,166 @@ from napari_imagej.widgets.parameter_widgets import (
 from tests.utils import jc
 
 
-# @pytest.fixture
-# def mutable_output_widget(make_napari_viewer):
-#     make_napari_viewer()
+@pytest.fixture
+def mutable_output_widget(make_napari_viewer):
+    make_napari_viewer()
 
-#     def func(output: "napari.layers.Image", input: "napari.layers.Image"):
-#         print(output.name, input.name)
+    def func(output: "napari.layers.Image", input: "napari.layers.Image"):
+        print(output.name, input.name)
 
-#     import magicgui
+    import magicgui
 
-#     widget = magicgui.magicgui(
-#         function=func,
-#         call_button=False,
-#         output={
-#             "widget_type": "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
-#         },
-#     )
-#     current_viewer().window.add_dock_widget(widget)
+    widget = magicgui.magicgui(
+        function=func,
+        call_button=False,
+        output={
+            "widget_type": "napari_imagej.widgets.parameter_widgets.MutableOutputWidget"
+        },
+    )
+    current_viewer().window.add_dock_widget(widget)
 
-#     output_widget = widget._list[0]
-#     input_widget = widget._list[1]
-#     assert isinstance(output_widget, MutableOutputWidget)
-#     assert isinstance(input_widget, ComboBox)
-#     return widget
-
-
-# @pytest.fixture
-# def output_widget(mutable_output_widget):
-#     widget = mutable_output_widget._list[0]
-#     assert isinstance(widget, MutableOutputWidget)
-#     return widget
+    output_widget = widget._list[0]
+    input_widget = widget._list[1]
+    assert isinstance(output_widget, MutableOutputWidget)
+    assert isinstance(input_widget, ComboBox)
+    return widget
 
 
-# @pytest.fixture
-# def input_widget(mutable_output_widget):
-#     widget = mutable_output_widget._list[1]
-#     assert isinstance(widget, ComboBox)
-#     return widget
+@pytest.fixture
+def output_widget(mutable_output_widget):
+    widget = mutable_output_widget._list[0]
+    assert isinstance(widget, MutableOutputWidget)
+    return widget
 
 
-# def test_mutable_output_widget_layout(output_widget: MutableOutputWidget):
-#     assert output_widget.value is None
-#     assert output_widget.layout == "horizontal"
-#     assert output_widget.margins == (0, 0, 0, 0)
-
-#     children = [w for w in output_widget]
-#     assert len(children) == 2
-
-#     assert isinstance(children[0], ComboBox)
-#     assert (
-#         children[0].tooltip
-#         == "Optional - produces a new layer unless an output container is provided"
-#     )
-#     # Current value is None - text should be empty
-#     assert children[0].current_choice == ""
-
-#     assert isinstance(children[1], PushButton)
-#     assert children[1].tooltip == "Create a new output container"
-#     assert children[1].max_width == 53
+@pytest.fixture
+def input_widget(mutable_output_widget):
+    widget = mutable_output_widget._list[1]
+    assert isinstance(widget, ComboBox)
+    return widget
 
 
-# def test_mutable_output_default_parameters(
-#     input_widget: ComboBox, output_widget: MutableOutputWidget
-# ):
-#     """
-#     Tests that MutableOutputWidget's default size and type change based on the
-#     choice of input widget
-#     """
+def test_mutable_output_widget_layout(output_widget: MutableOutputWidget):
+    assert output_widget.value is None
+    assert output_widget.layout == "horizontal"
+    assert output_widget.margins == (0, 0, 0, 0)
 
-#     # Assert when no selection, output shape is default
-#     assert input_widget.current_choice == ""
-#     assert output_widget._default_new_shape() == [(512, "Y"), (512, "X")]
-#     assert output_widget._default_new_type() == "float64"
+    children = [w for w in output_widget]
+    assert len(children) == 2
 
-#     # Add new Z-stack
-#     shape = (3, 128, 128)
-#     import numpy as np
+    assert isinstance(children[0], ComboBox)
+    assert (
+        children[0].tooltip
+        == "Optional - produces a new layer unless an output container is provided"
+    )
+    # Current value is None - text should be empty
+    assert children[0].current_choice == ""
 
-#     current_viewer().add_image(data=np.ones(shape, dtype=np.int32), name="Z")
-#     assert input_widget.current_choice == "Z"
-#     assert output_widget._default_new_shape() == [(3, "Z"), (128, "Y"), (128, "X")]
-#     assert output_widget._default_new_type() == "int32"
-
-#     # Add new RGB image
-#     shape = (128, 128, 3)
-#     import numpy as np
-
-#     current_viewer().layers.clear()
-#     current_viewer().add_image(data=np.ones(shape, dtype=np.int16), name="RGB")
-#     assert input_widget.current_choice == "RGB"
-#     assert output_widget._default_new_shape() == [(128, "Y"), (128, "X"), (3, "C")]
-#     assert output_widget._default_new_type() == "int16"
+    assert isinstance(children[1], PushButton)
+    assert children[1].tooltip == "Create a new output container"
+    assert children[1].max_width == 53
 
 
-# def test_mutable_output_dtype_choices(
-#     input_widget: ComboBox, output_widget: MutableOutputWidget
-# ):
-#     """
-#     Tests that MutableOutputWidget's data type choices
-#     are all types supported by pyimagej
-#     """
-#     supported = output_widget._dtype_choices()
-#     for ptype in _imglib2_types.values():
-#         assert np.dtype(ptype) in supported
+def test_mutable_output_default_parameters(
+    input_widget: ComboBox, output_widget: MutableOutputWidget
+):
+    """
+    Tests that MutableOutputWidget's default size and type change based on the
+    choice of input widget
+    """
+
+    # Assert when no selection, output shape is default
+    assert input_widget.current_choice == ""
+    assert output_widget._default_new_shape() == [(512, "Y"), (512, "X")]
+    assert output_widget._default_new_type() == "float64"
+
+    # Add new Z-stack
+    shape = (3, 128, 128)
+    import numpy as np
+
+    current_viewer().add_image(data=np.ones(shape, dtype=np.int32), name="Z")
+    assert input_widget.current_choice == "Z"
+    assert output_widget._default_new_shape() == [(3, "Z"), (128, "Y"), (128, "X")]
+    assert output_widget._default_new_type() == "int32"
+
+    # Add new RGB image
+    shape = (128, 128, 3)
+    import numpy as np
+
+    current_viewer().layers.clear()
+    current_viewer().add_image(data=np.ones(shape, dtype=np.int16), name="RGB")
+    assert input_widget.current_choice == "RGB"
+    assert output_widget._default_new_shape() == [(128, "Y"), (128, "X"), (3, "C")]
+    assert output_widget._default_new_type() == "int16"
 
 
-# # these types are always included
-# backing_types = [
-#     ("NumPy", np.ndarray),
-#     ("xarray", DataArray),
-# ]
-# # these types are sometimes included
-# if importlib.util.find_spec("zarr"):
-#     from zarr.core import Array
-
-#     backing_types.append(("Zarr", Array))
-
-
-# @pytest.mark.parametrize(argnames=["choice", "type"], argvalues=backing_types)
-# def test_mutable_output_add_new_image(
-#     input_widget: ComboBox, output_widget: MutableOutputWidget, choice, type
-# ):
-#     """Tests that MutableOutputWidget can add a new image from params"""
-
-#     params = {
-#         "name": "foo",
-#         "array_type": choice,
-#         "shape": ((100, "Y"), (100, "X"), (3, "C")),
-#         "fill_value": 3.0,
-#         "data_type": np.int32,
-#     }
-
-#     output_widget._add_new_image(params)
-
-#     assert "foo" in current_viewer().layers
-#     foo: Image = current_viewer().layers["foo"]
-#     assert "foo" == foo.name
-#     assert isinstance(foo.data, type)
-#     assert (100, 100, 3) == foo.data.shape
-#     assert (3) == np.unique(foo.data)
-
-#     assert foo in input_widget.choices
-#     assert foo in output_widget.layer_select.choices
-#     assert foo is output_widget.value
+def test_mutable_output_dtype_choices(
+    input_widget: ComboBox, output_widget: MutableOutputWidget
+):
+    """
+    Tests that MutableOutputWidget's data type choices
+    are all types supported by pyimagej
+    """
+    supported = output_widget._dtype_choices()
+    for ptype in _imglib2_types.values():
+        assert np.dtype(ptype) in supported
 
 
-# def test_mutable_output_add_new_image_dims_repeats(output_widget: MutableOutputWidget):
-#     """Tests that MutableOutputWidget can add a new image from params"""
+# these types are always included
+backing_types = [
+    ("NumPy", np.ndarray),
+    ("xarray", DataArray),
+]
+# these types are sometimes included
+if importlib.util.find_spec("zarr"):
+    from zarr.core import Array
 
-#     params = {
-#         "name": "foo",
-#         "array_type": "xarray",
-#         "shape": ((100, "Y"), (100, "Y"), (3, "C")),
-#         "fill_value": 3.0,
-#         "data_type": np.int32,
-#     }
+    backing_types.append(("Zarr", Array))
 
-#     with pytest.raises(ValueError):
-#         output_widget._add_new_image(params)
 
-#     assert "foo" not in current_viewer().layers
+@pytest.mark.parametrize(argnames=["choice", "type"], argvalues=backing_types)
+def test_mutable_output_add_new_image(
+    input_widget: ComboBox, output_widget: MutableOutputWidget, choice, type
+):
+    """Tests that MutableOutputWidget can add a new image from params"""
+
+    params = {
+        "name": "foo",
+        "array_type": choice,
+        "shape": ((100, "Y"), (100, "X"), (3, "C")),
+        "fill_value": 3.0,
+        "data_type": np.int32,
+    }
+
+    output_widget._add_new_image(params)
+
+    assert "foo" in current_viewer().layers
+    foo: Image = current_viewer().layers["foo"]
+    assert "foo" == foo.name
+    assert isinstance(foo.data, type)
+    assert (100, 100, 3) == foo.data.shape
+    assert (3) == np.unique(foo.data)
+
+    assert foo in input_widget.choices
+    assert foo in output_widget.layer_select.choices
+    assert foo is output_widget.value
+
+
+def test_mutable_output_add_new_image_dims_repeats(output_widget: MutableOutputWidget):
+    """Tests that MutableOutputWidget can add a new image from params"""
+
+    params = {
+        "name": "foo",
+        "array_type": "xarray",
+        "shape": ((100, "Y"), (100, "Y"), (3, "C")),
+        "fill_value": 3.0,
+        "data_type": np.int32,
+    }
+
+    with pytest.raises(ValueError):
+        output_widget._add_new_image(params)
+
+    assert "foo" not in current_viewer().layers
 
 
 def test_numbers(ij):
