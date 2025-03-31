@@ -7,7 +7,7 @@ from typing import Callable
 import numpy
 import pytest
 from napari import Viewer
-from napari.layers import Image, Layer, Shapes
+from napari.layers import Image, Labels, Layer, Shapes
 from napari.viewer import current_viewer
 from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtGui import QPixmap
@@ -388,6 +388,120 @@ def test_advanced_data_transfer(
         if dataset.dimension(jc.Axes.Y) != 100:
             return False
         if dataset.dimension(jc.Axes.Z) != 3:
+            return False
+
+        return True
+
+    asserter(check_active_display)
+
+
+def test_labels_transfer_as_data(
+    popup_handler, asserter, ij, gui_widget: NapariImageJMenu
+):
+    """Tests the detailed image exporter"""
+    if settings.headless():
+        pytest.skip("Only applies when not running headlessly")
+
+    button: ToIJDetailedButton = gui_widget.to_ij_detail
+    assert not button.isEnabled()
+
+    # Add some labels to the viewer
+    sample_data = numpy.ones((50, 100), dtype=numpy.uint8)
+    labels = Labels(data=sample_data, name="test_labels")
+    current_viewer().add_layer(labels)
+    asserter(lambda: button.isEnabled())
+
+    def handle_transfer(widget: QDialog) -> bool:
+        if not isinstance(widget, DetailExportDialog):
+            print("Not an AdvancedExportDialog")
+            return False
+        if not widget.img_container.combo.currentText() == "test_labels":
+            print(widget.img_container.combo.currentText())
+            print("Unexpected starting image text")
+            return False
+        if not widget.roi_container.combo.currentText() == "--------":
+            print("Unexpected starting roi text")
+            return False
+        if labels not in widget.roi_container.choices:
+            print("Labels layer not available")
+            return False
+
+        ok_button = widget.buttons.button(QDialogButtonBox.Ok)
+        ok_button.clicked.emit()
+        return True
+
+    popup_handler(button.clicked.emit, handle_transfer)
+
+    # Assert that the data is now in Fiji
+    def check_active_display():
+        if not ij.display().getActiveDisplay():
+            return False
+        dataset = ij.display().getActiveDisplay().getActiveView().getData()
+        if not dataset.getName() == "test_labels":
+            return False
+
+        return True
+
+    asserter(check_active_display)
+
+
+def test_labels_transfer_as_rois(
+    popup_handler, asserter, ij, gui_widget: NapariImageJMenu
+):
+    """Tests the detailed image exporter"""
+    if settings.headless():
+        pytest.skip("Only applies when not running headlessly")
+
+    button: ToIJDetailedButton = gui_widget.to_ij_detail
+    assert not button.isEnabled()
+
+    # Add an image to the viewer
+    sample_data = numpy.ones((50, 100, 3), dtype=numpy.uint8)
+    # NB: Unnatural data order used for testing in handler
+    dims = ("X", "Y", "Z")
+    sample_data = DataArray(data=sample_data, dims=dims)
+    image: Image = Image(data=sample_data, name="test_to")
+    current_viewer().add_layer(image)
+    asserter(lambda: button.isEnabled())
+
+    # Add some labels to the viewer
+    sample_data = numpy.ones((50, 100), dtype=numpy.uint8)
+    labels = Labels(data=sample_data, name="test_labels")
+    current_viewer().add_layer(labels)
+
+    def handle_transfer(widget: QDialog) -> bool:
+        if not isinstance(widget, DetailExportDialog):
+            print("Not an AdvancedExportDialog")
+            return False
+        # Note test_labels is the active layer - it will be the current text
+        if not widget.img_container.combo.currentText() == "test_labels":
+            print(widget.img_container.combo.currentText())
+            print("Unexpected starting image text")
+            return False
+        if not widget.roi_container.combo.currentText() == "--------":
+            print("Unexpected starting roi text")
+            return False
+        if labels not in widget.roi_container.choices:
+            print("Labels layer not available")
+            return False
+
+        widget.img_container.combo.setCurrentText("test_to")
+        widget.roi_container.combo.setCurrentText("test_labels")
+
+        ok_button = widget.buttons.button(QDialogButtonBox.Ok)
+        ok_button.clicked.emit()
+        return True
+
+    popup_handler(button.clicked.emit, handle_transfer)
+
+    # Assert that the data is now in Fiji
+    def check_active_display():
+        if not ij.display().getActiveDisplay():
+            return False
+        dataset = ij.display().getActiveDisplay().getActiveView().getData()
+        if not dataset.getName() == "test_to":
+            return False
+        if dataset.getProperties().get("rois") is None:
             return False
 
         return True
