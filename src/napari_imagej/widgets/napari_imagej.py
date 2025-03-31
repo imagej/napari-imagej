@@ -138,7 +138,12 @@ class NapariImageJWidget(QWidget):
         # Start constructing the ImageJ instance
         self.ij_initializer.start()
 
+        when_jvm_stops(self.close)
+
     def close(self):
+        print("Closing napari-imagej widget")
+        super().close()
+        self.ij_initializer.wait()
         self.ij_initializer._clean_subscribers()
 
     def wait_for_finalization(self):

@@ -22,9 +22,9 @@ do
   export $var="$value"
   if [ $# -gt 0 ]
   then
-    python -m pytest -p no:faulthandler $@
+    python -u -m pytest -p no:faulthandler $@
   else
-    python -m pytest -p no:faulthandler tests
+    python -u -m pytest -p no:faulthandler tests
   fi
   code=$?
   if [ $code -ne 0 ]
