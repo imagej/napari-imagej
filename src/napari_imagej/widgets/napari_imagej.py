@@ -141,7 +141,6 @@ class NapariImageJWidget(QWidget):
         when_jvm_stops(self.close)
 
     def close(self):
-        print("Closing napari-imagej widget")
         super().close()
         self.ij_initializer.wait()
         self.ij_initializer._clean_subscribers()
