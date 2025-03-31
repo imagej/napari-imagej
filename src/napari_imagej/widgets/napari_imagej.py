@@ -138,7 +138,15 @@ class NapariImageJWidget(QWidget):
         # Start constructing the ImageJ instance
         self.ij_initializer.start()
 
+        # Ensure widget closes when JVM closes
+        # Without this call we are prone to segfaults during JVM shutdown
+        when_jvm_stops(self.close)
+
     def close(self):
+        # Ensure setup completed
+        self.wait_for_finalization()
+        # Close things down
+        super().close()
         self.ij_initializer._clean_subscribers()
 
     def wait_for_finalization(self):
