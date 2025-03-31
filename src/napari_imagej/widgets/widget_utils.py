@@ -301,7 +301,8 @@ class DetailExportDialog(QDialog):
             )
             # Labels layers should display the index image
             if isinstance(j_img, jc.ImgLabeling):
-                j_img = j_img.getIndexImg()
+                j_img = nij.ij.py.to_dataset(j_img.getIndexImg())
+                j_img.setName(img.name)
             if roi:
                 if isinstance(roi, Points):
                     j_point = nij.ij.py.to_java(roi)
