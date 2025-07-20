@@ -125,7 +125,7 @@ class SearchResultItem(QStandardItem):
         text = str(result.name())
         # Wrap up the icon path in "highlight text"
         if "Menu path" in props:
-            text += f" <span style=\"color:{HIGHLIGHT};\">{props['Menu path']}</span>"
+            text += f' <span style="color:{HIGHLIGHT};">{props["Menu path"]}</span>'
         super().__init__(text)
         self.result = result
 
