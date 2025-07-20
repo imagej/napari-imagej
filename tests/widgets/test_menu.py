@@ -89,7 +89,7 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
                 asserter(lambda: QApplication.activeModalWidget() is not widget)
 
             def passed(self) -> bool:
-                return getattr(self, '_passed', False)
+                return getattr(self, "_passed", False)
 
         runnable = Handler()
         QThreadPool.globalInstance().start(runnable)
