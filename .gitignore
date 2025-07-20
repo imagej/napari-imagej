@@ -86,3 +86,7 @@ venv/
 # Scripts
 /scripts/*
 !/scripts/examples
+
+# uv
+/.venv/
+/uv.lock

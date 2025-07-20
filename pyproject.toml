@@ -31,7 +31,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-# NB: Keep this in sync with environment.yml AND dev-environment.yml!
 requires-python = ">=3.9, <3.13"
 dependencies = [
     "confuse >= 2.0.0",
@@ -51,9 +50,7 @@ dependencies = [
     "typing_extensions != 4.6.0", # https://github.com/pydantic/pydantic/issues/5821
 ]
 
-[project.optional-dependencies]
-# NB: Keep this in sync with dev-environment.yml!
-# Development tools
+[dependency-groups]
 dev = [
     "build",
     "myst-parser",
@@ -88,7 +85,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# ruff configuration
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]

@@ -1,7 +1,4 @@
-# This workflows will upload a Python Package using Twine when a release is created
-# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
-
-name: tests
+name: build
 
 on: 
   push:
@@ -17,7 +14,7 @@ env:
   NAPARI_IMAGEJ_TEST_TIMEOUT: 60000
 
 jobs:
-  test-pip:
+  build:
     name: ${{ matrix.platform }} (python ${{ matrix.python-version }}, java ${{matrix.java-version}})
     runs-on: ${{ matrix.platform }}
     strategy:
@@ -27,15 +24,15 @@ jobs:
         java-version: ['8', '21']
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up Java ${{ matrix.java-version }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java-version}}
           distribution: 'zulu'
@@ -58,79 +55,18 @@ jobs:
         run: |
           echo "AWT_FORCE_HEADFUL=true" >> $GITHUB_ENV
 
-      - name: Install napari-imagej
+      - name: Install uv
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[dev]'
+          python -m pip install uv
 
-      - name: Test napari-imagej
+      - name: Run tests
         uses: coactions/setup-xvfb@v1
         with:
           run:
             bash bin/test.sh
 
-  ensure-clean-code:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.9
-      # This step ensures that everything is installed
-      - name: Upgrade pip
+      - name: Lint code
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-
-      - name: Run Ruff
-        uses: astral-sh/ruff-action@v1
-
-      - name: Validate pyproject.toml
-        run: |
-          python -m pip install "validate-pyproject[all]"
-          python -m validate_pyproject pyproject.toml
-
-  conda-dev-test:
-    name: Conda Setup & Code Coverage
-    runs-on: ubuntu-latest
-    defaults:
-      # Steps that rely on the activated environment must be run with this shell setup.
-      # See https://github.com/marketplace/actions/setup-miniconda#important
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if dev-environment.yml has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('dev-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          # Create env with dev packages
-          auto-update-conda: true
-          python-version: "3.10"
-          miniforge-version: latest
-          environment-file: dev-environment.yml
-          # Activate napari-imagej-dev environment
-          activate-environment: napari-imagej-dev
-          auto-activate-base: false
-          # Use mamba for faster setup
-          use-mamba: true
-
-      - name: Setup Qt libraries
-        uses: tlambert03/setup-qt-libs@v1
-
-      - name: Test napari-imagej
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: |
-            conda run -n napari-imagej-dev --no-capture-output python -m pytest -s -p no:faulthandler --color=yes --cov-report=xml --cov=.
-
-      # We could do this in its own action, but we'd have to setup the environment again.
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v2
+          bin/lint.sh
