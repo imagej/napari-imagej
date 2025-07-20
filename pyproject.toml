@@ -55,7 +55,7 @@ dev = [
     "build",
     "myst-parser",
     "pre-commit",
-    "pyqt5",
+    "pyqt6",
     "pytest",
     "pytest-cov",
     "pytest-env",
