@@ -15,11 +15,11 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.platform }} (python ${{ matrix.python-version }}, java ${{matrix.java-version}})
-    runs-on: ${{ matrix.platform }}
+    name: ${{ matrix.os }} (python ${{ matrix.python-version }}, java ${{matrix.java-version}})
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        platform: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.12']
         java-version: ['11', '21']
 
