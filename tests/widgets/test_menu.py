@@ -79,7 +79,7 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
     def handle_popup(
         popup_generator: Callable[[], None], popup_handler: Callable[[QDialog], bool]
     ):
-        # # Start the handler in a new thread
+        # Start the handler in a new thread
         class Handler(QRunnable):
             # Test popup when running headlessly
             def run(self) -> None:
@@ -89,7 +89,7 @@ def popup_handler(asserter) -> Callable[[str, Callable[[], None]], None]:
                 asserter(lambda: QApplication.activeModalWidget() is not widget)
 
             def passed(self) -> bool:
-                return self._passed
+                return getattr(self, '_passed', False)
 
         runnable = Handler()
         QThreadPool.globalInstance().start(runnable)

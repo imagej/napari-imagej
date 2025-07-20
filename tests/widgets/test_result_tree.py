@@ -120,7 +120,12 @@ def test_right_click(fixed_tree: SearcherTreeView, asserter):
     # First, assert the policy
     assert fixed_tree.contextMenuPolicy() == Qt.CustomContextMenu
     # Then, grab an arbitratry Search Result
-    idx = fixed_tree.model().index(0, 0).child(0, 0)
+    parent_idx = fixed_tree.model().index(0, 0)
+    idx = (
+        parent_idx.child(0, 0)  # PyQt5
+        if hasattr(parent_idx, "child")
+        else fixed_tree.model().index(0, 0, parent_idx)  # PyQt6
+    )
     rect = fixed_tree.visualRect(idx)
     item = fixed_tree.model().itemFromIndex(idx)
     # Find its SearchActions

@@ -146,10 +146,19 @@ class JavaErrorMessageBox(QDialog):
         textHeight = textSize.height() + 100
         self.resize(textWidth, textHeight)
         # Maximum size - ~80% of the user's screen
-        screen_size = QApplication.desktop().screenGeometry()
-        self.setMaximumSize(
-            int(screen_size.width() * 0.8), int(screen_size.height() * 0.8)
-        )
+        screen_size = None
+        try:
+            screen_size = QApplication.primaryScreen().geometry()  # PyQt6
+        except Exception:
+            pass
+        if not screen_size:
+            try:
+                screen_size = QApplication.desktop().screenGeometry()  # PyQt5
+            except Exception:
+                pass
+        screen_width = screen_size.width() if screen_size else 1024
+        screen_height = screen_size.height() if screen_size else 768
+        self.setMaximumSize(int(screen_width * 0.8), int(screen_height * 0.8))
 
         btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
         btn_box.accepted.connect(self.accept)
