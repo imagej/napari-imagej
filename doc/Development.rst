@@ -45,7 +45,7 @@ Once you've made your changes, run the following:
 
 .. code-block:: bash
 
-    make docs
+    make html
 
 This will build the documentation into HTML files locally, stored in the ``doc/_build/html`` folder. You can then view the documentation locally by loading ``doc/_build/html/index.html`` in the browser of your choice.
 
