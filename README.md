@@ -52,9 +52,7 @@ Distributed under the terms of the [BSD-2] license,
 
 ## Citing
 
-_napari-imagej: ImageJ ecosystem access from napari_, Nature Methods, 2023 Aug 18
-
-DOI: [10.1038/s41592-023-01990-0](https://doi.org/10.1038/s41592-023-01990-0)
+    Selzer, G.J., Rueden, C.T., Hiner, M.C. *et al.* napari-imagej: ImageJ ecosystem access from napari. *Nat Methods* **20**, 1443–1444 (2023). https://doi.org/10.1038/s41592-023-01990-0
 
 [Apache Software License 2.0]: https://www.apache.org/licenses/LICENSE-2.0
 [black]: https://github.com/psf/black
