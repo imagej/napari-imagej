@@ -8,7 +8,7 @@ If your goal is only to *use* napari-imagej to call ImageJ ecosystem routines in
 Configuring a uv environment for development
 --------------------------------------------
 
-Developers should all use uv_ to manage a shared Python environment for napari-imagej development.
+Developers should perform an editable installation of napari-imagej, **installing the** ``dev`` **dependency group**, with an environment manager of their choice. This guide uses uv_, but Mamba_, virtualenv_, etc. could also be used.
 
 First, clone the repository:
 
@@ -21,7 +21,7 @@ Then, set up your environment using ``uv``:
 
 .. code-block:: bash
 
-    uv sync
+    uv pip install -e . --group dev
 
 Testing
 -------
@@ -78,7 +78,9 @@ You can run the following to bundle napari-imagej (macOS/Linux):
 .. _black: https://black.readthedocs.io/en/stable/
 .. _flake8: https://flake8.pycqa.org/en/latest/
 .. _isort: https://pycqa.github.io/isort/
-.. _uv: https://docs.astral.sh/uv/
+.. _Mamba: https://mamba.readthedocs.io/en/latest/
 .. _Read the Docs: https://readthedocs.org/
 .. _pre-commit: https://pre-commit.com/
 .. _pytest: https://docs.pytest.org
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _uv: https://docs.astral.sh/uv/
