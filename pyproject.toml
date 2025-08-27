@@ -35,7 +35,7 @@ requires-python = ">=3.9, <3.13"
 dependencies = [
     "confuse >= 2.0.0",
     "imglyb >= 2.1.0",
-    "jpype1 >= 1.4.1",
+    "jpype1 >= 1.4.1, <1.6.0", # JPype>=1.6.0 causes silent crashes on Windows
     "labeling >= 0.1.12",
     "magicgui >= 0.5.1",
     "napari >= 0.4.17",
