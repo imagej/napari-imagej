@@ -57,10 +57,12 @@ class NapariImageJMenu(QWidget):
             def show_ui():
                 if nij.ij.ui().isVisible():
                     nij.ij.thread().queue(
-                        lambda: nij.ij.ui()
-                        .getDefaultUI()
-                        .getApplicationFrame()
-                        .setVisible(True)
+                        lambda: (
+                            nij.ij.ui()
+                            .getDefaultUI()
+                            .getApplicationFrame()
+                            .setVisible(True)
+                        )
                     )
                 else:
                     nij.ij.thread().queue(lambda: nij.ij.ui().showUI())

@@ -104,8 +104,10 @@ def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter)
     tree.clicked.emit(tree.model().indexFromItem(item))
     # Ensure we don't see any text in the runner widget
     asserter(
-        lambda: imagej_widget.result_runner.selected_module_label.isHidden()
-        or imagej_widget.result_runner.selected_module_label.text() == ""
+        lambda: (
+            imagej_widget.result_runner.selected_module_label.isHidden()
+            or imagej_widget.result_runner.selected_module_label.text() == ""
+        )
     )
 
     # Ensure we don't see any buttons in the runner widget
@@ -181,8 +183,10 @@ def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asser
     # Disable the searcher, assert the proper ImageJ response
     searcher_item.setCheckState(Qt.Unchecked)
     asserter(
-        lambda: not nij.ij.get("org.scijava.search.SearchService").enabled(
-            searcher_item.searcher
+        lambda: (
+            not nij.ij.get("org.scijava.search.SearchService").enabled(
+                searcher_item.searcher
+            )
         )
     )
 
