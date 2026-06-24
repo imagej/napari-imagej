@@ -35,13 +35,14 @@ requires-python = ">=3.9, <3.13"
 dependencies = [
     "confuse >= 2.0.0",
     "imglyb >= 2.1.0",
-    "jpype1 >= 1.4.1",
+    "jpype1 >= 1.4.1, <1.6.0", # JPype>=1.6.0 causes silent crashes on Windows
     "labeling >= 0.1.12",
     "magicgui >= 0.5.1",
     "napari >= 0.4.17",
     "numpy",
     "pandas",
-    "pyimagej >= 1.5.0",
+    "cjdk@git+https://github.com/cachedjdk/cjdk#egg=robust-cleanup-failed-download",
+    "pyimagej@git+https://github.com/imagej/pyimagej",
     "scyjava >= 1.9.1",
     "superqt >= 0.7.0",
     "xarray < 2024.10.0",

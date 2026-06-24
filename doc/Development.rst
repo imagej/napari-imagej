@@ -5,36 +5,34 @@ This document describes how to contribute to the napari-imagej source.
 
 If your goal is only to *use* napari-imagej to call ImageJ ecosystem routines in napari, see `this page <./Install.html>`_.
 
-Configuring a Mamba environment for development
------------------------------------------------
+Configuring a uv environment for development
+--------------------------------------------
 
-napari-imagej requires Java and Python components, and as such we *highly* recommend contributors use virtual environments 
-to manage their development environment
+Developers should perform an editable installation of napari-imagej, **installing the** ``dev`` **dependency group**, with an environment manager of their choice. This guide uses uv_, but Mamba_, virtualenv_, etc. could also be used.
 
-The first step towards development is installing napari-imagej from source. With Mamba_, this is particularly easy.
+First, clone the repository:
 
 .. code-block:: bash
-    
+
     git clone https://github.com/imagej/napari-imagej
     cd napari-imagej
-    mamba env create -f dev-environment.yml
 
-This virtual environment must then be activated to work on the napari-imagej source:
+Then, set up your environment using ``uv``:
 
 .. code-block:: bash
 
-    mamba activate napari-imagej-dev
+    uv pip install -e . --group dev
 
 Testing
 -------
 
-napari-imagej uses pytest_ to automate testing. By installing the developement environment above, ``pytest`` will come installed.
+napari-imagej uses pytest_ to automate testing. By installing the development environment above, ``pytest`` will be available.
 
 To test napari-imagej, simply run:
 
 .. code-block:: bash
 
-    pytest
+    uv run pytest
 
 Documentation
 -------------
@@ -45,7 +43,7 @@ Once you've made your changes, run the following:
 
 .. code-block:: bash
 
-    make html
+    uv run make html
 
 This will build the documentation into HTML files locally, stored in the ``doc/_build/html`` folder. You can then view the documentation locally by loading ``doc/_build/html/index.html`` in the browser of your choice.
 
@@ -60,13 +58,13 @@ To manually format the source, run (macOS/Linux):
 
 .. code-block:: bash
 
-    make clean
+    uv run make clean
 
 napari-imagej also includes pre-commit_ configuration for those who want it. By using pre-commit, staged changes will be formatted before they can be commited to a repository. pre-commit can be set up using:
 
 .. code-block:: bash
 
-    pre-commit install
+    uv run pre-commit install
 
 Building Distribution Bundles
 -----------------------------
@@ -75,12 +73,14 @@ You can run the following to bundle napari-imagej (macOS/Linux):
 
 .. code-block:: bash
 
-    make dist
+    uv run make dist
 
 .. _black: https://black.readthedocs.io/en/stable/
 .. _flake8: https://flake8.pycqa.org/en/latest/
 .. _isort: https://pycqa.github.io/isort/
-.. _Mamba: https://mamba.readthedocs.io
+.. _Mamba: https://mamba.readthedocs.io/en/latest/
 .. _Read the Docs: https://readthedocs.org/
 .. _pre-commit: https://pre-commit.com/
 .. _pytest: https://docs.pytest.org
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _uv: https://docs.astral.sh/uv/
