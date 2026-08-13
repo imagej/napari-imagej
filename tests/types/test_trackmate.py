@@ -2,8 +2,6 @@
 A module testing napari_imagej.types.converters.trackmate
 """
 
-from typing import Tuple
-
 import numpy as np
 import pytest
 from napari.layers import Labels, Tracks
@@ -108,7 +106,7 @@ def test_Model_to_Tracks(asserter, ij, trackMate_example):
     # Convert the dataset's rois into its Python equivalent
     layers = ij.py.from_java(dataset.getProperties()["rois"])
     # Assert we receive a Tracks Layer
-    assert isinstance(layers, Tuple)
+    assert isinstance(layers, tuple)
     tracks, labels = layers
     assert isinstance(tracks, Tracks)
     assert isinstance(labels, Labels)

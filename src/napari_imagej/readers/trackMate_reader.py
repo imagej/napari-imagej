@@ -28,7 +28,7 @@ def napari_get_reader(path):
         return None
 
     # Ensure that the xml file is a TrackMate file
-    if not ET.parse(path).getroot().tag == "TrackMate":
+    if ET.parse(path).getroot().tag != "TrackMate":
         return None
 
     # Ensure TrackMate available

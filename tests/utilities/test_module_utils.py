@@ -5,7 +5,7 @@ A module testing napari_imagej.utilities._module_utils
 import sys
 from collections import OrderedDict
 from inspect import Parameter, _empty, signature
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy
 import pytest
@@ -14,11 +14,11 @@ from napari import Viewer
 from napari.layers import Image, Layer
 from napari.utils._magicgui import get_layers
 from pandas import DataFrame
+from tests.utils import DummyModuleInfo, DummyModuleItem, jc
 
 from napari_imagej.types.type_hints import type_hints
 from napari_imagej.types.type_utils import _napari_layer_types
 from napari_imagej.utilities import _module_utils
-from tests.utils import DummyModuleInfo, DummyModuleItem, jc
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ def test_napari_param_new_window_checkbox():
     for t in types_absent:
         assert_new_window_checkbox_for_type(t, False)
 
-    hint_domain = list(map(lambda hint: hint.type, type_hints()))
+    hint_domain = [hint.type for hint in type_hints()]
     types_present = list(set(hint_domain) - set(_napari_layer_types()))
     for t in types_present:
         assert_new_window_checkbox_for_type(t, True)
@@ -232,16 +232,16 @@ def metadata_module_item(ij) -> DummyModuleItem:
 
 
 def test_add_scijava_metadata(metadata_module_item: DummyModuleItem):
-    metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
+    metadata: dict[str, dict[str, Any]] = _module_utils._add_scijava_metadata(
         [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
     assert len(metadata.keys()) == 1
-    assert "foo" in metadata.keys()
+    assert "foo" in metadata
 
     # Assert each metadata
-    param_map: Dict[str, Any] = metadata["foo"]
+    param_map: dict[str, Any] = metadata["foo"]
     assert param_map["max"] == 20.0
     assert param_map["min"] == 10.0
     assert param_map["step"] == 2.0
@@ -264,16 +264,16 @@ def test_add_scijava_metadata_empty_choices(
     empty_list = ij.py.to_java(choices)
     metadata_module_item.setChoices(empty_list)
 
-    metadata: Dict[str, Dict[str, Any]] = _module_utils._add_scijava_metadata(
+    metadata: dict[str, dict[str, Any]] = _module_utils._add_scijava_metadata(
         [metadata_module_item], {"foo": float}
     )
 
     # Assert only 'foo' key in metadata
     assert len(metadata.keys()) == 1
-    assert "foo" in metadata.keys()
+    assert "foo" in metadata
 
     # Assert each metadata
-    param_map: Dict[str, Any] = metadata["foo"]
+    param_map: dict[str, Any] = metadata["foo"]
     assert param_map["max"] == 20.0
     assert param_map["min"] == 10.0
     assert param_map["step"] == 2.0
@@ -345,7 +345,7 @@ def run_module_from_script(ij, tmp_path, script, args):
     p = tmp_path / "script.py"
     p.write_text(script)
 
-    info: "jc.ScriptInfo" = jc.ScriptInfo(ij.context(), str(p))
+    info: jc.ScriptInfo = jc.ScriptInfo(ij.context(), str(p))
     module = info.createModule()
     ij.context().inject(module)
     remaining_preprocessors = _module_utils._preprocess_to_harvester(module)
@@ -589,7 +589,7 @@ def test_request_values_args():
 
     assert "a" in args
     assert args["a"]["annotation"] is inspect._empty
-    assert args["a"]["options"] == dict(tooltip="We don't use this")
+    assert args["a"]["options"] == {"tooltip": "We don't use this"}
     assert "value" not in args["a"]
 
     assert "b" in args
@@ -599,12 +599,12 @@ def test_request_values_args():
 
     assert "c" in args
     assert args["c"]["annotation"] is Image
-    assert args["c"]["options"] == dict(choices=get_layers)
+    assert args["c"]["options"] == {"choices": get_layers}
     assert "value" not in args["c"]
 
     assert "d" in args
     assert args["d"]["annotation"] == "napari.layers.Image"
-    assert args["d"]["options"] == dict(choices=get_layers)
+    assert args["d"]["options"] == {"choices": get_layers}
     assert "value" not in args["d"]
 
     assert "e" in args
@@ -620,7 +620,7 @@ def test_request_values_args():
 
 @pytest.mark.skipif(
     condition=sys.platform == "darwin",
-    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",  # noqa
+    reason="Hangs sporadically on Mac. See https://github.com/imagej/napari-imagej/issues/204",
 )
 def test_functionify_module_execution(imagej_widget, ij, asserter):
     viewer: Viewer = imagej_widget.napari_viewer
@@ -632,12 +632,12 @@ def test_functionify_module_execution(imagej_widget, ij, asserter):
         info.createModule(),
         info,
     )
-    params: Dict[str, Any] = dict(
-        input=numpy.ones((100, 100)),
-        doGauss=False,
-        spacingString="1, 1",
-        scaleString="2, 5",
-    )
+    params: dict[str, Any] = {
+        "input": numpy.ones((100, 100)),
+        "doGauss": False,
+        "spacingString": "1, 1",
+        "scaleString": "2, 5",
+    }
     func(*(params.values()))
     asserter(lambda: len(viewer.layers) == 1)
 
@@ -678,7 +678,7 @@ def test_info_for(ij):
     # Case 1: An OpSearchResult
     op_infos = ij.op().infos()
     assert len(op_infos)
-    result = jc.OpSearchResult(ij.context(), list(op_infos)[0], "")
+    result = jc.OpSearchResult(ij.context(), next(iter(op_infos)), "")
     assert isinstance(_module_utils.info_for(result), jc.ModuleInfo)
 
     # Case 2: A ModuleSearchResult

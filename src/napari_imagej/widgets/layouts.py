@@ -55,7 +55,7 @@ class QFlowLayout(QLayout):
         return height
 
     def setGeometry(self, rect):
-        super(QFlowLayout, self).setGeometry(rect)
+        super().setGeometry(rect)
         self._do_layout(rect, False)
 
     def sizeHint(self):

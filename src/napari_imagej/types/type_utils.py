@@ -15,7 +15,7 @@ def _napari_layer_types():
         *type_hints.labels(),
     ]
 
-    return list(map(lambda hint: hint.type, layer_hints))
+    return [hint.type for hint in layer_hints]
 
 
 def displayable_in_napari(data):

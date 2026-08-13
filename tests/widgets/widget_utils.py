@@ -2,16 +2,16 @@
 A module containing functionality useful for widget testing
 """
 
-from typing import Optional
+from __future__ import annotations
 
 from qtpy.QtCore import Qt
+from tests.utils import DummySearcher, DummySearchEvent, jc
 
 from napari_imagej import nij
 from napari_imagej.widgets.result_tree import SearcherItem, SearcherTreeView
-from tests.utils import DummySearcher, DummySearchEvent, jc
 
 
-def _searcher_tree_named(tree: SearcherTreeView, name: str) -> Optional[SearcherItem]:
+def _searcher_tree_named(tree: SearcherTreeView, name: str) -> SearcherItem | None:
     root = tree.model().invisibleRootItem()
     for i in range(root.rowCount()):
         if str(root.child(i, 0).searcher.title()).startswith(name):
@@ -21,7 +21,7 @@ def _searcher_tree_named(tree: SearcherTreeView, name: str) -> Optional[Searcher
 
 def _populate_tree(tree: SearcherTreeView, asserter):
     # DummySearchers are SciJava Searchers - we need a JVM
-    nij.ij
+    _ = nij.ij
 
     root = tree.model().invisibleRootItem()
     asserter(lambda: root.rowCount() == 0)

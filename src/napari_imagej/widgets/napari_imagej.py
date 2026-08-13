@@ -8,7 +8,7 @@ This widget is made accessible to napari through napari.yml.
 from __future__ import annotations
 
 from traceback import format_exception
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 from jpype import JArray, JImplements, JOverride
 from magicgui.widgets import FunctionGui, Widget
@@ -16,7 +16,7 @@ from napari import Viewer
 from napari.layers import Layer
 from qtpy.QtCore import QModelIndex, QThread, Signal, Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
-from scyjava import jstacktrace, when_jvm_stops, jvm_started
+from scyjava import jstacktrace, jvm_started, when_jvm_stops
 
 from napari_imagej import nij
 from napari_imagej.java import jc
@@ -33,9 +33,6 @@ from napari_imagej.widgets.result_runner import ResultRunner
 from napari_imagej.widgets.result_tree import SearcherTreeView, SearchResultItem
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
-
-if TYPE_CHECKING:
-    pass
 
 
 class NapariImageJWidget(QWidget):
@@ -171,7 +168,7 @@ class NapariImageJWidget(QWidget):
             raise TypeError(f"Do not know how to display {data}")
 
     @Slot(object)
-    def _update_progress(self, event: "jc.ModuleEvent"):
+    def _update_progress(self, event: jc.ModuleEvent):
         """
         Updates the napari progress bar of the given module.
 
@@ -193,15 +190,14 @@ class NapariImageJWidget(QWidget):
             (jc.ModuleFinishedEvent, jc.ModuleCanceledEvent, jc.ModuleErroredEvent),
         ):
             pm.close(module)
-        if isinstance(event, jc.ModuleErroredEvent):
-            if not nij.ij.ui().isVisible():
-                # TODO Use napari's error handler once it works better
-                # see https://github.com/imagej/napari-imagej/issues/234
-                module_title = str(module.getInfo().getTitle())
-                title = f"An error occurred in Java while executing {module_title}:"
-                exception_str = jstacktrace(event.getException())
-                msg = JavaErrorMessageBox(title, exception_str)
-                msg.exec()
+        if isinstance(event, jc.ModuleErroredEvent) and not nij.ij.ui().isVisible():
+            # TODO Use napari's error handler once it works better
+            # see https://github.com/imagej/napari-imagej/issues/234
+            module_title = str(module.getInfo().getTitle())
+            title = f"An error occurred in Java while executing {module_title}:"
+            exception_str = jstacktrace(event.getException())
+            msg = JavaErrorMessageBox(title, exception_str)
+            msg.exec()
 
     @Slot(object)
     def _handle_ij_init_error(self, exc: Exception):
@@ -257,7 +253,7 @@ class ImageJInitializer(QThread):
             # Finalize EventSubscribers
             self._finalize_subscribers()
             # jc.Thread.detach()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Handle the exception on the GUI thread
             self.widget.ij_error_handler.emit(e)
             return
@@ -281,7 +277,7 @@ class ImageJInitializer(QThread):
                 self.handler = event_handler
 
             @JOverride
-            def searchCompleted(self, event: "jc.SearchEvent"):
+            def searchCompleted(self, event: jc.SearchEvent):
                 self.handler.emit(event)
 
         # Start the search!

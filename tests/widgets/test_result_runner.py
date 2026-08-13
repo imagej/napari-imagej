@@ -66,7 +66,7 @@ def example_info(ij):
 
 
 def test_button_param_regression(
-    result_runner: ResultRunner, example_info: "jc.ModuleInfo"
+    result_runner: ResultRunner, example_info: jc.ModuleInfo
 ):
     """Simple regression test ensuring search action button population"""
 
@@ -77,13 +77,13 @@ def test_button_param_regression(
 
 
 def test_widget_button_spawns_widget(
-    result_runner: ResultRunner, example_info: "jc.ModuleInfo", asserter
+    result_runner: ResultRunner, example_info: jc.ModuleInfo, asserter
 ):
     """Simple regression test ensuring the widget button spawns a new napari widget"""
 
     result = jc.ModuleSearchResult(example_info, "")
     buttons = result_runner._buttons_for(result)
     assert buttons[1].text() == "Widget"
-    assert result.name() not in result_runner.viewer.window._dock_widgets.keys()
+    assert result.name() not in result_runner.viewer.window._dock_widgets
     buttons[1].action()
-    assert result.name() in result_runner.viewer.window._dock_widgets.keys()
+    assert result.name() in result_runner.viewer.window._dock_widgets

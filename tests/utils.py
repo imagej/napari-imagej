@@ -4,15 +4,10 @@ A module containing testing utilities
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from jpype import JImplements, JOverride
 from scyjava import JavaClasses
 
 from napari_imagej.java import NijJavaClasses
-
-if TYPE_CHECKING:
-    from typing import Dict, List
 
 
 class JavaClassesTest(NijJavaClasses):
@@ -163,7 +158,7 @@ class DummySearchEvent:
     A mock of org.scijava.search.search.SearchEvent
     """
 
-    def __init__(self, searcher: "jc.Searcher", results: List["jc.SearchResult"]):
+    def __init__(self, searcher: jc.Searcher, results: list[jc.SearchResult]):
         self._searcher = searcher
         self._results = results
 
@@ -174,8 +169,10 @@ class DummySearchEvent:
         return self._results
 
 
-class DummySearchResult(object):
-    def __init__(self, info: "jc.ModuleInfo" = None, properties: Dict = {}):
+class DummySearchResult:
+    def __init__(self, info: jc.ModuleInfo = None, properties: dict | None = None):
+        if properties is None:
+            properties = {}
         self._info = info
         self._properties = properties
 
@@ -194,7 +191,7 @@ class DummySearchResult(object):
     def properties(self):
         return self._properties
 
-    def set_properties(self, props: Dict):
+    def set_properties(self, props: dict):
         self._properties = props
 
 
@@ -204,7 +201,11 @@ class DummyModuleInfo:
     Fields can and should be added as needed for tests.
     """
 
-    def __init__(self, title="Dummy Module Info", inputs=[], outputs=[]):
+    def __init__(self, title="Dummy Module Info", inputs=None, outputs=None):
+        if outputs is None:
+            outputs = []
+        if inputs is None:
+            inputs = []
         self._title = title
         self._inputs = inputs
         self._outputs = outputs

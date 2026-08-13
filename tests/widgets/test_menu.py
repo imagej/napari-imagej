@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
 )
+from tests.utils import DummySearchResult, jc
 from xarray import DataArray
 
 from napari_imagej import settings
@@ -34,7 +35,6 @@ from napari_imagej.widgets.menu import (
     ToIJDetailedButton,
 )
 from napari_imagej.widgets.widget_utils import DimsComboBox, _run_actions_for
-from tests.utils import DummySearchResult, jc
 
 
 @pytest.fixture(autouse=True)
@@ -44,7 +44,9 @@ def napari_mocker(viewer: Viewer):
     # REQUEST_VALUES MOCK
     oldfunc = menu.request_values
 
-    def newfunc(values={}, title="", **kwargs):
+    def newfunc(values=None, title="", **kwargs):
+        if values is None:
+            values = {}
         values.update(kwargs)
         results = {}
         # Solve each parameter
@@ -348,11 +350,11 @@ def test_advanced_data_transfer(
         if not isinstance(widget, DetailExportDialog):
             print("Not an AdvancedExportDialog")
             return False
-        if not widget.img_container.combo.currentText() == "test_to":
+        if widget.img_container.combo.currentText() != "test_to":
             print(widget.img_container.combo.currentText())
             print("Unexpected starting image text")
             return False
-        if not widget.roi_container.combo.currentText() == "--------":
+        if widget.roi_container.combo.currentText() != "--------":
             print("Unexpected starting roi text")
             return False
         if shapes not in widget.roi_container.choices:
@@ -361,7 +363,7 @@ def test_advanced_data_transfer(
         widget.roi_container.combo.setCurrentText(shapes.name)
 
         dim_bars = widget.dims_container.findChildren(DimsComboBox.DimSelector)
-        if not len(dim_bars) == 3:
+        if len(dim_bars) != 3:
             print("Expected more dimension comboboxes")
             return False
         for i, e in enumerate(dims):
@@ -379,7 +381,7 @@ def test_advanced_data_transfer(
         if not ij.display().getActiveDisplay():
             return False
         dataset = ij.display().getActiveDisplay().getActiveView().getData()
-        if not dataset.getName() == "test_to":
+        if dataset.getName() != "test_to":
             return False
         if dataset.getProperties().get("rois") is None:
             return False
@@ -387,10 +389,7 @@ def test_advanced_data_transfer(
             return False
         if dataset.dimension(jc.Axes.Y) != 100:
             return False
-        if dataset.dimension(jc.Axes.Z) != 3:
-            return False
-
-        return True
+        return dataset.dimension(jc.Axes.Z) == 3
 
     asserter(check_active_display)
 
@@ -415,11 +414,11 @@ def test_labels_transfer_as_data(
         if not isinstance(widget, DetailExportDialog):
             print("Not an AdvancedExportDialog")
             return False
-        if not widget.img_container.combo.currentText() == "test_labels":
+        if widget.img_container.combo.currentText() != "test_labels":
             print(widget.img_container.combo.currentText())
             print("Unexpected starting image text")
             return False
-        if not widget.roi_container.combo.currentText() == "--------":
+        if widget.roi_container.combo.currentText() != "--------":
             print("Unexpected starting roi text")
             return False
         if labels not in widget.roi_container.choices:
@@ -437,10 +436,7 @@ def test_labels_transfer_as_data(
         if not ij.display().getActiveDisplay():
             return False
         dataset = ij.display().getActiveDisplay().getActiveView().getData()
-        if not dataset.getName() == "test_labels":
-            return False
-
-        return True
+        return dataset.getName() == "test_labels"
 
     asserter(check_active_display)
 
@@ -474,11 +470,11 @@ def test_labels_transfer_as_rois(
             print("Not an AdvancedExportDialog")
             return False
         # Note test_labels is the active layer - it will be the current text
-        if not widget.img_container.combo.currentText() == "test_labels":
+        if widget.img_container.combo.currentText() != "test_labels":
             print(widget.img_container.combo.currentText())
             print("Unexpected starting image text")
             return False
-        if not widget.roi_container.combo.currentText() == "--------":
+        if widget.roi_container.combo.currentText() != "--------":
             print("Unexpected starting roi text")
             return False
         if labels not in widget.roi_container.choices:
@@ -499,12 +495,9 @@ def test_labels_transfer_as_rois(
         if not ij.display().getActiveDisplay():
             return False
         dataset = ij.display().getActiveDisplay().getActiveView().getData()
-        if not dataset.getName() == "test_to":
+        if dataset.getName() != "test_to":
             return False
-        if dataset.getProperties().get("rois") is None:
-            return False
-
-        return True
+        return dataset.getProperties().get("rois") is not None
 
     asserter(check_active_display)
 
@@ -539,7 +532,9 @@ def test_settings_change(popup_handler, gui_widget: NapariImageJMenu):
 
     assert old_value != new_value
 
-    def provide_updated_values(values={}, title="", **kwargs):
+    def provide_updated_values(values=None, title="", **kwargs):
+        if values is None:
+            values = {}
         return {
             name: (
                 new_value

@@ -10,9 +10,11 @@ in a programmatic way. Those types should be declared elsewhere.
 The hint maps are broken up into sub-maps for convenience and utility.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Callable, List, Union
+from functools import cache
+from typing import Callable
 
 from jpype import JBoolean, JByte, JChar, JDouble, JFloat, JInt, JLong, JShort
 from scyjava import Priority
@@ -23,18 +25,18 @@ from napari_imagej.java import jc
 @dataclass
 class TypeHint:
     type: type
-    hint: Union[str, type]
+    hint: str | type
     priority: float = Priority.NORMAL
 
 
-HINT_GENERATORS: List[Callable[[], List[TypeHint]]] = []
+HINT_GENERATORS: list[Callable[[], list[TypeHint]]] = []
 
 
-def hint_category(func: Callable[[], List[TypeHint]]) -> Callable[[], List[TypeHint]]:
-    @lru_cache(maxsize=None)
-    def inner() -> List[TypeHint]:
+def hint_category(func: Callable[[], list[TypeHint]]) -> Callable[[], list[TypeHint]]:
+    @cache
+    def inner() -> list[TypeHint]:
         # We want the map returned by func...
-        original: List[TypeHint] = func()
+        original: list[TypeHint] = func()
         # ...but without any None keys.
         # NB the second None avoids the KeyError
         return list(filter(lambda hint: hint.type is not None, original))
@@ -43,13 +45,13 @@ def hint_category(func: Callable[[], List[TypeHint]]) -> Callable[[], List[TypeH
     return inner
 
 
-@lru_cache(maxsize=None)
-def type_hints() -> List[TypeHint]:
+@cache
+def type_hints() -> list[TypeHint]:
     """
     Returns a List of all HARDCODED python type hints for java types,
     sorted by priority.
     """
-    types: List[TypeHint] = []
+    types: list[TypeHint] = []
     for generator in HINT_GENERATORS:
         types.extend(generator())
     types.sort(reverse=True, key=lambda hint: hint.priority)
@@ -57,36 +59,36 @@ def type_hints() -> List[TypeHint]:
 
 
 @hint_category
-def booleans() -> List[TypeHint]:
+def booleans() -> list[TypeHint]:
     return [
         TypeHint(JBoolean, bool),
-        TypeHint(jc.Boolean_Arr, List[bool]),
+        TypeHint(jc.Boolean_Arr, list[bool]),
         TypeHint(jc.Boolean, bool),
         TypeHint(jc.BooleanType, bool, Priority.LOW),
     ]
 
 
 @hint_category
-def numbers() -> List[TypeHint]:
+def numbers() -> list[TypeHint]:
     return [
         TypeHint(JByte, int),
         TypeHint(jc.Byte, int),
-        TypeHint(jc.Byte_Arr, List[int]),
+        TypeHint(jc.Byte_Arr, list[int]),
         TypeHint(JShort, int),
         TypeHint(jc.Short, int),
-        TypeHint(jc.Short_Arr, List[int]),
+        TypeHint(jc.Short_Arr, list[int]),
         TypeHint(JInt, int),
         TypeHint(jc.Integer, int),
-        TypeHint(jc.Integer_Arr, List[int]),
+        TypeHint(jc.Integer_Arr, list[int]),
         TypeHint(JLong, int),
         TypeHint(jc.Long, int),
-        TypeHint(jc.Long_Arr, List[int]),
+        TypeHint(jc.Long_Arr, list[int]),
         TypeHint(JFloat, float),
         TypeHint(jc.Float, float),
-        TypeHint(jc.Float_Arr, List[float]),
+        TypeHint(jc.Float_Arr, list[float]),
         TypeHint(JDouble, float),
         TypeHint(jc.Double, float),
-        TypeHint(jc.Double_Arr, List[float]),
+        TypeHint(jc.Double_Arr, list[float]),
         TypeHint(jc.BigInteger, int),
         TypeHint(jc.BigDecimal, float),
         TypeHint(jc.IntegerType, int, Priority.LOW),
@@ -97,7 +99,7 @@ def numbers() -> List[TypeHint]:
 
 
 @hint_category
-def strings() -> List[TypeHint]:
+def strings() -> list[TypeHint]:
     return [
         TypeHint(JChar, str),
         TypeHint(jc.Character_Arr, str),
@@ -107,12 +109,12 @@ def strings() -> List[TypeHint]:
 
 
 @hint_category
-def labels() -> List[TypeHint]:
+def labels() -> list[TypeHint]:
     return [TypeHint(jc.ImgLabeling, "napari.layers.Labels", priority=Priority.HIGH)]
 
 
 @hint_category
-def images() -> List[TypeHint]:
+def images() -> list[TypeHint]:
     return [
         TypeHint(
             jc.RandomAccessibleInterval, "napari.layers.Image", priority=Priority.LOW
@@ -133,7 +135,7 @@ def images() -> List[TypeHint]:
 
 
 @hint_category
-def points() -> List[TypeHint]:
+def points() -> list[TypeHint]:
     return [
         TypeHint(jc.PointMask, "napari.layers.Points"),
         TypeHint(jc.RealPointCollection, "napari.layers.Points"),
@@ -141,7 +143,7 @@ def points() -> List[TypeHint]:
 
 
 @hint_category
-def shapes() -> List[TypeHint]:
+def shapes() -> list[TypeHint]:
     return [
         TypeHint(jc.Line, "napari.layers.Shapes"),
         TypeHint(jc.Box, "napari.layers.Shapes"),
@@ -153,26 +155,26 @@ def shapes() -> List[TypeHint]:
 
 
 @hint_category
-def surfaces() -> List[TypeHint]:
+def surfaces() -> list[TypeHint]:
     return [TypeHint(jc.Mesh, "napari.layers.Surface")]
 
 
 @hint_category
-def color_tables() -> List[TypeHint]:
+def color_tables() -> list[TypeHint]:
     return [
         TypeHint(jc.ColorTable, "vispy.color.Colormap"),
     ]
 
 
 @hint_category
-def pd() -> List[TypeHint]:
+def pd() -> list[TypeHint]:
     return [
         TypeHint(jc.Table, "pandas.DataFrame"),
     ]
 
 
 @hint_category
-def paths() -> List[TypeHint]:
+def paths() -> list[TypeHint]:
     return [
         TypeHint(jc.Character_Arr, str),
         TypeHint(jc.Character, str),
@@ -183,14 +185,14 @@ def paths() -> List[TypeHint]:
 
 
 @hint_category
-def enums() -> List[TypeHint]:
+def enums() -> list[TypeHint]:
     return [
         TypeHint(jc.Enum, "enum.Enum"),
     ]
 
 
 @hint_category
-def dates() -> List[TypeHint]:
+def dates() -> list[TypeHint]:
     return [
         TypeHint(jc.Date, "datetime.datetime"),
     ]

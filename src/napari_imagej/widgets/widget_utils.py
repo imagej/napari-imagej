@@ -1,10 +1,10 @@
+from contextlib import suppress
 from functools import lru_cache
 from logging import getLogger
-from typing import List
+from typing import ClassVar
 
 from imagej.convert import index_img_to_roi_tree
 from jpype import JArray, JByte
-from scyjava import jvm_started
 from magicgui import magicgui
 from napari import Viewer
 from napari.layers import Image, Labels, Layer, Points, Shapes
@@ -24,6 +24,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from scyjava import jvm_started
 
 from napari_imagej import nij
 from napari_imagej.java import jc
@@ -147,15 +148,11 @@ class JavaErrorMessageBox(QDialog):
         self.resize(textWidth, textHeight)
         # Maximum size - ~80% of the user's screen
         screen_size = None
-        try:
+        with suppress(Exception):
             screen_size = QApplication.primaryScreen().geometry()  # PyQt6
-        except Exception:
-            pass
         if not screen_size:
-            try:
+            with suppress(Exception):
                 screen_size = QApplication.desktop().screenGeometry()  # PyQt5
-            except Exception:
-                pass
         screen_width = screen_size.width() if screen_size else 1024
         screen_height = screen_size.height() if screen_size else 768
         self.setMaximumSize(int(screen_width * 0.8), int(screen_height * 0.8))
@@ -172,7 +169,7 @@ _ROI_LAYER_TYPES = (Labels, Points, Shapes)
 class LayerComboBox(QWidget):
     """A QWidget for selecting from a List of Layers, with a title"""
 
-    def __init__(self, title: str, choices: List[Layer], required=True):
+    def __init__(self, title: str, choices: list[Layer], required=True):
         super().__init__()
         # Define layout
         self.setLayout(QHBoxLayout())
@@ -241,7 +238,7 @@ class DimsComboBox(QFrame):
         """A QWidget providing potential labels for each dimension"""
 
         # NB: Strings correspond to supported net.imagej.axis.Axes types
-        choices = ["X", "Y", "Z", "Time", "Channel", "Unspecified"]
+        choices: ClassVar[list[str]] = ["X", "Y", "Z", "Time", "Channel", "Unspecified"]
 
         def __init__(self, title: str, guess: str):
             # Define widget layout

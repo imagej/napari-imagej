@@ -11,10 +11,12 @@ There are a few functions that are designed for use by graphical widgets, namely
         - converts a SciJava SearchResult to a ModuleInfo
 """
 
+from __future__ import annotations
+
 from inspect import Parameter, Signature, _empty, isclass, signature
 from logging import getLogger
 from time import perf_counter
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable
 
 from jpype import JException, JImplements, JOverride
 from magicgui.widgets import Container, Label, LineEdit, Table, Widget, request_values
@@ -31,7 +33,7 @@ from napari_imagej.types.widget_mappings import preferred_widget_for
 from napari_imagej.utilities.progress_manager import pm
 
 
-def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
+def _preprocess_to_harvester(module) -> list[jc.PreprocessorPlugin]:
     """
     Uses all preprocessors up to the InputHarvesters.
     We stop at the InputHarvesters as they would attempt to resolve inputs that
@@ -53,16 +55,16 @@ def _preprocess_to_harvester(module) -> List["jc.PreprocessorPlugin"]:
         preprocessor.process(module)
 
 
-NAPARI_IMAGEJ_PREPROCESSORS: List[Callable[["jc.Module"], None]] = []
+NAPARI_IMAGEJ_PREPROCESSORS: list[Callable[[jc.Module], None]] = []
 
 
-def preprocessor(func: Callable[["jc.Module"], None]) -> Callable[["jc.Module"], None]:
+def preprocessor(func: Callable[[jc.Module], None]) -> Callable[[jc.Module], None]:
     NAPARI_IMAGEJ_PREPROCESSORS.append(func)
     return func
 
 
 @preprocessor
-def optional_preallocated_output_real_type_preprocessor(module: "jc.Module"):
+def optional_preallocated_output_real_type_preprocessor(module: jc.Module):
     """
     Optional Preallocated RealType Outputs are annoying, since we can't resolve them
     in napari. So we resolve them here
@@ -82,7 +84,7 @@ def optional_preallocated_output_real_type_preprocessor(module: "jc.Module"):
             module.resolveInput(input.getName())
 
 
-def _preprocess_napari_imagej(module: "jc.Module"):
+def _preprocess_napari_imagej(module: jc.Module):
     """
     Runs various PreprocessorPlugin-like functions to resolve Module inputs.
     Ideally, we'd make these functions PreprocessorPlugins, but that turns out
@@ -95,15 +97,15 @@ def _preprocess_napari_imagej(module: "jc.Module"):
 
 
 def _mutable_layers(
-    unresolved_inputs: List["jc.ModuleItem"], user_resolved_inputs: List[Any]
-) -> List[Layer]:
+    unresolved_inputs: list[jc.ModuleItem], user_resolved_inputs: list[Any]
+) -> list[Layer]:
     """
     Finds all layers passed to a module that will be mutated
     :param unresolved_inputs: The ModuleItems declaring I/O intent
     :param user_resolved_inputs: The PYTHON inputs passed by magicgui
     :return: The Layer arguments that will be modified
     """
-    mutable_layers: List[Layer] = []
+    mutable_layers: list[Layer] = []
     for item, input in zip(unresolved_inputs, user_resolved_inputs):
         if isinstance(input, Layer) and item.isOutput():
             mutable_layers.append(input)
@@ -111,7 +113,7 @@ def _mutable_layers(
     return mutable_layers
 
 
-def _resolvable_or_required(input: "jc.ModuleItem"):
+def _resolvable_or_required(input: jc.ModuleItem):
     """Determines whether input should be resolved in napari"""
     # Return true if required
     if input.isRequired():
@@ -127,8 +129,8 @@ def _resolvable_or_required(input: "jc.ModuleItem"):
 
 
 def _filter_unresolved_inputs(
-    module: "jc.Module", inputs: List["jc.ModuleItem"]
-) -> List["jc.ModuleItem"]:
+    module: jc.Module, inputs: list[jc.ModuleItem]
+) -> list[jc.ModuleItem]:
     """Returns a list of all inputs that can only be resolved by the user."""
     # Grab all unresolved inputs
     unresolved = list(filter(lambda i: not module.isResolved(i.getName()), inputs))
@@ -142,11 +144,11 @@ def _filter_unresolved_inputs(
 
 
 def _napari_module_param_additions(
-    module_info: "jc.ModuleInfo",
-) -> Dict[str, Tuple[type, Any]]:
+    module_info: jc.ModuleInfo,
+) -> dict[str, tuple[type, Any]]:
     """Returns a set of parameters useful for napari functionality."""
     # additional parameters are in the form "name": (type, default value)
-    additional_params: Dict[str, Tuple[type, Any]] = {}
+    additional_params: dict[str, tuple[type, Any]] = {}
     # If the module outputs cannot be coerced into a layer type, they will have
     # to be displayed in a new widget made by napari-imagej. For convenience, we
     # give users the option to spawn that widget within the main napari window,
@@ -159,7 +161,7 @@ def _napari_module_param_additions(
     return additional_params
 
 
-def _is_required_arg(input: "jc.ModuleItem") -> bool:
+def _is_required_arg(input: jc.ModuleItem) -> bool:
     """
     Determines whether the ModuleInfo input is required,
     as far as a python arg would be concerned.
@@ -169,7 +171,7 @@ def _is_required_arg(input: "jc.ModuleItem") -> bool:
     return input.isRequired() and input.getDefaultValue() is None
 
 
-def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"]:
+def _sink_optional_inputs(inputs: list[jc.ModuleItem]) -> list[jc.ModuleItem]:
     """
     Python functions cannot have required args after an optional arg.
     We need to move all optional inputs after the required ones.
@@ -181,7 +183,7 @@ def _sink_optional_inputs(inputs: List["jc.ModuleItem"]) -> List["jc.ModuleItem"
     return sorted(inputs, key=sort_key)
 
 
-def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
+def _param_default_or_none(input: jc.ModuleItem) -> Any | None:
     """
     Gets the Python function's default value, if it exists, for input.
     """
@@ -192,11 +194,11 @@ def _param_default_or_none(input: "jc.ModuleItem") -> Optional[Any]:
         return _empty
     try:
         return nij.ij.py.from_java(default)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return default
 
 
-def _module_param(input: "jc.ModuleItem") -> Parameter:
+def _module_param(input: jc.ModuleItem) -> Parameter:
     """Converts a java ModuleItem into a python Parameter"""
     name = str(input.getName())
     if name == "in":
@@ -212,12 +214,16 @@ def _module_param(input: "jc.ModuleItem") -> Parameter:
 
 def _modify_function_signature(
     function: Callable,
-    inputs: List["jc.ModuleItem"],
-    module_info: "jc.ModuleInfo",
+    inputs: list[jc.ModuleItem],
+    module_info: jc.ModuleInfo,
 ) -> None:
     """Rewrites function with type annotations for all module I/O items."""
 
     sig: Signature = signature(function)
+    # NB: With postponed evaluation of annotations (PEP 563),
+    # a None return annotation is the string "None"; restore the real value.
+    if sig.return_annotation == "None":
+        sig = sig.replace(return_annotation=None)
     # Grab all options after the module inputs
     inputs = _sink_optional_inputs(inputs)
     module_params = [_module_param(i) for i in inputs]
@@ -234,7 +240,7 @@ def _modify_function_signature(
     function.__signature__ = sig.replace(parameters=all_params)
 
 
-def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
+def _devise_layer_name(info: jc.ModuleInfo, original_name: str) -> str:
     """Utility function to overwrite uninformative output names"""
 
     # Common names should append module info for context.
@@ -259,9 +265,9 @@ def _devise_layer_name(info: "jc.ModuleInfo", original_name: str) -> str:
 def _handle_output(
     output: Any,
     name: str,
-    info: "jc.ModuleInfo",
-    layer_outputs: List,
-    widget_outputs: List,
+    info: jc.ModuleInfo,
+    layer_outputs: list,
+    widget_outputs: list,
 ):
     # Layers should be appended directly
     if isinstance(output, Layer):
@@ -292,9 +298,9 @@ def _handle_output(
 
 
 def _pure_module_outputs(
-    module: "jc.Module",
-    user_inputs: List["jc.ModuleItem"],
-) -> Tuple[Optional[List[Layer]], List[Tuple[str, Any]]]:
+    module: jc.Module,
+    user_inputs: list[jc.ModuleItem],
+) -> tuple[list[Layer] | None, list[tuple[str, Any]]]:
     """Gets the pure outputs of the module, or None if the module has no pure output."""
     # Outputs delivered to users through the return of the magicgui widget.
     # Elements are napari.layers.Layer
@@ -329,7 +335,7 @@ def _pure_module_outputs(
     return (layer_outputs, widget_outputs)
 
 
-def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> Any:
+def _napari_specific_parameter(func: Callable, args: tuple[Any], param: str) -> Any:
     try:
         index = list(signature(func).parameters.keys()).index(param)
     except ValueError:
@@ -338,7 +344,7 @@ def _napari_specific_parameter(func: Callable, args: Tuple[Any], param: str) -> 
     return args[index]
 
 
-def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> Widget:
+def _non_layer_widget(results: list[tuple[str, Any]], widget_name: str = "") -> Widget:
     widgets = []
     for result in results:
         name = result[0]
@@ -359,8 +365,8 @@ def _non_layer_widget(results: List[Tuple[str, Any]], widget_name: str = "") -> 
 
 def _add_napari_metadata(
     execute_module: Callable,
-    info: "jc.ModuleInfo",
-    unresolved_inputs: List["jc.ModuleItem"],
+    info: jc.ModuleInfo,
+    unresolved_inputs: list[jc.ModuleItem],
 ) -> None:
     module_name = nij.ij.py.from_java(info.getTitle())
     execute_module.__doc__ = f"Invoke ImageJ2's {module_name}"
@@ -407,9 +413,9 @@ def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
 
 
 def _add_scijava_metadata(
-    unresolved_inputs: List["jc.ModuleItem"],
-    type_hints: Dict[str, Union[str, type]],
-) -> Dict[str, Dict[str, Any]]:
+    unresolved_inputs: list[jc.ModuleItem],
+    type_hints: dict[str, str | type],
+) -> dict[str, dict[str, Any]]:
     metadata = {}
     for input in unresolved_inputs:
         key = nij.ij.py.from_java(input.getName())
@@ -469,9 +475,9 @@ def _get_postprocessors():
 
 def functionify_module_execution(
     output_handler: Callable[[object], None],
-    module: "jc.Module",
-    info: "jc.ModuleInfo",
-) -> Tuple[Callable, dict]:
+    module: jc.Module,
+    info: jc.ModuleInfo,
+) -> tuple[Callable, dict]:
     """
     Converts a module into a Widget that can be added to napari.
     :param output_handler: The callback function for Module outputs
@@ -508,7 +514,7 @@ def functionify_module_execution(
                 input_map.put(module_item.getName(), input)
 
             # Create postprocessors
-            postprocessors: "jc.ArrayList" = _get_postprocessors()
+            postprocessors: jc.ArrayList = _get_postprocessors()
             postprocessors.add(
                 NapariPostProcessor(
                     module_execute,
@@ -542,12 +548,12 @@ def functionify_module_execution(
         return (module_execute, magic_kwargs)
     except JException as exc:
         # chain exc to a Python exception
-        raise Exception(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
+        raise RuntimeError(f"Caught Java Exception\n\n {jstacktrace(exc)}") from None
 
 
 def _request_values_args(
-    func: Callable, param_options: Dict[str, Dict]
-) -> Dict[str, Dict]:
+    func: Callable, param_options: dict[str, dict]
+) -> dict[str, dict]:
     """Gets the arguments for request_values from a function"""
 
     # Convert function parameters and param_options to a dictionary
@@ -575,7 +581,7 @@ def _request_values_args(
 
 
 def execute_function_modally(
-    name: str, func: Callable, param_options: Dict[str, Dict]
+    name: str, func: Callable, param_options: dict[str, dict]
 ) -> None:
     # Determine which arguments are needed
     args: dict = _request_values_args(func, param_options)
@@ -583,14 +589,14 @@ def execute_function_modally(
     if len(args) > 0:
         params = request_values(title=name, **args)
     else:
-        params = dict()
+        params = {}
     # Execute the function with the arguments
     if params is not None:
         inputs = params.values()
         func(*inputs)
 
 
-def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
+def info_for(search_result: jc.SearchResult) -> jc.ModuleInfo | None:
     if hasattr(search_result, "info"):
         info = search_result.info()
         # There is an extra step for Ops - we actually need the CommandInfo
@@ -601,13 +607,13 @@ def info_for(search_result: "jc.SearchResult") -> Optional["jc.ModuleInfo"]:
 
 
 @JImplements("org.scijava.module.process.PostprocessorPlugin", deferred=True)
-class NapariPostProcessor(object):
+class NapariPostProcessor:
     def __init__(
         self,
         function: Callable,
         output_handler: Callable[[object], None],
         args,
-        params: List["jc.ModuleInfo"],
+        params: list[jc.ModuleInfo],
         start_time: float,
     ):
         self.function = function
@@ -633,10 +639,10 @@ class NapariPostProcessor(object):
     # -- ProcessorPlugin methods -- #
 
     @JOverride
-    def process(self, module: "jc.Module"):
+    def process(self, module: jc.Module):
         # get all outputs
-        layer_outputs: List[Layer]
-        widget_outputs: List[Any]
+        layer_outputs: list[Layer]
+        widget_outputs: list[Any]
         layer_outputs, widget_outputs = _pure_module_outputs(module, self.params)
         # log outputs
         for layer in layer_outputs:

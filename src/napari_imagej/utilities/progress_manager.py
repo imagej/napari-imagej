@@ -1,5 +1,3 @@
-from typing import Dict
-
 from napari.utils import progress
 
 from napari_imagej.java import jc
@@ -21,7 +19,7 @@ class ModuleProgressManager:
     """
 
     def __init__(self):
-        self.prog_bars: Dict[jc.Module, progress] = {}
+        self.prog_bars: dict[jc.Module, progress] = {}
 
     def init_progress(self, module: "jc.Module"):
         prog = progress(

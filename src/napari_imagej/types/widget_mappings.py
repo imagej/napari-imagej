@@ -7,7 +7,9 @@ Notable functions included in the module:
         and corresponding python type
 """
 
-from typing import Callable, Dict, Optional, Union, get_args, get_origin
+from __future__ import annotations
+
+from typing import Callable, Optional, Union, get_args, get_origin
 
 from jpype import JByte, JDouble, JFloat, JInt, JLong, JShort
 from napari.layers import Image
@@ -24,13 +26,13 @@ PREFERENCE_FUNCTIONS = []
 
 
 def _widget_preference(
-    func: Callable[["jc.ModuleItem", Union[type, str]], Optional[str]],
-) -> Callable[["jc.ModuleItem", Union[type, str]], Optional[str]]:
+    func: Callable[[jc.ModuleItem, type | str], str | None],
+) -> Callable[[jc.ModuleItem, type | str], str | None]:
     PREFERENCE_FUNCTIONS.append(func)
     return func
 
 
-def _unwrap_optional(type_hint: Union[type, str]) -> Union[type, str]:
+def _unwrap_optional(type_hint: type | str) -> type | str:
     origin = get_origin(type_hint)
     args = get_args(type_hint)
     # If it is an optional - unwrap it
@@ -44,9 +46,9 @@ def _unwrap_optional(type_hint: Union[type, str]) -> Union[type, str]:
 
 
 def preferred_widget_for(
-    item: "jc.ModuleItem",
-    type_hint: Union[type, str],
-) -> Optional[Union[type, str]]:
+    item: jc.ModuleItem,
+    type_hint: type | str,
+) -> type | str | None:
     """
     Finds the best MAGICGUI widget for a given SciJava ModuleItem,
     and its corresponding Python type
@@ -67,17 +69,15 @@ def preferred_widget_for(
 
 @_widget_preference
 def _numeric_type_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[Union[type, str]]:
+    item: jc.ModuleItem, type_hint: type | str
+) -> type | str | None:
     if issubclass(item.getType(), jc.NumericType):
         return numeric_type_widget_for(item.getType())
     return None
 
 
 @_widget_preference
-def _number_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[Union[type, str]]:
+def _number_preference(item: jc.ModuleItem, type_hint: type | str) -> type | str | None:
     # Primitives
     if item.getType() == JByte:
         return number_widget_for(jc.Byte)
@@ -100,8 +100,8 @@ def _number_preference(
 
 @_widget_preference
 def _mutable_output_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[Union[type, str]]:
+    item: jc.ModuleItem, type_hint: type | str
+) -> type | str | None:
     # We only care about mutable outputs
     if item.isInput() and item.isOutput():
         # If the type hint is an (optional) Image, use MutableOutputWidget
@@ -125,16 +125,13 @@ def _mutable_output_preference(
 
 
 @_widget_preference
-def _shape_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[Union[type, str]]:
-    if item.isInput() and not item.isOutput():
-        if item.getType() == jc.Shape:
-            return ShapeWidget
+def _shape_preference(item: jc.ModuleItem, type_hint: type | str) -> type | str | None:
+    if item.isInput() and not item.isOutput() and item.getType() == jc.Shape:
+        return ShapeWidget
 
 
 # The definitive mapping of scijava widget styles to magicgui widget types
-_supported_scijava_styles: Dict[str, Dict[type, str]] = {
+_supported_scijava_styles: dict[str, dict[type, str]] = {
     # ChoiceWidget styles
     "listBox": {str: "Select"},
     "radioButtonHorizontal": {str: "RadioButtons"},
@@ -146,9 +143,7 @@ _supported_scijava_styles: Dict[str, Dict[type, str]] = {
 
 
 @_widget_preference
-def _scijava_style_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[str]:
+def _scijava_style_preference(item: jc.ModuleItem, type_hint: type | str) -> str | None:
     style: str = item.getWidgetStyle()
     if style not in _supported_scijava_styles:
         return None
@@ -160,8 +155,6 @@ def _scijava_style_preference(
 
 
 @_widget_preference
-def _scijava_path_preference(
-    item: "jc.ModuleItem", type_hint: Union[type, str]
-) -> Optional[str]:
+def _scijava_path_preference(item: jc.ModuleItem, type_hint: type | str) -> str | None:
     if "pathlib.PosixPath" == str(type_hint):
         return file_widget_for(item)

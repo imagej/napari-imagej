@@ -4,7 +4,8 @@ A module containing pytest configuration and globally-used fixtures
 
 import os
 import sys
-from typing import Callable, Generator
+from collections.abc import Generator
+from typing import Callable
 
 import pytest
 from napari import Viewer

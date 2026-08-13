@@ -1,5 +1,3 @@
-from typing import List
-
 from scyjava import get_version, is_version_at_least, jimport
 
 from napari_imagej import settings
@@ -13,7 +11,7 @@ version_checks = {
     "net.imagej:imagej-common": "net.imagej.Dataset",
     "net.imagej:imagej-legacy": "net.imagej.legacy.LegacyService",
     "net.imagej:imagej-ops": "net.imagej.ops.OpService",
-    "net.imglib2:imglib2-imglyb": "net.imglib2.python.ReferenceGuardingRandomAccessibleInterval",  # noqa: E501
+    "net.imglib2:imglib2-imglyb": "net.imglib2.python.ReferenceGuardingRandomAccessibleInterval",
     "net.imglib2:imglib2-unsafe": "net.imglib2.img.unsafe.UnsafeImg",
     "org.scijava:scijava-common": "org.scijava.Context",
     "org.scijava:scijava-search": "org.scijava.search.Searcher",
@@ -31,7 +29,7 @@ def test_java_components(ij):
     for coord, class_name in version_checks.items():
         try:
             jcls = jimport(class_name)
-        except Exception:
+        except Exception:  # noqa: BLE001
             jcls = None
 
         if jcls is None:
@@ -49,7 +47,7 @@ def test_java_components(ij):
 
 
 def test_endpoint(ij):
-    endpoints: List[str] = settings.endpoint().split("+")
+    endpoints: list[str] = settings.endpoint().split("+")
     for endpoint in endpoints:
         gav = endpoint.split(":")
         if len(gav) > 2:
@@ -73,7 +71,7 @@ def test_recommended_version(ij):
 
     log_capture_string = io.StringIO()
     ch = logging.StreamHandler(log_capture_string)
-    ch.setLevel(logging.WARN)
+    ch.setLevel(logging.WARNING)
     logging.getLogger("napari-imagej").addHandler(ch)
     # Validate ImageJ - capture lower-than-recommended version
     _validate_imagej(ij)

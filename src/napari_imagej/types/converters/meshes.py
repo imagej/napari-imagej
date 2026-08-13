@@ -46,7 +46,7 @@ def _surface_to_mesh(surface: Surface) -> "jc.Mesh":
     # Surface data is vertices, triangles, colormap data
     py_vertices, py_triangles, _ = surface.data
 
-    mesh: "jc.Mesh" = jc.NaiveDoubleMesh()
+    mesh: jc.Mesh = jc.NaiveDoubleMesh()
     # TODO: Determine the normals
     for py_vertex in py_vertices:
         # Note that the dimensions are reversed across the language barrier

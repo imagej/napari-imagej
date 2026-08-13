@@ -4,11 +4,11 @@ A module testing napari_imagej.widgets.parameter_widgets
 
 import importlib
 
-from jpype import JByte, JDouble, JFloat, JInt, JLong, JShort
 import napari
 import numpy as np
 import pytest
 from imagej.images import _imglib2_types
+from jpype import JByte, JDouble, JFloat, JInt, JLong, JShort
 from magicgui.types import FileDialogMode
 from magicgui.widgets import (
     CheckBox,
@@ -21,6 +21,7 @@ from magicgui.widgets import (
 from napari import current_viewer
 from napari.layers import Image
 from scyjava import numeric_bounds
+from tests.utils import jc
 from xarray import DataArray
 
 from napari_imagej.widgets.parameter_widgets import (
@@ -32,7 +33,6 @@ from napari_imagej.widgets.parameter_widgets import (
     number_widget_for,
     numeric_type_widget_for,
 )
-from tests.utils import jc
 
 
 @pytest.fixture
@@ -323,7 +323,7 @@ def test_shape_widget_centered_rectangle():
     # Assert the value returned is a CenteredRectangleShape
     value = widget.value
     assert isinstance(value, jc.CenteredRectangleShape)
-    assert np.array_equal(value.getSpan(), np.ones((2)))
+    assert np.array_equal(value.getSpan(), np.ones(2))
     assert not value.isSkippingCenter()
 
 
@@ -405,7 +405,7 @@ def test_shape_widget_pair_of_points():
     # Assert the value returned is a PairofPointsShape
     value = widget.value
     assert isinstance(value, jc.PairOfPointsShape)
-    assert np.array_equal(value.getOffset(), np.ones((2)))
+    assert np.array_equal(value.getOffset(), np.ones(2))
 
 
 def test_shape_widget_periodic_line():
@@ -423,7 +423,7 @@ def test_shape_widget_periodic_line():
     value = widget.value
     assert isinstance(value, jc.PeriodicLineShape)
     assert value.getSpan() == 1
-    assert np.array_equal(value.getIncrements(), np.ones((2)))
+    assert np.array_equal(value.getIncrements(), np.ones(2))
 
 
 def test_shape_widget_rectangle():

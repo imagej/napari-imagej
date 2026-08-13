@@ -9,7 +9,7 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from qtpy.QtCore import QRectF, Qt, Signal, QSize
+from qtpy.QtCore import QRectF, QSize, Qt, Signal
 from qtpy.QtGui import QStandardItem, QStandardItemModel, QTextDocument
 from qtpy.QtWidgets import (
     QAction,
@@ -27,8 +27,6 @@ from napari_imagej.widgets.widget_utils import _get_icon, python_actions_for
 
 if TYPE_CHECKING:
     from qtpy.QtCore import QModelIndex
-
-    from typing import Dict, List
 
 
 # Color used for additional information in the QTreeView
@@ -96,7 +94,7 @@ class SearcherTreeView(QTreeView):
 class SearcherItem(QStandardItem):
     def __init__(
         self,
-        searcher: "jc.Searcher",
+        searcher: jc.Searcher,
     ):
         super().__init__(str(searcher.title()))
         self.searcher = searcher
@@ -120,7 +118,7 @@ class SearcherItem(QStandardItem):
 
 
 class SearchResultItem(QStandardItem):
-    def __init__(self, result: "jc.SearchResult"):
+    def __init__(self, result: jc.SearchResult):
         props = result.properties()
         text = str(result.name())
         # Wrap up the icon path in "highlight text"
@@ -186,7 +184,7 @@ class SearchResultModel(QStandardItemModel):
 
     def __init__(self):
         super().__init__()
-        self.searchers: Dict["jc.Searcher", SearcherItem] = {}
+        self.searchers: dict[jc.Searcher, SearcherItem] = {}
         self.insert_searcher.connect(self.register_searcher)
         self.process.connect(self.handle_search_event)
 
@@ -198,13 +196,13 @@ class SearchResultModel(QStandardItemModel):
     def search(self, text: str):
         self._searchOperation.search(text)
 
-    def register_searcher(self, searcher: "jc.Searcher"):
+    def register_searcher(self, searcher: jc.Searcher):
         if searcher not in self.searchers:
             searcher_item: SearcherItem = SearcherItem(searcher)
             self.searchers[str(searcher.title())] = searcher_item
             self.invisibleRootItem().appendRow(searcher_item)
 
-    def handle_search_event(self, event: "jc.SearchEvent"):
+    def handle_search_event(self, event: jc.SearchEvent):
         searcher_name = str(event.searcher().title())
         if searcher_name in self.searchers:
             searcher_item = self.searchers[searcher_name]
@@ -218,25 +216,24 @@ class SearchResultModel(QStandardItemModel):
         else:
             getLogger("napari-imagej").debug(f"Searcher {event.searcher()} not found!")
 
-    def first_search_result(self) -> "jc.SearchResult":
+    def first_search_result(self) -> jc.SearchResult:
         root = self.invisibleRootItem()
         for i in range(root.rowCount()):
             child = root.child(i, 0)
             if child.hasChildren():
                 return child.child(0, 0).result
 
-    def _generate_result_items(self, event: "jc.SearchEvent") -> List[SearchResultItem]:
+    def _generate_result_items(self, event: jc.SearchEvent) -> list[SearchResultItem]:
         results = event.results()
         # Handle null results
         if not results:
             return []
         # Return False for search errors
-        if len(results) == 1:
-            if str(results[0].name()) == "<error>":
-                getLogger("napari-imagej").debug(
-                    f"Failed Search: {str(results[0].properties().get(None))}"
-                )
-                return []
+        if len(results) == 1 and str(results[0].name()) == "<error>":
+            getLogger("napari-imagej").debug(
+                f"Failed Search: {results[0].properties().get(None)!s}"
+            )
+            return []
         return [SearchResultItem(r) for r in event.results()]
 
     def _detect_check_change(self, item):

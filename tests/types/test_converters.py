@@ -2,28 +2,28 @@
 A module testing napari_imagej.types.converters
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pytest
 from jpype import JArray, JDouble
 from labeling.Labeling import Labeling
 from napari.layers import Image, Labels, Points, Shapes, Surface
+from tests.utils import DummyModuleItem, jc
 
 from napari_imagej.types.converters.labels import _labeling_to_layer, _layer_to_labeling
 from napari_imagej.types.enum_likes import OutOfBoundsFactory
 from napari_imagej.types.enums import _ENUMS, py_enum_for
 from napari_imagej.types.type_conversions import type_hint_for
-from tests.utils import DummyModuleItem, jc
 
 
 def assert_labels_equality(
-    exp: Dict[str, Any], act: Dict[str, Any], ignored_keys: List[str]
+    exp: dict[str, Any], act: dict[str, Any], ignored_keys: list[str]
 ):
-    for key in exp.keys():
+    for key, value in exp.items():
         if key in ignored_keys:
             continue
-        assert exp[key] == act[key]
+        assert value == act[key]
 
 
 @pytest.fixture(scope="module")
@@ -108,13 +108,13 @@ def test_labels_to_labeling(py_labeling):
 
 
 def test_labels_with_metadata_to_imgLabeling(ij, labels_with_metadata):
-    converted: "jc.ImgLabeling" = ij.py.to_java(labels_with_metadata)
+    converted: jc.ImgLabeling = ij.py.to_java(labels_with_metadata)
     act_img: Image = ij.py.from_java(converted.getIndexImg())
     assert np.array_equal(labels_with_metadata.data, act_img.data)
 
 
 def test_labels_with_metadata_circular(ij, labels_with_metadata):
-    converted: "jc.ImgLabeling" = ij.py.to_java(labels_with_metadata)
+    converted: jc.ImgLabeling = ij.py.to_java(labels_with_metadata)
     converted_back: Labels = ij.py.from_java(converted)
     exp_img: np.ndarray = labels_with_metadata.data
     act_img: np.ndarray = converted_back.data
@@ -122,13 +122,13 @@ def test_labels_with_metadata_circular(ij, labels_with_metadata):
 
 
 def test_labels_without_metadata_to_imgLabeling(ij, labels_without_metadata):
-    converted: "jc.ImgLabeling" = ij.py.to_java(labels_without_metadata)
+    converted: jc.ImgLabeling = ij.py.to_java(labels_without_metadata)
     act_img: np.ndarray = ij.py.from_java(converted.getIndexImg())
     np.array_equal(labels_without_metadata.data, act_img.data)
 
 
 def test_labels_without_metadata_circular(ij, labels_without_metadata):
-    converted: "jc.ImgLabeling" = ij.py.to_java(labels_without_metadata)
+    converted: jc.ImgLabeling = ij.py.to_java(labels_without_metadata)
     converted_back: Labels = ij.py.from_java(converted)
     exp_img: np.ndarray = labels_without_metadata.data
     act_img: np.ndarray = converted_back.data
@@ -786,7 +786,7 @@ def _assert_equal_color_maps(j_map: "jc.ColorTable", p_map):
     # Assert color table "equality"
     for i in range(j_map.getLength()):
         for j in range(j_map.getComponentCount()):
-            assert j_map.get(j, i) == int(round(p_color[i, j] * 255))
+            assert j_map.get(j, i) == round(p_color[i, j] * 255)
 
 
 def test_image_layer_to_dataset(ij):
@@ -863,7 +863,7 @@ def test_multichannel_dataset_to_image_layers(ij, test_multichannel_dataset):
     test_multichannel_dataset.setColorTable(jc.ColorTables.CYAN, 0)
     test_multichannel_dataset.setColorTable(jc.ColorTables.MAGENTA, 1)
     p_imgs = ij.py.from_java(test_multichannel_dataset)
-    assert isinstance(p_imgs, List)
+    assert isinstance(p_imgs, list)
     assert isinstance(p_imgs[0], Image)
     assert "cyan" == p_imgs[0].colormap.name
     assert isinstance(p_imgs[1], Image)

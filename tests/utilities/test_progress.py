@@ -1,9 +1,9 @@
 import pytest
 from napari.utils import progress
+from tests.utils import jc
 
 from napari_imagej.utilities.progress_manager import pm
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
-from tests.utils import jc
 
 
 @pytest.fixture

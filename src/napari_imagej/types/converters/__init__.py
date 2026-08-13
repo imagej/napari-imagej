@@ -12,7 +12,7 @@ Notable functions included in the module:
 
 import pkgutil
 from importlib.util import module_from_spec
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 from scyjava import (
     Converter,
@@ -24,8 +24,8 @@ from scyjava import (
 
 # PHASE 1 - DEFINE THE CONVERTER DECORATORS
 
-JAVA_TO_PY_CONVERTERS: List = []
-PY_TO_JAVA_CONVERTERS: List = []
+JAVA_TO_PY_CONVERTERS: list = []
+PY_TO_JAVA_CONVERTERS: list = []
 
 
 def java_to_py_converter(

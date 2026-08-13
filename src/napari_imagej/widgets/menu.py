@@ -2,8 +2,10 @@
 The top-level menu for the napari-imagej widget.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
 
 from magicgui.widgets import request_values
 from napari import Viewer
@@ -101,16 +103,15 @@ class IJMenuButton(QPushButton):
 
     def recolor(self, event=None):
         """Recolors this button's icon, if it can be recolored."""
-        if icon := self._icon():
-            if isinstance(icon, QColoredSVGIcon):
-                self.setIcon(icon.colored(theme=self.viewer.theme))
+        if (icon := self._icon()) and isinstance(icon, QColoredSVGIcon):
+            self.setIcon(icon.colored(theme=self.viewer.theme))
 
     def _icon(self):
         """
         Placeholder function returning this button's icon.
         This function should be overwritten by subclasses.
         """
-        return None
+        return
 
 
 class ToIJDetailedButton(IJMenuButton):
@@ -156,7 +157,7 @@ class ToIJButton(IJMenuButton):
         return QColoredSVGIcon(resource_path("export"))
 
     def send_active_layer(self):
-        layer: Optional[Layer] = self.viewer.layers.selection.active
+        layer: Layer | None = self.viewer.layers.selection.active
         if layer:
             # Queue UI call on the EDT
             # TODO: Use EventQueue.invokeLater scyjava wrapper, once it exists
@@ -216,7 +217,7 @@ class FromIJButton(IJMenuButton):
             self.viewer.add_layer(layer)
             # Check the metadata for additonal layers, like
             # Shapes/Tracks/Points
-            for _, v in layer.metadata.items():
+            for v in layer.metadata.values():
                 if isinstance(v, Layer):
                     self.viewer.add_layer(v)
                 elif isinstance(v, Iterable):
@@ -227,7 +228,7 @@ class FromIJButton(IJMenuButton):
         # Create and add the layer
         if isinstance(py_image, Layer):
             add_layer(py_image)
-        elif isinstance(py_image, (Tuple, List)):
+        elif isinstance(py_image, (tuple, list)):
             for image in py_image:
                 if isinstance(image, Layer):
                     add_layer(image)
@@ -324,7 +325,7 @@ class SettingsButton(IJMenuButton):
         Spawn a popup allowing the user to configure napari-imagej settings.
         """
         # Build arguments list by iterating over all default settings.
-        args = {k: dict(value=getattr(settings, k)) for k in settings.defaults}
+        args = {k: {"value": getattr(settings, k)} for k in settings.defaults}
 
         # Configure some details to improve graphical presentation and behavior.
         args["imagej_directory_or_endpoint"]["options"] = {

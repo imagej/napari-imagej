@@ -13,7 +13,7 @@ from napari_imagej.java import jc
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class NapariEventSubscriber(object):
+class NapariEventSubscriber:
     @JOverride
     def onEvent(self, event):
         getLogger("napari-imagej").debug(str(event))
@@ -28,7 +28,7 @@ class NapariEventSubscriber(object):
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class ProgressBarListener(object):
+class ProgressBarListener:
     def __init__(self, progress_signal: Signal):
         self.progress_signal = progress_signal
 
@@ -46,7 +46,7 @@ class ProgressBarListener(object):
 
 
 @JImplements(["org.scijava.event.EventSubscriber"], deferred=True)
-class UIShownListener(object):
+class UIShownListener:
     def __init__(self):
         self.initialized = False
 
@@ -91,7 +91,7 @@ class UIShownListener(object):
 
         # Add our own behavior for WindowEvents
         @JImplements("java.awt.event.WindowListener")
-        class NapariAdapter(object):
+        class NapariAdapter:
             @JOverride
             def windowOpened(self, event):
                 pass

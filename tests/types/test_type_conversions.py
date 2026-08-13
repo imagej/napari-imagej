@@ -2,15 +2,13 @@
 A module testing napari_imagej.types.type_conversions
 """
 
-from typing import List
-
 import pytest
 from jpype import JObject
+from tests.utils import DummyModuleItem, jc
 
 from napari_imagej.types.enum_likes import OutOfBoundsFactory
 from napari_imagej.types.type_hints import type_hints
 from napari_imagej.utilities import _module_utils
-from tests.utils import DummyModuleItem, jc
 
 
 def test_direct_match_pairs():
@@ -52,7 +50,7 @@ def test_assignable_match_pairs():
 
 
 def test_convertible_match_pairs():
-    hint_domain = list(map(lambda hint: hint.type, type_hints()))
+    hint_domain = [hint.type for hint in type_hints()]
     # We want to test that napari could tell that a DoubleArray ModuleItem
     # could be satisfied by a List[float], as napari-imagej knows how to
     # convert that List[float] into a Double[], and imagej knows how to
@@ -77,13 +75,13 @@ def test_convertible_match_pairs():
     # as an option, we will leave the conversion like this.
     assert jc.DoubleArray not in hint_domain
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=False, isOutput=True)
-    assert _module_utils.type_hint_for(input_item) == List[bool]
+    assert _module_utils.type_hint_for(input_item) == list[bool]
 
     # Test that a java both NOT in ptypes but convertible to/from some type in ptypes
     # gets converted to a ptype
     assert jc.DoubleArray not in hint_domain
     input_item = DummyModuleItem(jtype=jc.DoubleArray, isInput=True, isOutput=True)
-    assert _module_utils.type_hint_for(input_item) == List[bool]
+    assert _module_utils.type_hint_for(input_item) == list[bool]
 
 
 def test_python_type_of_enum_like_IO():
@@ -104,7 +102,7 @@ def test_python_type_of_enum_like_IO():
     # Test that a pure output does not match the enum - it matches Boolean[] instead
     # because the DefaultConverter can convert an OutOfBoundsFactory into a Boolean[].
     module_item._isInput = False
-    assert _module_utils.type_hint_for(module_item) == List[bool]
+    assert _module_utils.type_hint_for(module_item) == list[bool]
 
 
 def test_enum():

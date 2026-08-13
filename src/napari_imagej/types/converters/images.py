@@ -3,8 +3,10 @@ scyjava Converters for converting between ImageJ ecosystem image types
 (referred to collectively as "java image"s) and napari Image layers
 """
 
+from __future__ import annotations
+
 from logging import getLogger
-from typing import Any, List, Union
+from typing import Any
 
 from imagej.convert import java_to_xarray
 from jpype import JArray, JByte
@@ -23,7 +25,7 @@ from napari_imagej.types.converters import java_to_py_converter, py_to_java_conv
     predicate=lambda obj: nij.ij.convert().supports(obj, jc.DatasetView),
     priority=Priority.VERY_HIGH + 1,
 )
-def _java_image_to_image_layer(image: Any) -> Union[Image, List[Image]]:
+def _java_image_to_image_layer(image: Any) -> Image | list[Image]:
     """
     Converts a java image (i.e. something that can be converted into a DatasetView)
     into a napari Image layer.
@@ -40,7 +42,7 @@ def _java_image_to_image_layer(image: Any) -> Union[Image, List[Image]]:
     # Construct an xarray from the DatasetView
     xarr: DataArray = java_to_xarray(nij.ij, data)
     # General layer parameters
-    kwargs = dict()
+    kwargs = {}
     kwargs["name"] = data.getName()
     kwargs["metadata"] = getattr(xarr, "attrs", {})
 
@@ -49,7 +51,6 @@ def _java_image_to_image_layer(image: Any) -> Union[Image, List[Image]]:
         if existing_ctables:
             cmap = _color_table_to_colormap(view.getColorTables().get(0))
             kwargs["colormap"] = cmap
-        pass
     # RGB data - set RGB flag
     elif xarr.sizes["ch"] in [3, 4]:
         kwargs["rgb"] = True
@@ -71,7 +72,7 @@ def _java_image_to_image_layer(image: Any) -> Union[Image, List[Image]]:
 @py_to_java_converter(
     predicate=lambda obj: isinstance(obj, Image), priority=Priority.VERY_HIGH
 )
-def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
+def _image_layer_to_dataset(image: Image, **kwargs) -> jc.Dataset:
     """
     Converts a napari Image layer into a Dataset.
 
@@ -98,7 +99,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
         kwargs["dim_order"] = dim_order
 
     # Construct a dataset from the data
-    dataset: "jc.Dataset" = nij.ij.py.to_dataset(data, **kwargs)
+    dataset: jc.Dataset = nij.ij.py.to_dataset(data, **kwargs)
 
     # Clean up the axes
     axes = [
@@ -142,7 +143,7 @@ def _image_layer_to_dataset(image: Image, **kwargs) -> "jc.Dataset":
     for k, v in image.metadata.items():
         try:
             properties.put(nij.ij.py.to_java(k), nij.ij.py.to_java(v))
-        except Exception:
+        except Exception:  # noqa: BLE001
             getLogger("napari-imagej").debug(
                 f"Could not add property ({k}, {v}) to dataset {dataset}:"
             )
@@ -162,14 +163,14 @@ def _colormap_to_color_table(cmap: Colormap):
     for i in range(shape[1]):
         j_values[i] = JArray(JByte)(shape[0])
         for j in range(shape[0]):
-            value = int(round(py_values[j, i] * 255))
+            value = round(py_values[j, i] * 255)
             # map unsigned value to signed
             j_values[i][j] = value if value < 128 else value - 256
 
     return jc.ColorTable8(j_values)
 
 
-def _color_table_to_colormap(ctable: "jc.ColorTable"):
+def _color_table_to_colormap(ctable: jc.ColorTable):
     """
     Converts a SciJava ColorTable into a napari Colormap.
     :param ctable: The SciJava ColorTable

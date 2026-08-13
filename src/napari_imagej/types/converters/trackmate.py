@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 import numpy as np
 from napari.layers import Labels, Tracks
 from scyjava import JavaClasses, Priority
@@ -15,10 +16,10 @@ def trackmate_present():
     """
     try:
         # Start the JVM
-        nij.ij
+        _ = nij.ij
         # Try to import the class
         return jc.TrackMate is not None
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -47,9 +48,7 @@ def track_overlay_predicate(obj):
     if not any(isinstance(child.getRoi(), jc.SpotOverlay) for child in children):
         return False
     # And another is a TrackOverlay
-    if not any(isinstance(child.getRoi(), jc.TrackOverlay) for child in children):
-        return False
-    return True
+    return any(isinstance(child.getRoi(), jc.TrackOverlay) for child in children)
 
 
 def model_and_image_to_tracks(model: "jc.Model", imp: "jc.ImagePlus"):

@@ -5,7 +5,7 @@ Calls to ResultRunner.select(result) will generate a set of actions that operate
 on the provided SciJava SearchResult. These actions will appear as QPushButtons.
 """
 
-from typing import Callable, Dict, List, Union
+from typing import Callable, Union
 
 from napari import Viewer
 from qtpy.QtCore import Qt, Signal
@@ -16,7 +16,7 @@ from napari_imagej.java import jc
 from napari_imagej.widgets.layouts import QFlowLayout
 from napari_imagej.widgets.widget_utils import python_actions_for
 
-_action_tooltips: Dict[str, str] = {
+_action_tooltips: dict[str, str] = {
     "Widget": "Creates a napari widget for executing this command with varying inputs",
     "Run": "Runs the command immediately, asking for inputs in a pop-up dialog box",
     "Source": "Opens the source code in browser",
@@ -81,7 +81,7 @@ class ResultRunner(QWidget):
         Using SHIFT, the second-highest action is run.
         :param result: The selected SearchResult
         """
-        buttons: List[ActionButton] = self._buttons_for(result)
+        buttons: list[ActionButton] = self._buttons_for(result)
         # Run the first action UNLESS Shift is also pressed.
         # If so, run the second action
         if len(buttons) > 0:
@@ -103,7 +103,7 @@ class ResultRunner(QWidget):
         else:
             self.selected_module_label.hide()
 
-    def _buttons_for(self, result: "jc.SearchResult") -> List[ActionButton]:
+    def _buttons_for(self, result: "jc.SearchResult") -> list[ActionButton]:
         return [
             ActionButton(*a)
             for a in python_actions_for(result, self.output_signal, self)

@@ -1,7 +1,8 @@
 from enum import Enum
 
-from napari_imagej.types.enums import py_enum_for
 from tests.utils import jc
+
+from napari_imagej.types.enums import py_enum_for
 
 
 def test_py_enum_for():

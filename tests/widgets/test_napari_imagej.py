@@ -2,11 +2,15 @@
 A module testing napari_imagej.widgets.napari_imagej
 """
 
+from contextlib import suppress
+
 from napari import Viewer
 from napari.layers import Image
 from numpy import ones
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QTextEdit, QVBoxLayout
+from tests.utils import jc
+from tests.widgets.widget_utils import _searcher_tree_named
 
 from napari_imagej import nij
 from napari_imagej.utilities.event_subscribers import (
@@ -20,8 +24,6 @@ from napari_imagej.widgets.napari_imagej import NapariImageJWidget, ResultRunner
 from napari_imagej.widgets.result_tree import SearcherTreeView
 from napari_imagej.widgets.searchbar import JVMEnabledSearchbar
 from napari_imagej.widgets.widget_utils import JavaErrorMessageBox
-from tests.utils import jc
-from tests.widgets.widget_utils import _searcher_tree_named
 
 
 def test_widget_subwidget_layout(imagej_widget: NapariImageJWidget):
@@ -42,7 +44,7 @@ def test_keymaps(make_napari_viewer, qtbot):
     """Tests that 'Ctrl+L' is added to the keymap by ImageJWidget"""
 
     def find_keybind(kbs) -> bool:
-        for k, _ in viewer.keymap.items():
+        for k in viewer.keymap:
             if str(k) in kbs:
                 return True
         return False
@@ -64,15 +66,13 @@ def _ensure_searchers_available(imagej_widget: NapariImageJWidget, asserter):
     tree = imagej_widget.result_tree
     # Find the ModuleSearcher
     numSearchers = len(nij.ij.plugin().getPluginsOfType(jc.Searcher))
-    try:
-        asserter(lambda: tree.topLevelItemCount() == numSearchers)
-    except Exception:
+    with suppress(Exception):
         # HACK: Sometimes (especially on CI), not all Searchers make it into
         # the tree.
         # For our purposes of removing those items, though, we don't care how
         # many make it in. All that matters is that no more will be added.
         # So, if we timeout, we assume no more will be added, and carry on.
-        pass
+        asserter(lambda: tree.topLevelItemCount() == numSearchers)
 
 
 def test_result_single_click(imagej_widget: NapariImageJWidget, qtbot, asserter):
@@ -168,7 +168,7 @@ def test_search_tree_ordering(imagej_widget: NapariImageJWidget, asserter):
     results = imagej_widget.result_tree
     root = results.model().invisibleRootItem()
     for i in range(root.rowCount() - 1):
-        asserter(lambda: ordering(root.child(i, 0), root.child(i + 1, 0)))
+        asserter(lambda i=i: ordering(root.child(i, 0), root.child(i + 1, 0)))
 
 
 def test_imagej_search_tree_disable(ij, imagej_widget: NapariImageJWidget, asserter):
@@ -261,7 +261,7 @@ def test_info_validity(imagej_widget: NapariImageJWidget, qtbot, asserter):
 
 
 def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter):
-    output_handler = getattr(imagej_widget, "output_handler")
+    output_handler = imagej_widget.output_handler
     viewer = imagej_widget.napari_viewer
     asserter(lambda: len(viewer.layers) == 0)
 
@@ -271,15 +271,15 @@ def test_handle_output_layer(imagej_widget: NapariImageJWidget, qtbot, asserter)
 
 
 def test_handle_output_non_layer(imagej_widget: NapariImageJWidget, asserter):
-    output_handler = getattr(imagej_widget, "output_handler")
+    output_handler = imagej_widget.output_handler
     viewer = imagej_widget.napari_viewer
-    existing_widget_names = [k for k in viewer.window._dock_widgets.keys()]
+    existing_widget_names = [k for k in viewer.window._dock_widgets]
 
     data = {"data": [("b", 4)], "name": "test", "external": False}
     output_handler.emit(data)
 
     def check_for_new_widget():
-        current_widget_names = [k for k in viewer.window._dock_widgets.keys()]
+        current_widget_names = [k for k in viewer.window._dock_widgets]
         return "test" not in existing_widget_names and "test" in current_widget_names
 
     asserter(check_for_new_widget)

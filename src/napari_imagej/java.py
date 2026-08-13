@@ -10,8 +10,9 @@ Notable fields included in the module:
         - object whose fields are lazily-loaded Java Class instances.
 """
 
+from contextlib import suppress
 from logging import getLogger
-from typing import Any, Dict
+from typing import Any
 
 import imagej
 from scyjava import JavaClasses, config, get_version, is_version_at_least, jimport
@@ -89,7 +90,7 @@ def init_ij() -> "jc.ImageJ":
 # -- Private functions -- #
 
 
-def _configure_imagej() -> Dict[str, Any]:
+def _configure_imagej() -> dict[str, Any]:
     """
     Configure scyjava and pyimagej.
     This function returns the settings that must be passed in the
@@ -183,10 +184,8 @@ def _optional_requirements(ij: "jc.ImageJ"):
         "sc.fiji:Fiji": "fiji.Main",
     }
     for artifact, cls in optional_classes.items():
-        try:
+        with suppress(Exception):
             optionals[artifact] = jimport(cls)
-        except Exception:
-            pass
 
     return optionals
 

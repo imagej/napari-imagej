@@ -20,7 +20,6 @@ the correct JavaEnumLike for a Java enum-like!
 """
 
 from enum import Enum, auto
-from typing import List
 
 from napari_imagej.java import jc
 
@@ -39,7 +38,7 @@ class JavaEnumLike(Enum):
         """Obtains the backing Java type this enum is mocking"""
 
 
-_ENUM_LIKES: List[JavaEnumLike] = []
+_ENUM_LIKES: list[JavaEnumLike] = []
 
 
 def enum_like(java_type, default=None) -> type:

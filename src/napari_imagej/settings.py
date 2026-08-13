@@ -37,10 +37,12 @@ jvm_command_line_arguments: str = ""
     By default, no arguments are passed.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 from logging import DEBUG, getLogger
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 import confuse
 
@@ -73,7 +75,7 @@ _is_macos = sys.platform == "darwin"
 # -- Public API functions --
 
 
-def asdict() -> Dict[str, Any]:
+def asdict() -> dict[str, Any]:
     """
     Gets the settings as a dictionary.
     :return: Dictionary containing key/value pair for each setting.
@@ -135,7 +137,7 @@ def jvm_mode() -> str:
     return "headless" if headless() else "interactive"
 
 
-def load(read_config_file: bool = None) -> None:
+def load(read_config_file: bool | None = None) -> None:
     """
     Populate settings from user config file on disk and/or environment variables.
     :param read_config_file: Whether to load settings from user's config file on disk.
@@ -243,9 +245,9 @@ def _confuse_get(config: confuse.Configuration, name, default_value) -> Any:
 
 
 def _copy_settings(
-    src_get: Optional[Callable] = None,
-    dest_set: Optional[Callable] = None,
-    dest_get: Optional[Callable] = None,
+    src_get: Callable | None = None,
+    dest_set: Callable | None = None,
+    dest_get: Callable | None = None,
 ) -> bool:
     """
     Copy settings from a source to a destination.
@@ -257,14 +259,14 @@ def _copy_settings(
     this = sys.modules[__name__]
     if src_get is None:
         # By default, use fields of this settings module as source.
-        src_get = lambda k, dv: getattr(this, k, dv)  # noqa: E731
+        src_get = lambda k, dv: getattr(this, k, dv)
     if dest_set is None:
         # By default, use fields of this settings module as destination.
-        dest_set = lambda k, v: setattr(this, k, v)  # noqa: E731
-        dest_get = lambda k: getattr(this, k, None)  # noqa: E731
+        dest_set = lambda k, v: setattr(this, k, v)
+        dest_get = lambda k: getattr(this, k, None)
     if dest_get is None:
         # If no getter for destination is given, just use Nones.
-        dest_get = lambda k: None  # noqa: E731
+        dest_get = lambda k: None
 
     # Calculate new value for each key.
     any_changed = False

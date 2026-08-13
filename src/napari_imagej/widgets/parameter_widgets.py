@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from functools import cache
+from typing import TYPE_CHECKING, Any
 
 from imagej.images import _imglib2_types
 from jpype import JArray, JByte, JClass, JDouble, JFloat, JInt, JLong, JShort
@@ -26,7 +26,7 @@ from magicgui.widgets import (
     request_values,
 )
 from napari import current_viewer
-from napari.layers import Layer, Image
+from napari.layers import Image, Layer
 from napari.utils._magicgui import get_layers
 from numpy import dtype
 from scyjava import numeric_bounds
@@ -34,7 +34,7 @@ from scyjava import numeric_bounds
 from napari_imagej.java import jc
 
 if TYPE_CHECKING:
-    from typing import Sequence
+    from collections.abc import Sequence
 
 
 # Generally, Python libraries treat the dimensions i of an array with n
@@ -50,7 +50,7 @@ CONVENTIONAL_DIMS = [
 ]
 
 
-def widget_supported_java_types() -> List[JClass]:
+def widget_supported_java_types() -> list[JClass]:
     """
     Returns a List of the JAVA types that, for various reasons,
     have dedicated magicgui widgets.
@@ -60,7 +60,7 @@ def widget_supported_java_types() -> List[JClass]:
     return [jc.Shape]
 
 
-@lru_cache(maxsize=None)
+@cache
 def numeric_type_widget_for(cls: type):
     # Set sensible defaults for interfaces
     if cls == jc.RealType or cls == jc.NumericType:
@@ -102,7 +102,7 @@ def numeric_type_widget_for(cls: type):
     return Widget
 
 
-@lru_cache(maxsize=None)
+@cache
 def number_widget_for(cls: type):
     if not (
         cls in [JByte, JShort, JInt, JLong, JFloat, JDouble]
@@ -259,7 +259,7 @@ class MutableOutputWidget(Container):
     def _btn_text(self) -> str:
         return "New Image"
 
-    def _default_layer(self) -> Optional[Layer]:
+    def _default_layer(self) -> Layer | None:
         """
         This widget sets the default size, shape etc. to be the same as
         the (first) input. We find the (first) input in this function.
@@ -300,7 +300,7 @@ class MutableOutputWidget(Container):
         # fallback - good ol' float64
         return "float64"
 
-    def _dtype_choices(self) -> List:
+    def _dtype_choices(self) -> list:
         return [dtype(v) for v in set(_imglib2_types.values())]
 
     def create_new_image(self) -> None:
@@ -323,46 +323,46 @@ class MutableOutputWidget(Container):
         # Define the magicgui widget for parameter harvesting
         params = request_values(
             title="New Image",
-            name=dict(
-                annotation=str,
-                value="",
-                options=dict(tooltip="If blank, a name will be generated"),
-            ),
-            shape=dict(
-                annotation=List[MutableDimWidget],
-                value=self._default_new_shape(),
-                options=dict(
-                    layout="vertical",
-                    options=dict(
-                        widget_type=MutableDimWidget,
-                    ),
-                    tooltip="The size of each image axis",
-                ),
-            ),
-            array_type=dict(
-                annotation=str,
-                value="xarray",
-                options=dict(
-                    tooltip="The backing data array implementation",
-                    choices=backing_choices,
-                ),
-            ),
-            data_type=dict(
-                annotation=type,
-                value=self._default_new_type(),
-                options=dict(
-                    tooltip="The image element type",
-                    choices=dict(
-                        choices=self._dtype_choices(),
-                        key=str,
-                    ),
-                ),
-            ),
-            fill_value=dict(
-                annotation=float,
-                value=0.0,
-                options=dict(tooltip="Starting value for all pixels"),
-            ),
+            name={
+                "annotation": str,
+                "value": "",
+                "options": {"tooltip": "If blank, a name will be generated"},
+            },
+            shape={
+                "annotation": list[MutableDimWidget],
+                "value": self._default_new_shape(),
+                "options": {
+                    "layout": "vertical",
+                    "options": {
+                        "widget_type": MutableDimWidget,
+                    },
+                    "tooltip": "The size of each image axis",
+                },
+            },
+            array_type={
+                "annotation": str,
+                "value": "xarray",
+                "options": {
+                    "tooltip": "The backing data array implementation",
+                    "choices": backing_choices,
+                },
+            },
+            data_type={
+                "annotation": type,
+                "value": self._default_new_type(),
+                "options": {
+                    "tooltip": "The image element type",
+                    "choices": {
+                        "choices": self._dtype_choices(),
+                        "key": str,
+                    },
+                },
+            },
+            fill_value={
+                "annotation": float,
+                "value": 0.0,
+                "options": {"tooltip": "Starting value for all pixels"},
+            },
         )
         self._add_new_image(params)
 
@@ -464,7 +464,7 @@ class MutableOutputWidget(Container):
 # -- FILE WIDGETS -- #
 
 
-def file_widget_for(item: "jc.ModuleItem"):
+def file_widget_for(item: jc.ModuleItem):
     style: str = item.getWidgetStyle()
     if style == jc.FileWidget.OPEN_STYLE:
         return OpenFileWidget
@@ -533,7 +533,7 @@ class ShapeData:
     # The implementation's Java class
     j_class: JClass
     # The constructor parameters
-    params: List[ShapeParameter]
+    params: list[ShapeParameter]
 
 
 class ShapeWidget(Container):
@@ -609,7 +609,7 @@ class ShapeWidget(Container):
         return cls(*params)
 
     @property
-    def shape_types(self) -> Dict[str, ShapeData]:
+    def shape_types(self) -> dict[str, ShapeData]:
         """
         Defines the Shape implementations supported by this widget.
         """

@@ -16,6 +16,7 @@ from magicgui.widgets import (
     SpinBox,
 )
 from napari.layers import Image
+from tests.utils import DummyModuleItem, jc
 
 from napari_imagej.types.widget_mappings import (
     _supported_scijava_styles,
@@ -29,7 +30,6 @@ from napari_imagej.widgets.parameter_widgets import (
     SaveFileWidget,
     ShapeWidget,
 )
-from tests.utils import DummyModuleItem, jc
 
 
 def _assert_widget_matches_item(item, type_hint, widget_type, widget_class):

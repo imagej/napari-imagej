@@ -5,6 +5,8 @@ A module testing napari_imagej.widgets.results
 import pytest
 from qtpy.QtCore import QRunnable, Qt, QThreadPool
 from qtpy.QtWidgets import QApplication, QMenu
+from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult
+from tests.widgets.widget_utils import _populate_tree
 
 from napari_imagej import nij
 from napari_imagej.widgets.result_tree import (
@@ -13,8 +15,6 @@ from napari_imagej.widgets.result_tree import (
     SearchResultItem,
 )
 from napari_imagej.widgets.widget_utils import python_actions_for
-from tests.utils import DummySearcher, DummySearchEvent, DummySearchResult
-from tests.widgets.widget_utils import _populate_tree
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_searchers_persist(fixed_tree: SearcherTreeView, asserter):
 def test_regression():
     """Tests SearchResultItems, SearcherItems display as expected."""
     # SearchResultItems wrap SciJava SearchResults, so they expect a running JVM
-    nij.ij
+    _ = nij.ij
 
     # Phase 1: Search Results
     dummy = DummySearchResult()
