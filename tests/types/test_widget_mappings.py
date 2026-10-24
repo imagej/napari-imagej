@@ -40,7 +40,7 @@ def _assert_widget_matches_item(item, type_hint, widget_type, widget_class):
     def func(foo):
         print(foo, "bar")
 
-    func.__annotation__ = {"foo": type_hint}
+    func.__annotations__ = {"foo": type_hint}
 
     widget = magicgui.magicgui(
         function=func, call_button=False, foo={"widget_type": actual}

@@ -383,7 +383,7 @@ def _add_napari_metadata(
     type_hints["return"] = signature(execute_module).return_annotation
 
     execute_module._info = info  # type: ignore
-    execute_module.__annotation__ = type_hints  # type: ignore
+    execute_module.__annotations__ = type_hints
 
 
 def _add_param_metadata(metadata: dict, key: str, value: Any) -> None:
@@ -542,7 +542,7 @@ def functionify_module_execution(
         # Add metadata for widget creation
         _add_napari_metadata(module_execute, info, unresolved_inputs)
         magic_kwargs = _add_scijava_metadata(
-            unresolved_inputs, module_execute.__annotation__
+            unresolved_inputs, module_execute.__annotations__
         )
 
         return (module_execute, magic_kwargs)
